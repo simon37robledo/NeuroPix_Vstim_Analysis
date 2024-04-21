@@ -44,23 +44,28 @@ expPV139 = 'PV139_Experiment_6_2_24';
 basic_pathPV59 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV59';
 expPV59 = 'PV59_Experiment_20_2_24';
 
+basic_pathPV32 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV32';
+expPV32 = 'PV32_Experiment_18_3_24';
+
 
 %% Basic variables
-base_dir = string(basic_pathPV59)+"\"+string(expPV59);
+base_dir = string(basic_pathPV32)+"\"+string(expPV32);
 
 run_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT"; %Folder that has catgt and tprime subfolders
-insertion = "1";
-fileName = "PV59_Experiment";
+insertion = "4";
+fileName = "PV32_Experiment";
 runs = "mult";
 dig_CH = "1";
 concat = 1;
 syncChan = "6";
 
 %% Mice
-base_dir = "\\sil3\data\Large_scale_mapping_NP\Tests_recordings\testDiode_31_1_24";
-fileName = "testDiode";
-insertion = "-1";
+base_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_28_11_23";
+fileName = "Mice_exp_28";
+insertion = "1";
+syncChan = "0";
 
+dig_CH ="11";
 cd(base_dir)
 %% Command line excecution
   
@@ -313,7 +318,7 @@ else
 
 end
 
-
+%%
 %5.0. Create sync folder
 
 if insertion ~= "-1"
@@ -338,7 +343,7 @@ cd(run_dir + "\TPrime-win")
 %5.1. Create TPrime command
 
 if insertion ~= "-1"
-    cmndTPrime = "TPrime -syncperiod=1.0 -tostream=" + base_dir + "\Insertion" + insertion + "\catgt_" + exp + "_" + insertion + "_g0\" + exp + "_" + insertion + "_g0_tcat.imec0.ap.xd_384_"+syncChan+"_500.txt "...
+    cmndTPrime = "TPrime -syncperiod=1.0 -tostream=" + base_dir + "\Insertion" + insertion + "\catgt_" + exp + "_" + insertion + "_g0\" + exp + "_" + insertion + "_g0_tcat.imec0.ap.xd_384_"+"6"+"_500.txt "...
         + "-fromstream=0,"+ base_dir + "\Insertion" + insertion + "\catgt_" + exp + "_" + insertion + "_g0\" + exp + "_" + insertion + "_g0_tcat.nidq.xd_"+ dig_CH+"_"+syncChan+"_500.txt "...
         + "-events=0,"+ base_dir + "\Insertion" + insertion + "\catgt_" + exp + "_" + insertion + "_g0\" + exp + "_" + insertion + "_g0_tcat.nidq.xd_"+ dig_CH+"_1_0.txt,"...
         + base_dir + "\Insertion" + insertion + "\catgt_" + exp + "_" + insertion + "_g0\" + "sync_events\out_1.txt "... %stimulus onset

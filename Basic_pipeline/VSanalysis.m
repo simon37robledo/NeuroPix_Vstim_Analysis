@@ -32,6 +32,9 @@ for i = 1:length(stimFiles)
     stimFilesOrdered{i} = stimFiles{ttlindex(2,i)};
 end
 
+
+
+
 %Operate stim functions
 
 if allStim ==1

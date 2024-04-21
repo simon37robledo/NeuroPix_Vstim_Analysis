@@ -2,16 +2,18 @@
 
 %Load recording and create neuropixel class
 
-base_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\Esmolo_test_2"; %change to NP.recordingDir
+base_dir = "\\sil3\data\Mice_exp\mouse1\Mice_exp_29_11_23\Insertion1\catgt_Mice_exp_28_11_23_1_g0";
+%base_dir = "\\sil3\data\Mice_exp\mouse1\Mice_exp_29_11_23\Insertion1\catgt_Mice_exp_29_11_23_1_g0";%change to NP.recordingDir
 run_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\SpikeGLX\"; %Folder that has catgt and tprime subfolders
-insertion = "2";
+insertion = "1";
 t1 = 0.8;
 t2 = 0.9;
 dur = 12;
 dur_var = 5;
 ttl_index =-1;
-
-recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\Esmolo_test_2\Insertion2\Filter_catgt_Esmolo_test_2_2_g0'; 
+%%
+%recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_29_11_23\Insertion1\catgt_Mice_exp_29_11_23_1_g0'; 
+recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_28_11_23\Insertion1\catgt_Mice_exp_28_11_23_1_g0'; 
 NP1= NPAPRecording(recPath1);
 
 
@@ -22,13 +24,66 @@ LFP_Esmolot22 = NP1.getDataLFP(1:384,round(NP1.recordingDuration_ms/2),5000);
 
 %% Get analog data (ECG)
 
-s = NP1.getAnalogData(1,0,round(NP1.recordingDuration_ms)-100);
+s = NP1.getAnalogData([1,3,4],0,round(NP1.recordingDuration_ms)-100);
 
-s = squeeze(s);
+sECG = squeeze(s(3,:));
+
+sDiode = squeeze(s(1,:));
+cd(NP1.recordingDir)
+
+save('ECG_Analog.mat',"sECG");
+
+save('AnalogData_Diode.mat','sDiode');
 
 %fb = dwtfilterbank('Wavelet','sym4','SignalLength',numel(s),'Level',3);
 
 %psi = wavelets(fb);
+%% Vstim triggers
+
+ [Ttrigger,chNumberT]=NP1.getTrigger();
+
+ Sstart = [Ttrigger{1}];
+ Send = [Ttrigger{2}];
+ onset = [Ttrigger{3}];
+ offset = [Ttrigger{4}];
+
+ %Send = Send(2:end); %For mouse1\Mice_exp_29_11_23\Insertion2\catgt_Mice_exp_29_11_23_2_g0
+
+ ttl_index = 1;
+
+ stimOn = [];
+ stimOff = [];
+ stimInter = [];
+ j =1;
+
+
+ for i=ttl_index
+     stimUp = onset(onset > Sstart(i) & onset < Send(i));
+     stimOn = [stimOn stimUp]; %general
+
+     stimDown = offset(offset > Sstart(i) & offset < Send(i));
+     stimOff = [stimOff stimDown]; %general
+
+     stimInter = [stimInter mean(stimOff-stimOn)];
+
+     %ttlNum(j) = length(stim(1:2:end)); %sanity check to see how many stimulus presentations there are per round
+
+     j = j+1;
+ end
+
+
+save('GupTrigger.mat','stimOn')
+save('GdownTrigger.mat','stimOff')
+
+% save('FFFupTrigger.mat','stimOn')
+% save('FFFdownTrigger.mat','stimOff')
+
+% GupTrigger = stimOn;
+% 
+% GdownTrigger = stimOff;
+%% triggers Diode
+%[stimOn stimOff onSync offSync] = NPdiodeExtract(NP1,0,"MovBall",1,11,0); 
+
 
 %% Plot analog data 
 
@@ -41,21 +96,63 @@ axis tight
 legend('QRS Complex','Sym4 Wavelet')
 title('Comparison of Sym4 Wavelet and QRS Complex')
 hold off
-%% Create filter to extract peaks
- wt = modwt(s,10);
- wtrec = zeros(size(wt));
- inScale=10;
- wtrec(inScale,:) = wt(inScale,:);
-y = imodwt(wtrec,'sym4');
-plot(normZeroOne(s));hold on;plot(normZeroOne(y))     
+% %% Create filter to extract peaks
+%  wt = modwt(s,10);
+%  wtrec = zeros(size(wt));
+%  inScale=10;
+%  wtrec(inScale,:) = wt(inScale,:);
+% y = imodwt(wtrec,'sym4');
+% sECG
+ 
 
 %% Extract peaks
 % y = abs(y).^2;
-[qrspeaks,locs] = findpeaks(s,'MinPeakHeight',0.76,...
-    'MinPeakDistance',500);
+
+Fs = NP1.samplingFrequencyNI; % Example sampling frequency in Hz, adjust this to your signal's sampling frequency
+Fn = Fs/2; % Nyquist frequency
+Fhp = 0.5; % High-pass filter cutoff frequency in Hz, adjust based on your needs
+[b, a] = butter(2, Fhp/Fn, 'high'); % 2nd order Butterworth filter
+ecgFiltered = filtfilt(b, a, sECG); % Zero-phase filtering to avoid phase shift
+
+[qrspeaks,locs] = findpeaks(ecgFiltered,'MinPeakHeight',0.8,...
+    'MinPeakDistance',300);
+
+figure()
+plot(ecgFiltered(round(2520*NP1.samplingFrequencyNI):end));%hold on;plot(normZeroOne(y(1:20000))) 
+hold on
+plot(locs(locs>round(2520*NP1.samplingFrequencyNI))-round(2520*NP1.samplingFrequencyNI),qrspeaks(locs>round(2520*NP1.samplingFrequencyNI)),'ro')
+
+figure()
+plot(sECG);%hold on;plot(normZeroOne(y(1:20000))) 
+hold on
+plot(locs,qrspeaks,'ro')
+
+%%
+
+%%%% SYNC %%%%%%%%%%%%%%%%%%%%%%
+
+
+% Search in for neural SQW and NI SQW and load them
+cd(NP1.recordingDir)
+Neur = readmatrix(dir(fullfile(NP1.recordingDir, '*imec0.ap.xd_384_6_500.txt*')).name);
+originSQW = readmatrix(dir(fullfile(NP1.recordingDir, '*nidq.xd_11_0_500.txt*')).name);
+
+locSync = interp1([originSQW(1)-1;originSQW;originSQW(end)+1]'*1000, [Neur(1)-1;Neur;Neur(end)+1]'*1000, locs/(NP1.samplingFrequencyNI/1000), 'linear');
+
+% fileID = fopen("Peak_sync"+".mat",'w');
+% fprintf(fileID, '%d\n', locSync);
+% fclose(fileID);
+
+save('Peak_sync.mat','locSync')
+
+
+
+
+
+
 %%
 figure
-plot(s)
+plot(y)
 hold on
 plot(locs,qrspeaks,'ro')
 %% Find HR
@@ -86,8 +183,14 @@ end
 %% Build the TIC matrix
 p = NP1.convertPhySorting2tIc(NP1.recordingDir);
 
+p = NP1.convertBCSorting2tIc(NP1.recordingDir);
+
+%p = NP1.convertBCSorting2tIc(NP1.recordingDir);
+
 %Select good units
 label = string(p.label');
+
+%labelG = label(label == 'good'|label == 'non-somatic');
 
 goodU = p.ic(:,label == 'good');
 
@@ -102,7 +205,7 @@ hb1 = hb(hb < msInject);
 
 %% Build the burst matrix Before esmolol 
 
-[M]=BuildBurstMatrix(goodU,round(p.t/bin),round(hb1/bin)-start,round(win/bin));
+[M]=squeeze(BuildBurstMatrix(goodU,round(p.t),0,round(NP1.recordingDuration_ms)));
 
 [nTrials,nNeurons,nTimes]=size(M);
 %%

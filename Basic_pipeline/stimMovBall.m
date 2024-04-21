@@ -332,7 +332,6 @@ for in = ins %Start iterating across insertions
     %--------------------------------------------------------------------------------------------------------------------------------%
     % Position
 
-
     %Spike index and times:
 
     spkI = readNPY(string(NP.recordingDir) + "\spike_clusters.npy");

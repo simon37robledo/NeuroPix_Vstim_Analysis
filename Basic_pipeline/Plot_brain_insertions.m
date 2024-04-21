@@ -212,6 +212,20 @@ InsAnglesPV27= [72.5 72.5 72.5  72.5 72.5 72.5 72.5];
  
 InsDepthsPV27= [3913.9 3904.34 3525.7 3900.1 3914.34 3739.3 3906.8];
 
+InsAnglesPV139 = [89 89];
+
+InsDepthsPV139 = [3910 3907.23];
+
+InsAnglesPV59 = [81 81 81];
+
+InsDepthsPV59 = [2845.89 2858.91+500 3050.36];
+
+InsAnglesPV32 = [69 72 72];
+
+InsDepthsPV32 = [2400 2600 2200];
+
+
+
 animalD = {InsDepthsPV67,InsDepthsPV103,InsDepthsPV27};
 
 animalA = {InsAnglesPV67,InsAnglesPV103,InsAnglesPV27};
