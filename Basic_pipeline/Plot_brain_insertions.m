@@ -78,7 +78,7 @@ InscoorPV103 = [Ins1PV103;Ins2PV103;Ins3PV103;Ins4PV103;Ins5PV103;Ins6PV103;Ins7
 %%%%%%%PV67 Microomanipulator coor
 
 %1
-Ins1PV67 = [44.24 50.51 -21.98];
+Ins1PV67 = [44.24 50.51 -21.98]; %Ref
 
 %2
 xc = Ins1PV67(1)-853/100;
@@ -94,7 +94,7 @@ yc = Ins1PV67(2)+994/100;
 
 zcoor =  surfaceZ(xc,yc, brain);
 
-Ins4PV67 = [xc yc zcoor];
+Ins3PV67 = [xc yc zcoor];
 
 %4
 xc =Ins1PV67(1);
@@ -102,7 +102,7 @@ yc = Ins1PV67(2)+994/100;
 
 zcoor =  surfaceZ(xc,yc, brain);
 
-Ins3PV67 = [xc yc zcoor];
+Ins4PV67 = [xc yc zcoor];
 
 
 InscoorPV67 = [Ins1PV67; Ins2PV67; Ins3PV67; Ins4PV67];

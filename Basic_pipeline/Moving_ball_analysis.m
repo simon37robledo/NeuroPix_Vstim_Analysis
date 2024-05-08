@@ -6,6 +6,7 @@ data = readtable(excelFile);
 %Optionall
 summPlot = 0;
 plotexamplesMB =0;
+newTIC = 0;
 
 
 % Iterate through experiments (insertions and animals) in excel file
@@ -119,16 +120,38 @@ for ex =1:size(data,1)
     GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
     GoodU_orDepth = cluster_info.depth(cluster_info.group=="good");
 
+    %If new tic matrix needs to be used, move oldTIc files and run
+    %convertPhySorting2tIc
+    cd(NP.recordingDir)
+    if isfile("sorting_tIc.mat") && newTIC
+
+        if ~exist('oldTIC', 'dir')
+            mkdir oldTIC
+        end
+
+        movefile sorting_tIc.mat oldTIC
+        movefile sorting_tIc_All.mat oldTIC
+    end
+
     p = NP.convertPhySorting2tIc(NP.recordingDir);
     label = string(p.label');
     goodU = p.ic(:,label == 'good');
+    goodSPKS = p.nSpks(label == 'good');
+    goodAmp = p.neuronAmp(label == 'good');
+    goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
+
+    %Get depths of units correcting for angle and micromanipulator depth:
+    verticalDepth = sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - goodUdepth);
 
     %Load raster matrices
     bin = 50;
 
-    preBase = interStimStats/2; %define prebase, which are the sections of no stimulus surrounding the stimulus duration
+    preBase = round(3*interStimStats/4);
+    %preBase = 700; %define prebase, which are the sections of no stimulus surrounding the stimulus duration
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
     [nT,nN,nB] = size(Mr);
+
+    figure;imagesc(squeeze(Mr(:,15,:)));colormap(flipud(gray(64)));xline(preBase/bin);xline((preBase+stimDur)/bin);yline(trialDivision:trialDivision:nT-1);
 
     [MbTotal] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-interStimStats)/bin),round((interStimStats)/bin));% baseline matrix (whole baseline)
     baseline = squeeze(mean(squeeze(mean(MbTotal)),2));
@@ -143,7 +166,7 @@ for ex =1:size(data,1)
     for plotOp = summPlot
         if summPlot
             
-            fig = figure();
+            fig = figure;
             imagesc(Norm);
             xline(preBase/bin,'k', LineWidth=1.5)
             xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
@@ -179,7 +202,7 @@ for ex =1:size(data,1)
 
     %Select biggest response baseline
 
-    preBase =500;
+    %preBase =500;
     basePresp = preBase+stimDur;
     [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round((preBase)/bin)); %Baseline matrix plus
 
@@ -212,10 +235,22 @@ for ex =1:size(data,1)
 
     %spkRateBM = mean(MbC); %Calculate baseline spike rate of each neuron. 
     spkRateBM = mean(Mb);
-    epsilon = 0.01;
+    epsilon = 0.02;
     %denom = mad(MbC,0)+epsilon; %Calculate baseline variation of each neuron. 
 
-    denom =  std(Mb)+epsilon;
+    denom =  std(Mb)+eps;
+
+    %%%select all response as baseline for z-scoring
+
+    [Mall] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round((stimDur+preBase*2)/bin));
+
+    MallM = mean(Mall,3);
+
+    epsilon = 0.01;
+
+    %spkRateBM = mean(MallM);
+
+    %denom = std(MallM)+eps;
 
     %%%% Convolute matrix:
     %%%1. Convolute in the 3rd dimension (trials)
@@ -226,10 +261,10 @@ for ex =1:size(data,1)
 
     trialDivision = nT/(length(unique(offsets))*length(unique(directions))*length(unique(sizes))*length(unique(speeds))); %Number of trials per unique conditions
 
-
     %%%%Create window of 2 offsets by 10 bins (500 ms) to scan
 
-    window_size = [1, 5];
+    duration =250; %ms
+    window_size = [1, duration/bin];
 
     % Initialize the maximum mean value and its position %No
     % need or concolutions.
@@ -268,6 +303,7 @@ for ex =1:size(data,1)
     % responsive compared to the baseline.
 
 
+    %Real data:
     for u =1:nN
         % Slide the window over the matrix
         %unit matrix
@@ -307,8 +343,8 @@ for ex =1:size(data,1)
             NeuronRespProfile(i,3) = max_position_Trial(i,2);
 
             %4%. Z-score
-            NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - (spkRateBM(u)+max_mean_value_Trial(i))/2)/denom(u);
-
+            % NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - (spkRateBM(u)+max_mean_value_Trial(i))/2)/denom(u); %Zscore
+            NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - spkRateBM(u))/denom(u); %Zscore
             %Assign visual stats to last columns of NeuronRespProfile. Select
             %accotding  to trial (d) the appropiate parameter > directions' offsets' sizes' speeds'
             NeuronRespProfile(i,5) = C(i,2);
@@ -324,14 +360,8 @@ for ex =1:size(data,1)
         MaxWindows{u} = NeuronRespProfile; 
     end
 
-    %Get depths of units:
-    GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
-    GoodU_orDepth = cluster_info.depth(cluster_info.group=="good");
-
-    verticalDepth = flip(sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - GoodU_orDepth));
 
     %Create tunning curve, based on direction tunning curve --> clustering
-
     tuningCurve = zeros(nN,nT/direcN,direcN);
 
     uDir = unique(directions);
@@ -342,93 +372,245 @@ for ex =1:size(data,1)
         for d = 1:direcN
 
             tuningCurve(u,:,d) = NeuronD(NeuronD(:,2)==uDir(d),1)';
+
         end
+
     end
+  
 
+    %Select significantly responsive units with shuffling plus Z-score. 
+
+    
+    rands = 200;
+
+    if ~isfile(sprintf('randZscores-It-%d.mat',rands))
+        RandZscoreU = zeros(rands, nN,2);
+        for s = 1:rands
+
+            M_shuffTr=Mr(randperm(size(Mr,1)),:,:); %check if neuron is responsive to specific stim (shuffle across trials)
+            M_shufMTrC = ConvBurstMatrix(M_shuff,fspecial('gaussian',[1 5],3),'same');
+            Mb_shufTr = mean(M_shuffTr(:,:,1:round(preBase/bin)),3);
+            Mb_shufTrM = mean(Mb_shufTr);
+            denomTr = std(Mb_shufTr)+eps;
+
+            M_shuffTi=Mr(:,:,randperm(size(Mr,3))); %check if neuron is visually response (shuffle across time)
+            M_shufMTiC = ConvBurstMatrix(M_shuff,fspecial('gaussian',[1 5],3),'same');
+            Mb_shufTi = mean(M_shuffTi(:,:,1:round(preBase/bin)),3);
+            Mb_shufTiM = mean(Mb_shufTi);
+            denomTi = std(Mb_shufTi)+eps;
+
+            NeuronRespProfileShTr = zeros(nT,nN);
+            NeuronRespProfileShTi = zeros(nT,nN);
+            for u =1:nN
+                % Slide the window over the matrix
+                %unit matrix
+
+                for i = 1:nT %Iterate across trials
+                    uMTr = squeeze(M_shufMTrC(i,u,:))';%Create matrix per unique trial conditions
+                    uMTi = squeeze(M_shufMTiC(i,u,:))';%Create matrix per unique trial conditions
+
+                    %Create 2 matrices, for mean inside max window, and for position of window, for each trial
+                    max_mean_value_Trialtr = zeros(1,nT);
+                    max_mean_value_Trialtr(i) = -Inf;
+
+                    %Create 2 matrices, for mean inside max window, and for position of window, for each trial
+                    max_mean_value_Trialti = zeros(1,nT);
+                    max_mean_value_Trialti(i) = -Inf;
+
+                    for j = 1:size(uM, 2) - window_size(2) + 1 %Iterate across bins
+                        % Extract the sub-matrix
+                        sub_matrixTr = uMTr(j:min(j+window_size(2)-1,end)); %Create matrix of size window per bin
+                        sub_matrixTi = uMTi(j:min(j+window_size(2)-1,end)); %Create matrix of size window per bin
+
+                        % Compute the mean value
+                        mean_valueTr = mean(sub_matrixTr(:)); %Compute mean of each window
+                        mean_valueTi = mean(sub_matrixTi(:)); %Compute mean of each window
+
+                        % Update the maximum mean value and its position (a
+                        % window is selected across each trial)
+                        if mean_valueTr >  max_mean_value_Trialtr(i)
+                            max_mean_value_Trialtr(i) = mean_valueTr;
+                        end
+
+                        % Update the maximum mean value and its position (a
+                        % window is selected across each trial)
+                        if mean_valueTi >  max_mean_value_Trialti(i)
+                            max_mean_value_Trialti(i) = mean_valueTi;
+                        end
+
+                    end
+
+                    %. Z-score
+                    NeuronRespProfileShTr(i,u) = (max_mean_value_Trialtr(i) - Mb_shufTrM(u))/denomTr(u); %Zscore
+                    NeuronRespProfileShTi(i,u) = (max_mean_value_Trialti(i) - Mb_shufTiM(u))/denomTi(u); %Zscore
+
+                end
+
+            end
+
+            tDivList = 1:trialDivision:nT-1;
+
+%             meanTshuffledTi = zeros(u,numel(tDivList));
+% 
+%             for td = 1:numel(tDivList) %take means across trials to look at random times
+%                 meanTshuffledTi(:,td) = mean(NeuronRespProfileShTi(tDivList(td):tDivList(td)+trialDivision-1,:));
+%             end
+
+            tri = randi(numel(tDivList)); %Take group of random trials to look at trials
+
+            RandZscoreU(s,:,1) =  mean(NeuronRespProfileShTr(tDivList(tri):tDivList(tri)+trialDivision-1,:));
+            RandZscoreU(s,:,2) =  mean(NeuronRespProfileShTi(tDivList(tri):tDivList(tri)+trialDivision-1,:));%max(meanTshuffledTi,[],2);
+        end
+
+        save(sprintf('randZscores-It-%d',rands),"RandZscoreU");
+    else
+
+        RandZscoreU = load(sprintf('randZscores-It-%d.mat',rands));
+        RandZscoreU = RandZscoreU.RandZscoreU;
+
+    end
+   
+    Zthreshold = 3;
     meanZScores = squeeze(mean(tuningCurve,2));
+    %%Check if at least for 1 direction neuron is visually responsive:
 
-    figure;imagesc(squeeze(Mr(:,1,:)));colormap(flipud(gray(64)))
+    maxZS_vr = max(meanZScores,[],2);
 
-    %Clustering tuning curves:
+    pvalTr = (sum(squeeze(RandZscoreU(:,:,1)) >= maxZS_vr') +1)/(rands+1);
+    pvalTi = (sum(squeeze(RandZscoreU(:,:,2)) >= maxZS_vr') +1)/(rands+1);
 
-    k = 3; % Example number of clusters
-    [idx, C] = kmeans(meanZScores, k);
+    find(pvalTr<0.05 & pvalTr<0.05)
 
-    % Visualize the clusters (assuming 2D data for simplicity)
+    randddd2 = squeeze(RandZscoreU(:,:,1));
+
+    %Calculate direction: if neuron has 2 big peaks (equivalent angles (hue), or if neuron has 1
+    %big peak (hue), or if neuron has multiple big peaks. 
+    binarizedS = meanZScores>Zthreshold;
+
+    %remove neurons that have zero spiking rate in 97% of the trials
+    rateTrials = mean(Mr,3);
+    tuningCurveS = tuningCurve(sum(rateTrials==0)./size(rateTrials,1)<0.95,:,:);
+
+    meanZScores = squeeze(mean(tuningCurveS(~isoutlier(tuningCurveS,2)),2));
+    meanZScoresSig =  meanZScores(any(meanZScores > Zthreshold, 2),:);
+    verticalDepthSig = verticalDepth(any(meanZScores > Zthreshold, 2));
+    
     figure;
-    gscatter(meanZScores(:,1), meanZScores(:,2), idx);
-    title('Neuron Clustering with K-means');
-    xlabel('Feature 1');
-    ylabel('Feature 2');
-    legend('Cluster 1', 'Cluster 2', 'Cluster 3');
+    plot(rad2deg(uDir), meanZScoresSig(1,:), 'LineWidth', 2);
 
-    %Plot depth as color across different clusters
 
+    %Tuning index
+    OI = sqrt(sum(meanZScoresSig.*sin(2*uDir),2).^2 + sum(meanZScoresSig.*cos(2*uDir),2).^2)./sum(meanZScoresSig,2); % OI calculated as in Dragoi and Swindale.
+
+   
     nColors = 64; % Number of colors in the colormap
     red = [linspace(0, 1, nColors)]'; % Red component increases linearly
     green = [linspace(0, 0, nColors)]'; % Green component is always 0
     blue = [linspace(1, 0, nColors)]'; % Blue component decreases linearly
     customColormap = [red, green, blue]; % Combine into an nColors-by-3 matrix
 
-    normalizedValues = round(rescale([floor(min(verticalDepth)/100)*100; verticalDepth; ceil(max(verticalDepth)/100)*100], 1, nColors)); % Normalize and scale values to 1-64
+    normalizedValues = round(rescale([floor(min(verticalDepthSig')/100)*100; verticalDepthSig'; ceil(max(verticalDepthSig')/100)*100], 1, nColors)); %
+
+    %Normalize and scale values to 1-64
     colorsForValues = customColormap(round(normalizedValues(2:end-1)), :); % Get corresponding color for each value
 
-    %
+    %Clustering Analysis:
+%     BinZScore = meanZScoresSig >Zthreshold;
+% 
+%     %normS = normalize(meanZScoresSig);
+%     %normS = diff(log10(meanZScoresSig+1+abs(min(meanZScoresSig,[],'all'))));
+%     normS = log(meanZScoresSig+1+abs(min(meanZScoresSig,[],'all')));
+%     %figure;imagesc(squeeze(Mr(:,1,:)));colormap(flipud(gray(64)))
+% 
+%     %Clustering tuning curves:
+%     %
+%     %     k = 4; % Example number of clusters
+%     %     [idx, Cl] = kmeans(BinZScore,
+%     %     k,'MaxIter',10000,'Display','final','Replicates',10,'OnlinePhase','on');
+% 
+% 
+%    [idx] = dbscan(normS,1,2); %seems to work better than k means, no need to know number of clusters
+% 
+%    
+%     
+%     %idx = clusterdata(meanZScoresSig,2);
+%     %figure;plot(rad2deg(uDir), normS, 'LineWidth', 2);
+% 
+%     k = unique(idx);
+% 
+%     % Visualize the clusters (assuming 2D data for simplicity)
+%     fig = figure;
+%     gscatter(normS(:,1), normS(:,2), idx);
+%     title('Neuron Clustering with K-means');
+%     xlabel('Feature 1');
+%     ylabel('Feature 2');
+%     legend('Cluster 1', 'Cluster 2', 'Cluster 3');
+%     cd('\\132.66.45.127\data\Large_scale_mapping_NP\Immobilized_exp\Orientation_tuning_figs');
+%     print(fig, sprintf('%s-MovBall-clusters_groups.png',NP.recordingName),'-dpng');
+%     close all
+% 
+%     %Plot depth as color across different clusters
+% 
+%     fig = figure;
+%     for i = 1:length(k)
+%         subplot(1,length(k),i)
+%         pl= plot(rad2deg(uDir), meanZScoresSig(idx ==k(i),:), 'LineWidth', 2);
+%         xlabel('Angle (degrees)');
+%         xticks(rad2deg(uDir));
+%         xticklabels(arrayfun(@num2str, rad2deg(uDir), 'UniformOutput', false));
+%         ylabel('Mean Z-Score Response');
+%         title(sprintf('Tuning Curve cluster %d',i));
+%         grid on;
+%         ylim([floor(min(meanZScoresSig,[],'all')) ceil(max(meanZScoresSig,[],'all'))])
+% 
+%         clusterColors = colorsForValues(find(idx ==k(i)),:);
+% 
+%         for j = 1:length(pl)
+%             set(pl(j),'color',clusterColors(j,:)); % Change colour of plot.
+%         end
+% 
+%     end
+% 
+% 
+%     colormap(flipud(customColormap))
+%     cb = colorbar();
+%     cb.TickLabels = flip(linspace(floor(min(verticalDepthSig)/100)*100,ceil(max(verticalDepthSig)/100)*100,11));
+%     cb.Label.String = 'Depth';
+%     cb.Label.FontSize = 12;
+%     cd('\\132.66.45.127\data\Large_scale_mapping_NP\Immobilized_exp\Orientation_tuning_figs');
+%     print(fig, sprintf('%s-MovBall-clustersR.png',NP.recordingName),'-dpng');
+    %close all
 
-    figure;
-    for i = 1:k
-        subplot(1,3,i)
-        p= plot(rad2deg(uDir), meanZScores(idx ==i,:), 'LineWidth', 2);
-        xlabel('Angle (degrees)');
-        xticks(rad2deg(uDir));
-        xticklabels(arrayfun(@num2str, rad2deg(uDir), 'UniformOutput', false));
-        ylabel('Mean Z-Score Response');
-        title(sprintf('Tuning Curve cluster %d',i));
-        grid on;
-        ylim([floor(min(meanZScores,[],'all')) ceil(max(meanZScores,[],'all'))])
-
-        clusterColors = colorsForValues(find(idx ==1),:);
-
-        for i = 1 : length(p)
-            set(p(i),'color',clusterColors(i,:)); % Change colour of plot.
-        end
-        
-    end
-
-    colormap(flipud(customColormap))
-    cb = colorbar();
-    cb.TickLabels = flip(linspace(floor(min(verticalDepth)/100)*100,ceil(max(verticalDepth)/100)*100,11));
-    cb.Label.String = 'Depth';
-    cb.Label.FontSize = 12;
 
 
     % Enhance the plot with error bars showing the standard error of the mean
-    sem = stdResponses / sqrt(numTrials); % Standard Error of the Mean
-    hold on;
-    errorbar(angles, meanZScores, sem, 'LineStyle', 'none', 'Color', 'k');
-    hold off;
+%     sem = stdResponses / sqrt(numTrials); % Standard Error of the Mean
+%     hold on;
+%     errorbar(angles, meanZScores, sem, 'LineStyle', 'none', 'Color', 'k');
+%     hold off;
+% 
+%     sse = [];
+%     for k = 1:10
+%         [idx, C, sumd] = kmeans(meanZScores, k);
+%         sse(end+1) = sum(sumd);
+%     end
+%     figure;
+%     plot(1:10, sse, '-o');
+%     xlabel('Number of clusters k');
+%     ylabel('Sum of squared distances');
+%     close all
 
-    sse = [];
-    for k = 1:10
-        [idx, C, sumd] = kmeans(meanZScores, k);
-        sse(end+1) = sum(sumd);
-    end
-    figure;
-    plot(1:10, sse, '-o');
-    xlabel('Number of clusters k');
-    ylabel('Sum of squared distances');
-
-    % Assuming 'data' is your dataset
-    k = 3; % Example number of clusters
-    [idx, C] = kmeans(meanZScores, k);
-
-    % Visualize the clusters (assuming 2D data for simplicity)
-    figure;
-    gscatter(meanZScores(:,1), meanZScores(:,2), idx);
-    title('Neuron Clustering with K-means');
-    xlabel('Feature 1');
-    ylabel('Feature 2');
-    legend('Cluster 1', 'Cluster 2', 'Cluster 3');
+%     % Assuming 'data' is your dataset
+%     k = 3; % Example number of clusters
+%     [idx, C] = kmeans(meanZScores, k);
+% 
+%     % Visualize the clusters (assuming 2D data for simplicity)
+%     figure;
+%     gscatter(meanZScores(:,1), meanZScores(:,2), idx);
+%     title('Neuron Clustering with K-means');
+%     xlabel('Feature 1');
+%     ylabel('Feature 2');
+%     legend('Cluster 1', 'Cluster 2', 'Cluster 3');
 
 
     exampleU = MaxWindows{u};
@@ -444,11 +626,9 @@ for ex =1:size(data,1)
 
     sDirections = sort(directions);
 
-    tunning = sDirections(max_position(:,1));
+%    tunning = sDirections(max_position(:,1));
 
     MinusRB = spkRateR - spkRateBM;
-
-   
 
     %K-means clustering --> Look at sidekick rply
     %1% preprocessing the data

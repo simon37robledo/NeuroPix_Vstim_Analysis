@@ -12,8 +12,8 @@ dur = 12;
 dur_var = 5;
 ttl_index =-1;
 %%
-%recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_29_11_23\Insertion1\catgt_Mice_exp_29_11_23_1_g0'; 
-recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_28_11_23\Insertion1\catgt_Mice_exp_28_11_23_1_g0'; 
+recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse2\Mice_exp_29_11_23\Insertion2\catgt_Mice_exp_29_11_23_2_g0'; 
+%recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_28_11_23\Insertion1\catgt_Mice_exp_28_11_23_1_g0'; 
 NP1= NPAPRecording(recPath1);
 
 
@@ -183,7 +183,7 @@ end
 %% Build the TIC matrix
 p = NP1.convertPhySorting2tIc(NP1.recordingDir);
 
-p = NP1.convertBCSorting2tIc(NP1.recordingDir);
+%p = NP1.convertBCSorting2tIc(NP1.recordingDir);
 
 %p = NP1.convertBCSorting2tIc(NP1.recordingDir);
 
@@ -197,6 +197,14 @@ goodU = p.ic(:,label == 'good');
 bin=2;
 win= 160;
 start = 40;
+%% depth
+cluster_info = readtable(string(NP1.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
+GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
+GoodU_orDepth = cluster_info.depth(cluster_info.group=="good");
+
+verticalDepth = 3800 - GoodU_orDepth;
+cd(NP1.recordingDir)
+save('unitDepth',"verticalDepth");
 
 %% times before esmolol injection
 hb = (locs/(NP1.samplingFrequencyNI/1000))';
