@@ -12,13 +12,14 @@ newTIC = 0;
 % Iterate through experiments (insertions and animals) in excel file
 for ex =1:size(data,1)
     
-    %Load NP class
+    %% Load data and data paremeters
+    %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
     cd(path)
     NP = NPAPRecording(path);
 
-    %Extract moving ball statistics
+    %2. Extract moving ball statistics
     patternIndex = strfind(string(NP.recordingDir), "\catgt");
 
     endIndex = patternIndex(1)-1;
@@ -80,7 +81,7 @@ for ex =1:size(data,1)
     orientN = length(unique(orientations));
     
 
-    % Triggers (diode)
+    %3. Load Triggers (diode)
     Ordered_stims= strsplit(data.VS_ordered{ex},',');
     containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
     ttlInd = find(containsMB);
@@ -108,20 +109,20 @@ for ex =1:size(data,1)
     %
     % end
 
+    stimInter= mean(stimOn(2:end)-stimOff(1:end-1)); % When dealing with different speeds, save different stim durs, and create M for each speed
     stimDur = mean(-stimOn+stimOff); %When dealing with different speeds, save different stim durs, and create M for each speed
     A = [stimOn directions' offsets' sizes' speeds' orientations'];
     [C indexS] = sortrows(A,[2 3 4 5 6]);
 
-    %Sort directions:
+    %4. Sort directions:
     directimesSorted = C(:,1)';
 
-    %Load data to select good units
+    %5. Load data to select good units
     cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
     GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
     GoodU_orDepth = cluster_info.depth(cluster_info.group=="good");
 
-    %If new tic matrix needs to be used, move oldTIc files and run
-    %convertPhySorting2tIc
+    %If new tic matrix needs to be used, move oldTIc files and run convertPhySorting2tIc
     cd(NP.recordingDir)
     if isfile("sorting_tIc.mat") && newTIC
 
@@ -140,18 +141,17 @@ for ex =1:size(data,1)
     goodAmp = p.neuronAmp(label == 'good');
     goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
 
-    %Get depths of units correcting for angle and micromanipulator depth:
+    %6. Get depths of units correcting for angle and micromanipulator depth:
     verticalDepth = sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - goodUdepth);
 
-    %Load raster matrices
+    %7. Load raster matrices
     bin = 50;
-
     preBase = round(3*interStimStats/4);
-    %preBase = 700; %define prebase, which are the sections of no stimulus surrounding the stimulus duration
+
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
     [nT,nN,nB] = size(Mr);
 
-    figure;imagesc(squeeze(Mr(:,15,:)));colormap(flipud(gray(64)));xline(preBase/bin);xline((preBase+stimDur)/bin);yline(trialDivision:trialDivision:nT-1);
+    %figure;imagesc(squeeze(Mr(:,15,:)));colormap(flipud(gray(64)));xline(preBase/bin);xline((preBase+stimDur)/bin);yline(trialDivision:trialDivision:nT-1);
 
     [MbTotal] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-interStimStats)/bin),round((interStimStats)/bin));% baseline matrix (whole baseline)
     baseline = squeeze(mean(squeeze(mean(MbTotal)),2));
@@ -161,7 +161,7 @@ for ex =1:size(data,1)
     Norm = MrMean ./ v_replicated; %normalization by division 
     Norm(Norm>2) = 2;
 
-    %Plot summary response
+    %8. Plot summary response
     summPlot =0;
     for plotOp = summPlot
         if summPlot
@@ -195,65 +195,53 @@ for ex =1:size(data,1)
             print(fig, sprintf('%s-MovBall-summary.png',NP.recordingName),'-dpng');
         end
     end
-
-    %Select responsive units and their tunning profile 
-
+ 
     stims = stimOn';
 
-    %Select biggest response baseline
+    %% Select responsive units and calculate their tunning profile
 
-    %preBase =500;
-    basePresp = preBase+stimDur;
-    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round((preBase)/bin)); %Baseline matrix plus
+    %1. Select baseline
+    
+    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-stimInter)/bin),round((stimInter*2+stimDur)/bin)); %Baseline matrix plus
 
-    Mb = mean(Mb,3);
-
-    [trials, neurons] = size(Mb);
-
-    %             MbC = zeros(trials, neurons);
-
-    percentTrials = round(trials*0.2);
-
-    [S, Sindex] = sort(Mb);
-
-    % Mb = S(1:end-percentTrials,:);
+    Mb = mean(Mb,3); %mean across time bins
 
     [trials, neurons] = size(Mb);
 
-    %randomize again.
-    %Mb = Mb(randi([1, size(Mb,1)], 1, size(Mb,1)),:);
+    % MbC = zeros(trials, neurons);
 
-    %Take mean across window of % of trials
-
-    MbC = zeros(round(trials/percentTrials), neurons);
-
-    for i = 1:percentTrials:trials
-        meanb = mean(Mb(i:min(i+percentTrials-1, end),:),1);
-        MbC(j,:) = meanb;
-        j = j+1;
-    end
+%     percentTrials = round(trials*0.2);
+% 
+%     [S, Sindex] = sort(Mb);
+% 
+%     % Mb = S(1:end-percentTrials,:);
+% 
+%     [trials, neurons] = size(Mb);
+% 
+%     %randomize again.
+%     %Mb = Mb(randi([1, size(Mb,1)], 1, size(Mb,1)),:);
+% 
+%     %Take mean across window of % of trials
+% 
+%     MbC = zeros(round(trials/percentTrials), neurons);
+% 
+%     for i = 1:percentTrials:trials
+%         meanb = mean(Mb(i:min(i+percentTrials-1, end),:),1);
+%         MbC(j,:) = meanb;
+%         j = j+1;
+%     end
 
     %spkRateBM = mean(MbC); %Calculate baseline spike rate of each neuron. 
-    spkRateBM = mean(Mb);
+
+    %2. Calculate denominator for Z-score calculation
+    spkRateBM = mean(Mb); %total mean. 
     epsilon = 0.02;
     %denom = mad(MbC,0)+epsilon; %Calculate baseline variation of each neuron. 
 
-    denom =  std(Mb)+eps;
+    denom = std(Mb);%+eps;
 
-    %%%select all response as baseline for z-scoring
-
-    [Mall] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round((stimDur+preBase*2)/bin));
-
-    MallM = mean(Mall,3);
-
-    epsilon = 0.01;
-
-    %spkRateBM = mean(MallM);
-
-    %denom = std(MallM)+eps;
-
-    %%%% Convolute matrix:
-    %%%1. Convolute in the 3rd dimension (trials)
+    %3. Convolute matrix to spread response
+    % Convolute in the 3rd dimension (trials)
 
     [MrC]=ConvBurstMatrix(Mr,fspecial('gaussian',[1 5],3),'same');
 
@@ -261,13 +249,11 @@ for ex =1:size(data,1)
 
     trialDivision = nT/(length(unique(offsets))*length(unique(directions))*length(unique(sizes))*length(unique(speeds))); %Number of trials per unique conditions
 
-    %%%%Create window of 2 offsets by 10 bins (500 ms) to scan
-
+    %4. Create window to scan rasters and get the maximum response
     duration =250; %ms
     window_size = [1, duration/bin];
 
-    % Initialize the maximum mean value and its position %No
-    % need or concolutions.
+    %5. Initialize the maximum mean value and its position 
 
     max_position = zeros(nN,2);
     max_mean_value = zeros(1,nN);
@@ -298,10 +284,11 @@ for ex =1:size(data,1)
     %         end
     %     end
 
-    MaxWindows = cell(1,nN); %Each cell is a neuron, which has a matrix where the first column is maxVal of bins, 2nd and 3rd position of window in matrix...
+    NeuronVals = cell(1,nN); %Each cell is a neuron, which has a matrix where the first column is maxVal of bins, 2nd and 3rd position of window in matrix...
     % 4th Z-score. 
     % responsive compared to the baseline.
 
+%[1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 20, 22, 23, 24, 28, 32, 34, 36]
 
     %Real data:
     for u =1:nN
@@ -346,7 +333,7 @@ for ex =1:size(data,1)
             % NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - (spkRateBM(u)+max_mean_value_Trial(i))/2)/denom(u); %Zscore
             NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - spkRateBM(u))/denom(u); %Zscore
             %Assign visual stats to last columns of NeuronRespProfile. Select
-            %accotding  to trial (d) the appropiate parameter > directions' offsets' sizes' speeds'
+            %according  to trial (d) the appropiate parameter > directions' offsets' sizes' speeds'
             NeuronRespProfile(i,5) = C(i,2);
             NeuronRespProfile(i,6) = C(i,3);
             NeuronRespProfile(i,7) = C(i,4);
@@ -357,7 +344,7 @@ for ex =1:size(data,1)
 
         %figure;imagesc(uM);xline(max_position_Trial(i,2));xline(max_position_Trial(i,2)+window_size(2))
 
-        MaxWindows{u} = NeuronRespProfile; 
+        NeuronVals{u} = NeuronRespProfile; 
     end
 
 
@@ -367,7 +354,7 @@ for ex =1:size(data,1)
     uDir = unique(directions);
 
     for u = 1:nN
-        NeuronD = MaxWindows{u}(:,[4 5]);
+        NeuronD = NeuronVals{u}(:,[4 5]);
 
         for d = 1:direcN
 
@@ -378,9 +365,7 @@ for ex =1:size(data,1)
     end
   
 
-    %Select significantly responsive units with shuffling plus Z-score. 
-
-    
+    %Select significantly responsive units with shuffling plus Z-score:
     rands = 200;
 
     if ~isfile(sprintf('randZscores-It-%d.mat',rands))
@@ -388,13 +373,21 @@ for ex =1:size(data,1)
         for s = 1:rands
 
             M_shuffTr=Mr(randperm(size(Mr,1)),:,:); %check if neuron is responsive to specific stim (shuffle across trials)
-            M_shufMTrC = ConvBurstMatrix(M_shuff,fspecial('gaussian',[1 5],3),'same');
+            M_shufMTrC = ConvBurstMatrix(M_shuffTr,fspecial('gaussian',[1 5],3),'same');
             Mb_shufTr = mean(M_shuffTr(:,:,1:round(preBase/bin)),3);
             Mb_shufTrM = mean(Mb_shufTr);
             denomTr = std(Mb_shufTr)+eps;
 
-            M_shuffTi=Mr(:,:,randperm(size(Mr,3))); %check if neuron is visually response (shuffle across time)
-            M_shufMTiC = ConvBurstMatrix(M_shuff,fspecial('gaussian',[1 5],3),'same');
+            ti2 = zeros(1,length(p.t));
+            for u = 1:nN
+                ti=p.t(p.ic(3,u):p.ic(4,u));
+                diffi = diff(ti);
+                %ti = ti(1) + cumsum(randperm(round(diff(ti))));
+                ti2(p.ic(3,u):p.ic(4,u)) = [ti(1) ti(1)+cumsum((diffi(randperm(numel(diffi)))))];
+            end
+
+            M_shuffTi=BuildBurstMatrix(goodU,round(ti2/bin),round((stims-preBase)/bin),round((stimDur+preBase*2)/bin)); %check if neuron is visually response (shuffle across time)
+            M_shufMTiC = ConvBurstMatrix(M_shuffTi,fspecial('gaussian',[1 5],3),'same');
             Mb_shufTi = mean(M_shuffTi(:,:,1:round(preBase/bin)),3);
             Mb_shufTiM = mean(Mb_shufTi);
             denomTi = std(Mb_shufTi)+eps;
@@ -402,7 +395,8 @@ for ex =1:size(data,1)
             NeuronRespProfileShTr = zeros(nT,nN);
             NeuronRespProfileShTi = zeros(nT,nN);
             for u =1:nN
-                % Slide the window over the matrix
+                % Slide the window over the matrix (this selects the random
+                % max)
                 %unit matrix
 
                 for i = 1:nT %Iterate across trials
@@ -450,20 +444,29 @@ for ex =1:size(data,1)
 
             tDivList = 1:trialDivision:nT-1;
 
-%             meanTshuffledTi = zeros(u,numel(tDivList));
-% 
-%             for td = 1:numel(tDivList) %take means across trials to look at random times
-%                 meanTshuffledTi(:,td) = mean(NeuronRespProfileShTi(tDivList(td):tDivList(td)+trialDivision-1,:));
-%             end
+            meanTshuffledTr = zeros(u,numel(tDivList));
+            meanTshuffledTi = zeros(u,numel(tDivList));
 
-            tri = randi(numel(tDivList)); %Take group of random trials to look at trials
+            %
+            for td = 1:numel(tDivList) %take means across trials to look at random times
+                meanTshuffledTi(:,td) = mean(NeuronRespProfileShTi(tDivList(td):tDivList(td)+trialDivision-1,:));
+                meanTshuffledTr(:,td) = mean(NeuronRespProfileShTr(tDivList(td):tDivList(td)+trialDivision-1,:));
+            end
 
-            RandZscoreU(s,:,1) =  mean(NeuronRespProfileShTr(tDivList(tri):tDivList(tri)+trialDivision-1,:));
-            RandZscoreU(s,:,2) =  mean(NeuronRespProfileShTi(tDivList(tri):tDivList(tri)+trialDivision-1,:));%max(meanTshuffledTi,[],2);
+            %tri = randi(numel(tDivList)); %Take group of random trials to look at trials
+
+            %RandZscore matrix: 3 dimension, 1st (number of iterations) 2nd
+            %(number of neurons), 3rd (1. trials shuffled, 2. Times
+            %shuffled). 
+            RandZscoreU(s,:,1) =  max(meanTshuffledTr,[],2);
+            RandZscoreU(s,:,2) =  max(meanTshuffledTi,[],2); 
+
+           % RandZscoreU(s,:,2) =  mean(NeuronRespProfileShTi(tDivList(tri):tDivList(tri)+trialDivision-1,:));%max(meanTshuffledTi,[],2);
         end
 
-        save(sprintf('randZscores-It-%d',rands),"RandZscoreU");
-    else
+
+        save(sprintf('randZscores-It-%d',rands),"RandZscoreU"); 
+    else %if eand Z-score file exists then load
 
         RandZscoreU = load(sprintf('randZscores-It-%d.mat',rands));
         RandZscoreU = RandZscoreU.RandZscoreU;
@@ -479,7 +482,7 @@ for ex =1:size(data,1)
     pvalTr = (sum(squeeze(RandZscoreU(:,:,1)) >= maxZS_vr') +1)/(rands+1);
     pvalTi = (sum(squeeze(RandZscoreU(:,:,2)) >= maxZS_vr') +1)/(rands+1);
 
-    find(pvalTr<0.05 & pvalTr<0.05)
+    find(pvalTr<0.05 & pvalTr<0.02)
 
     randddd2 = squeeze(RandZscoreU(:,:,1));
 
@@ -613,7 +616,7 @@ for ex =1:size(data,1)
 %     legend('Cluster 1', 'Cluster 2', 'Cluster 3');
 
 
-    exampleU = MaxWindows{u};
+    exampleU = NeuronVals{u};
 
     spkRateR = max_mean_value;
 
@@ -733,7 +736,6 @@ for ex =1:size(data,1)
 
             end
         end
-
 
 
     end
