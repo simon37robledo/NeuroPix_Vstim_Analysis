@@ -7,13 +7,17 @@ data = readtable(excelFile);
 summPlot = 0;
 plotexamplesMB =0;
 newTIC = 0;
+ex=1;
+ZscoresDo=0;
+ReceptiveField = 1;
 
-
+%%
 % Iterate through experiments (insertions and animals) in excel file
 for ex =1:size(data,1)
-    
-    %% Load data and data paremeters
+
+    %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
+    %ex = 25;
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
     cd(path)
@@ -32,6 +36,18 @@ for ex =1:size(data,1)
     file = dir (stimDir);
     filenames = {file.name};
     ballFiles = filenames(contains(filenames,"linearlyMovingBall"));
+    %
+    %     if isempty(ballFiles)
+    %
+    %     end
+    %
+    %     if isempty(ballFiles)
+    %         %disp()
+    %         w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
+    %         warning()
+    %         continue
+    %     end
+
     directions = [];
     offsets = [];
     sizes = [];
@@ -46,7 +62,7 @@ for ex =1:size(data,1)
         for i = ballFiles %Extract stim properties
             ball= load(stimDir+"\"+string(i));
 
-            if ~isempty(find(strcmp(ball.VSMetaData.allPropName,'orientations'))) %Check if orientations are present (grid inside moving object). 
+            if ~isempty(find(strcmp(ball.VSMetaData.allPropName,'orientations'))) %Check if orientations are present (grid inside moving object).
                 orientations = [orientations cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'orientations'))))];
             else
                 orientations = [orientations zeros(1,cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'nTotTrials')))))];
@@ -73,13 +89,16 @@ for ex =1:size(data,1)
         Freq = [ cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'orientationFreq'))))];
     end
 
-    categ = nT/trialDivision;
+
     offsetN = length(unique(offsets));
     direcN = length(unique(directions));
     speedN = length(unique(speeds));
     sizeN = length(unique(sizes));
     orientN = length(unique(orientations));
-    
+    nT = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'nTotTrials'))));
+    trialDivision = nT/(offsetN*direcN*speedN*sizeN*orientN); %Number of trials per unique conditions
+    categ = nT/trialDivision;
+
 
     %3. Load Triggers (diode)
     Ordered_stims= strsplit(data.VS_ordered{ex},',');
@@ -109,13 +128,17 @@ for ex =1:size(data,1)
     %
     % end
 
-    stimInter= mean(stimOn(2:end)-stimOff(1:end-1));
+    stimInter= mean(stimOn(2:end)-stimOff(1:end-1)); % When dealing with different speeds, save different stim durs, and create M for each speed
     stimDur = mean(-stimOn+stimOff); %When dealing with different speeds, save different stim durs, and create M for each speed
     A = [stimOn directions' offsets' sizes' speeds' orientations'];
     [C indexS] = sortrows(A,[2 3 4 5 6]);
 
     %4. Sort directions:
     directimesSorted = C(:,1)';
+
+    B = [stimOff directions' offsets' sizes' speeds' orientations'];
+    [Coff indexSo] = sortrows(B,[2 3 4 5 6]);
+    directimesSortedOff = Coff(:,1)';
 
     %5. Load data to select good units
     cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
@@ -146,7 +169,7 @@ for ex =1:size(data,1)
 
     %7. Load raster matrices
     bin = 50;
-    preBase = round(3*interStimStats/4);
+    preBase = 300;%round(3*interStimStats/4);
 
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
     [nT,nN,nB] = size(Mr);
@@ -158,14 +181,14 @@ for ex =1:size(data,1)
     MrMean = squeeze(mean(Mr));
 
     v_replicated = repmat(baseline, 1, size(MrMean, 2));
-    Norm = MrMean ./ v_replicated; %normalization by division 
+    Norm = MrMean ./ v_replicated; %normalization by division
     Norm(Norm>2) = 2;
 
     %8. Plot summary response
     summPlot =0;
     for plotOp = summPlot
         if summPlot
-            
+
             fig = figure;
             imagesc(Norm);
             xline(preBase/bin,'k', LineWidth=1.5)
@@ -195,65 +218,62 @@ for ex =1:size(data,1)
             print(fig, sprintf('%s-MovBall-summary.png',NP.recordingName),'-dpng');
         end
     end
- 
+
     stims = stimOn';
 
-    %% Select responsive units and calculate their tunning profile
+    %%%%%%%%%%%%%% Select baseline
 
-    %1. Select baseline
-    
-    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round((preBase*2+stimDur)/bin)); %Baseline matrix plus
 
-    Mb = mean(Mb,3);
+    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
+
+    Mb = mean(Mb,3); %mean across time bins
 
     [trials, neurons] = size(Mb);
 
     % MbC = zeros(trials, neurons);
 
-    percentTrials = round(trials*0.2);
+    %     percentTrials = round(trials*0.2);
+    %
+    %     [S, Sindex] = sort(Mb);
+    %
+    %     % Mb = S(1:end-percentTrials,:);
+    %
+    %     [trials, neurons] = size(Mb);
+    %
+    %     %randomize again.
+    %     %Mb = Mb(randi([1, size(Mb,1)], 1, size(Mb,1)),:);
+    %
+    %     %Take mean across window of % of trials
+    %
+    %     MbC = zeros(round(trials/percentTrials), neurons);
+    %
+    %     for i = 1:percentTrials:trials
+    %         meanb = mean(Mb(i:min(i+percentTrials-1, end),:),1);
+    %         MbC(j,:) = meanb;
+    %         j = j+1;
+    %     end
 
-    [S, Sindex] = sort(Mb);
-
-    % Mb = S(1:end-percentTrials,:);
-
-    [trials, neurons] = size(Mb);
-
-    %randomize again.
-    %Mb = Mb(randi([1, size(Mb,1)], 1, size(Mb,1)),:);
-
-    %Take mean across window of % of trials
-
-    MbC = zeros(round(trials/percentTrials), neurons);
-
-    for i = 1:percentTrials:trials
-        meanb = mean(Mb(i:min(i+percentTrials-1, end),:),1);
-        MbC(j,:) = meanb;
-        j = j+1;
-    end
-
-    %spkRateBM = mean(MbC); %Calculate baseline spike rate of each neuron. 
+    %spkRateBM = mean(MbC); %Calculate baseline spike rate of each neuron.
 
     %2. Calculate denominator for Z-score calculation
-    spkRateBM = mean(Mb);
-    epsilon = 0.02;
-    %denom = mad(MbC,0)+epsilon; %Calculate baseline variation of each neuron. 
+    spkRateBM = mean(Mb); %total mean.
+    epsilon = 0.001;
+    %denom = mad(MbC,0)+epsilon; %Calculate baseline variation of each neuron.
 
-    denom =  std(Mb)+eps;
-
+    denom = std(Mb)+eps;
+    %%% Select responsive units and calculate their tunning profile
     %3. Convolute matrix to spread response
     % Convolute in the 3rd dimension (trials)
-
+if ZscoresDo ==1
     [MrC]=ConvBurstMatrix(Mr,fspecial('gaussian',[1 5],3),'same');
 
     [nT,nN,nB] = size(MrC);
-
-    trialDivision = nT/(length(unique(offsets))*length(unique(directions))*length(unique(sizes))*length(unique(speeds))); %Number of trials per unique conditions
 
     %4. Create window to scan rasters and get the maximum response
     duration =250; %ms
     window_size = [1, duration/bin];
 
-    %5. Initialize the maximum mean value and its position 
+    %5. Initialize the maximum mean value and its position
 
     max_position = zeros(nN,2);
     max_mean_value = zeros(1,nN);
@@ -284,26 +304,27 @@ for ex =1:size(data,1)
     %         end
     %     end
 
-    MaxWindows = cell(1,nN); %Each cell is a neuron, which has a matrix where the first column is maxVal of bins, 2nd and 3rd position of window in matrix...
-    % 4th Z-score. 
+    NeuronVals = zeros(nN,nT/trialDivision,9); %Each neuron, which has a matrix where the first column is maxVal of bins, 2nd and 3rd position of window in matrix...
+    % 4th Z-score.
     % responsive compared to the baseline.
 
-%[1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 20, 22, 23, 24, 28, 32, 34, 36]
+    %[1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 20, 22, 23, 24, 28, 32, 34, 36]
 
     %Real data:
     for u =1:nN
         % Slide the window over the matrix
         %unit matrix
         max_mean_value(u) = -Inf; %General max? not needed
-        NeuronRespProfile = zeros(nT,9); %4 columns plus: ofsett, dir, size, speed, frec.
+        NeuronRespProfile = zeros(nT/trialDivision,9); %4 columns plus: ofsett, dir, size, speed, frec.
 
-        for i = 1:nT %Iterate across trials
-            uM = squeeze(MrC(i,u,:))';%Create matrix per unique trial conditions
+        k =1;
+        for i = 1:trialDivision:nT %Iterate across trials
+            uM = mean(squeeze(MrC(i:i+trialDivision-1,u,:)));%Create matrix per unique trial conditions
 
-            max_position_Trial = zeros(nT,2); %Create 2 matrices, for mean inside max window, and for position of window, for each trial
-            max_mean_value_Trial = zeros(1,nT);
-            max_mean_value_Trial(i) = -Inf;
-           
+            max_position_Trial = zeros(nT/trialDivision,2); %Create 2 matrices, for mean inside max window, and for position of window, for each trial category
+            max_mean_value_Trial = zeros(1,nT/trialDivision);
+            max_mean_value_Trial(k) = -Inf;
+
             for j = 1:size(uM, 2) - window_size(2) + 1 %Iterate across bins
                 % Extract the sub-matrix
                 sub_matrix = uM(j:min(j+window_size(2)-1,end)); %Create matrix of size window per bin
@@ -313,57 +334,59 @@ for ex =1:size(data,1)
 
                 % Update the maximum mean value and its position (a
                 % window is selected across each trial)
-                if mean_value >  max_mean_value_Trial(i)
-                    max_mean_value_Trial(i) = mean_value;
-                    max_position_Trial(i,:) = [i j];
+                if mean_value >  max_mean_value_Trial(k)
+                    max_mean_value_Trial(k) = mean_value;
+                    max_position_Trial(k,:) = [i j];
                 end
 
             end
             %Save across each trial (in a row) the max bin window
             %1%. Response
-            NeuronRespProfile(i,1) = max_mean_value_Trial(i);
+            NeuronRespProfile(k,1) = max_mean_value_Trial(k);
 
             %2%. WindowTrial
-            NeuronRespProfile(i,2) = max_position_Trial(i,1);
+            NeuronRespProfile(k,2) = max_position_Trial(k,1);
 
             %3%. WindowBin
-            NeuronRespProfile(i,3) = max_position_Trial(i,2);
+            NeuronRespProfile(k,3) = max_position_Trial(k,2);
 
             %4%. Z-score
             % NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - (spkRateBM(u)+max_mean_value_Trial(i))/2)/denom(u); %Zscore
-            NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - spkRateBM(u))/denom(u); %Zscore
+            NeuronRespProfile(k,4) = (max_mean_value_Trial(k) - spkRateBM(u))/denom(u); %Zscore
             %Assign visual stats to last columns of NeuronRespProfile. Select
-            %according  to trial (d) the appropiate parameter > directions' offsets' sizes' speeds'
-            NeuronRespProfile(i,5) = C(i,2);
-            NeuronRespProfile(i,6) = C(i,3);
-            NeuronRespProfile(i,7) = C(i,4);
-            NeuronRespProfile(i,8) = C(i,5);
-            NeuronRespProfile(i,9) = C(i,6);
+            %according  to trial (d) the appropiate parameter > directions'offsets' sizes' speeds' freq'
+            NeuronRespProfile(k,5) = C(i,2);
+            NeuronRespProfile(k,6) = C(i,3);
+            NeuronRespProfile(k,7) = C(i,4);
+            NeuronRespProfile(k,8) = C(i,5);
+            NeuronRespProfile(k,9) = C(i,6);
+
+            k = k+1;
 
         end
 
         %figure;imagesc(uM);xline(max_position_Trial(i,2));xline(max_position_Trial(i,2)+window_size(2))
 
-        MaxWindows{u} = NeuronRespProfile; 
+        NeuronVals(u,:,:) = NeuronRespProfile;
     end
 
+    %     [MrespO] = BuildBurstMatrix(goodU,round(p.t/bin),round(directimesSorted/bin),round((stimDur+duration)/bin));
+    %     Z_scores = (MrespO-spkRateBM)./denom;
+    %
+    %     max(Z_scores,[],'all')
 
     %Create tunning curve, based on direction tunning curve --> clustering
-    tuningCurve = zeros(nN,nT/direcN,direcN);
+    tuningCurve = zeros(nN,direcN);
 
     uDir = unique(directions);
 
     for u = 1:nN
-        NeuronD = MaxWindows{u}(:,[4 5]);
-
+        NeuronD = squeeze(NeuronVals(u,:,[4 5]));
         for d = 1:direcN
-
-            tuningCurve(u,:,d) = NeuronD(NeuronD(:,2)==uDir(d),1)';
-
+            tuningCurve(u,d) = NeuronD(NeuronD(:,2)==uDir(d),1)';
         end
-
     end
-  
+
 
     %Select significantly responsive units with shuffling plus Z-score:
     rands = 200;
@@ -374,9 +397,9 @@ for ex =1:size(data,1)
 
             M_shuffTr=Mr(randperm(size(Mr,1)),:,:); %check if neuron is responsive to specific stim (shuffle across trials)
             M_shufMTrC = ConvBurstMatrix(M_shuffTr,fspecial('gaussian',[1 5],3),'same');
-            Mb_shufTr = mean(M_shuffTr(:,:,1:round(preBase/bin)),3);
-            Mb_shufTrM = mean(Mb_shufTr);
-            denomTr = std(Mb_shufTr)+eps;
+            %             Mb_shufTr = mean(M_shuffTr(:,:,1:round(preBase/bin)),3);
+            %             Mb_shufTrM = mean(Mb_shufTr);
+            %             denomTr = std(Mb_shufTr)+eps;
 
             ti2 = zeros(1,length(p.t));
             for u = 1:nN
@@ -388,9 +411,9 @@ for ex =1:size(data,1)
 
             M_shuffTi=BuildBurstMatrix(goodU,round(ti2/bin),round((stims-preBase)/bin),round((stimDur+preBase*2)/bin)); %check if neuron is visually response (shuffle across time)
             M_shufMTiC = ConvBurstMatrix(M_shuffTi,fspecial('gaussian',[1 5],3),'same');
-            Mb_shufTi = mean(M_shuffTi(:,:,1:round(preBase/bin)),3);
-            Mb_shufTiM = mean(Mb_shufTi);
-            denomTi = std(Mb_shufTi)+eps;
+            %             Mb_shufTi = mean(M_shuffTi(:,:,1:round(preBase/bin)),3);
+            %             Mb_shufTiM = mean(Mb_shufTi);
+            %             denomTi = std(Mb_shufTi)+eps;
 
             NeuronRespProfileShTr = zeros(nT,nN);
             NeuronRespProfileShTi = zeros(nT,nN);
@@ -399,9 +422,10 @@ for ex =1:size(data,1)
                 % max)
                 %unit matrix
 
-                for i = 1:nT %Iterate across trials
-                    uMTr = squeeze(M_shufMTrC(i,u,:))';%Create matrix per unique trial conditions
-                    uMTi = squeeze(M_shufMTiC(i,u,:))';%Create matrix per unique trial conditions
+                k =1;
+                for i = 1:trialDivision:nT %Iterate across trials
+                    uMTr = squeeze(M_shufMTrC(i+trialDivision-1,u,:))';%Create matrix per unique trial conditions
+                    uMTi = squeeze(M_shufMTiC(i+trialDivision-1,u,:))';%Create matrix per unique trial conditions
 
                     %Create 2 matrices, for mean inside max window, and for position of window, for each trial
                     max_mean_value_Trialtr = zeros(1,nT);
@@ -435,9 +459,10 @@ for ex =1:size(data,1)
                     end
 
                     %. Z-score
-                    NeuronRespProfileShTr(i,u) = (max_mean_value_Trialtr(i) - Mb_shufTrM(u))/denomTr(u); %Zscore
-                    NeuronRespProfileShTi(i,u) = (max_mean_value_Trialti(i) - Mb_shufTiM(u))/denomTi(u); %Zscore
+                    NeuronRespProfileShTr(i,u) = (max_mean_value_Trialtr(i) - spkRateBM(u))/denom(u);%Mb_shufTrM(u))/denomTr(u); %Zscore
+                    NeuronRespProfileShTi(i,u) = (max_mean_value_Trialti(i) - spkRateBM(u))/denom(u);%Mb_shufTiM(u))/denomTi(u); %Zscore
 
+                    k=k+1;
                 end
 
             end
@@ -457,22 +482,22 @@ for ex =1:size(data,1)
 
             %RandZscore matrix: 3 dimension, 1st (number of iterations) 2nd
             %(number of neurons), 3rd (1. trials shuffled, 2. Times
-            %shuffled). 
+            %shuffled).
             RandZscoreU(s,:,1) =  max(meanTshuffledTr,[],2);
-            RandZscoreU(s,:,2) =  max(meanTshuffledTi,[],2); 
+            RandZscoreU(s,:,2) =  max(meanTshuffledTi,[],2);
 
-           % RandZscoreU(s,:,2) =  mean(NeuronRespProfileShTi(tDivList(tri):tDivList(tri)+trialDivision-1,:));%max(meanTshuffledTi,[],2);
+            % RandZscoreU(s,:,2) =  mean(NeuronRespProfileShTi(tDivList(tri):tDivList(tri)+trialDivision-1,:));%max(meanTshuffledTi,[],2);
         end
 
 
-        save(sprintf('randZscores-It-%d',rands),"RandZscoreU"); 
+        save(sprintf('randZscores-It-%d',rands),"RandZscoreU");
     else %if eand Z-score file exists then load
 
         RandZscoreU = load(sprintf('randZscores-It-%d.mat',rands));
         RandZscoreU = RandZscoreU.RandZscoreU;
 
     end
-   
+
     Zthreshold = 3;
     meanZScores = squeeze(mean(tuningCurve,2));
     %%Check if at least for 1 direction neuron is visually responsive:
@@ -487,7 +512,7 @@ for ex =1:size(data,1)
     randddd2 = squeeze(RandZscoreU(:,:,1));
 
     %Calculate direction: if neuron has 2 big peaks (equivalent angles (hue), or if neuron has 1
-    %big peak (hue), or if neuron has multiple big peaks. 
+    %big peak (hue), or if neuron has multiple big peaks.
     binarizedS = meanZScores>Zthreshold;
 
     %remove neurons that have zero spiking rate in 97% of the trials
@@ -497,15 +522,14 @@ for ex =1:size(data,1)
     meanZScores = squeeze(mean(tuningCurveS(~isoutlier(tuningCurveS,2)),2));
     meanZScoresSig =  meanZScores(any(meanZScores > Zthreshold, 2),:);
     verticalDepthSig = verticalDepth(any(meanZScores > Zthreshold, 2));
-    
+
     figure;
     plot(rad2deg(uDir), meanZScoresSig(1,:), 'LineWidth', 2);
-
 
     %Tuning index
     OI = sqrt(sum(meanZScoresSig.*sin(2*uDir),2).^2 + sum(meanZScoresSig.*cos(2*uDir),2).^2)./sum(meanZScoresSig,2); % OI calculated as in Dragoi and Swindale.
 
-   
+
     nColors = 64; % Number of colors in the colormap
     red = [linspace(0, 1, nColors)]'; % Red component increases linearly
     green = [linspace(0, 0, nColors)]'; % Green component is always 0
@@ -518,105 +542,105 @@ for ex =1:size(data,1)
     colorsForValues = customColormap(round(normalizedValues(2:end-1)), :); % Get corresponding color for each value
 
     %Clustering Analysis:
-%     BinZScore = meanZScoresSig >Zthreshold;
-% 
-%     %normS = normalize(meanZScoresSig);
-%     %normS = diff(log10(meanZScoresSig+1+abs(min(meanZScoresSig,[],'all'))));
-%     normS = log(meanZScoresSig+1+abs(min(meanZScoresSig,[],'all')));
-%     %figure;imagesc(squeeze(Mr(:,1,:)));colormap(flipud(gray(64)))
-% 
-%     %Clustering tuning curves:
-%     %
-%     %     k = 4; % Example number of clusters
-%     %     [idx, Cl] = kmeans(BinZScore,
-%     %     k,'MaxIter',10000,'Display','final','Replicates',10,'OnlinePhase','on');
-% 
-% 
-%    [idx] = dbscan(normS,1,2); %seems to work better than k means, no need to know number of clusters
-% 
-%    
-%     
-%     %idx = clusterdata(meanZScoresSig,2);
-%     %figure;plot(rad2deg(uDir), normS, 'LineWidth', 2);
-% 
-%     k = unique(idx);
-% 
-%     % Visualize the clusters (assuming 2D data for simplicity)
-%     fig = figure;
-%     gscatter(normS(:,1), normS(:,2), idx);
-%     title('Neuron Clustering with K-means');
-%     xlabel('Feature 1');
-%     ylabel('Feature 2');
-%     legend('Cluster 1', 'Cluster 2', 'Cluster 3');
-%     cd('\\132.66.45.127\data\Large_scale_mapping_NP\Immobilized_exp\Orientation_tuning_figs');
-%     print(fig, sprintf('%s-MovBall-clusters_groups.png',NP.recordingName),'-dpng');
-%     close all
-% 
-%     %Plot depth as color across different clusters
-% 
-%     fig = figure;
-%     for i = 1:length(k)
-%         subplot(1,length(k),i)
-%         pl= plot(rad2deg(uDir), meanZScoresSig(idx ==k(i),:), 'LineWidth', 2);
-%         xlabel('Angle (degrees)');
-%         xticks(rad2deg(uDir));
-%         xticklabels(arrayfun(@num2str, rad2deg(uDir), 'UniformOutput', false));
-%         ylabel('Mean Z-Score Response');
-%         title(sprintf('Tuning Curve cluster %d',i));
-%         grid on;
-%         ylim([floor(min(meanZScoresSig,[],'all')) ceil(max(meanZScoresSig,[],'all'))])
-% 
-%         clusterColors = colorsForValues(find(idx ==k(i)),:);
-% 
-%         for j = 1:length(pl)
-%             set(pl(j),'color',clusterColors(j,:)); % Change colour of plot.
-%         end
-% 
-%     end
-% 
-% 
-%     colormap(flipud(customColormap))
-%     cb = colorbar();
-%     cb.TickLabels = flip(linspace(floor(min(verticalDepthSig)/100)*100,ceil(max(verticalDepthSig)/100)*100,11));
-%     cb.Label.String = 'Depth';
-%     cb.Label.FontSize = 12;
-%     cd('\\132.66.45.127\data\Large_scale_mapping_NP\Immobilized_exp\Orientation_tuning_figs');
-%     print(fig, sprintf('%s-MovBall-clustersR.png',NP.recordingName),'-dpng');
+    %     BinZScore = meanZScoresSig >Zthreshold;
+    %
+    %     %normS = normalize(meanZScoresSig);
+    %     %normS = diff(log10(meanZScoresSig+1+abs(min(meanZScoresSig,[],'all'))));
+    %     normS = log(meanZScoresSig+1+abs(min(meanZScoresSig,[],'all')));
+    %     %figure;imagesc(squeeze(Mr(:,1,:)));colormap(flipud(gray(64)))
+    %
+    %     %Clustering tuning curves:
+    %     %
+    %     %     k = 4; % Example number of clusters
+    %     %     [idx, Cl] = kmeans(BinZScore,
+    %     %     k,'MaxIter',10000,'Display','final','Replicates',10,'OnlinePhase','on');
+    %
+    %
+    %    [idx] = dbscan(normS,1,2); %seems to work better than k means, no need to know number of clusters
+    %
+    %
+    %
+    %     %idx = clusterdata(meanZScoresSig,2);
+    %     %figure;plot(rad2deg(uDir), normS, 'LineWidth', 2);
+    %
+    %     k = unique(idx);
+    %
+    %     % Visualize the clusters (assuming 2D data for simplicity)
+    %     fig = figure;
+    %     gscatter(normS(:,1), normS(:,2), idx);
+    %     title('Neuron Clustering with K-means');
+    %     xlabel('Feature 1');
+    %     ylabel('Feature 2');
+    %     legend('Cluster 1', 'Cluster 2', 'Cluster 3');
+    %     cd('\\132.66.45.127\data\Large_scale_mapping_NP\Immobilized_exp\Orientation_tuning_figs');
+    %     print(fig, sprintf('%s-MovBall-clusters_groups.png',NP.recordingName),'-dpng');
+    %     close all
+    %
+    %     %Plot depth as color across different clusters
+    %
+    %     fig = figure;
+    %     for i = 1:length(k)
+    %         subplot(1,length(k),i)
+    %         pl= plot(rad2deg(uDir), meanZScoresSig(idx ==k(i),:), 'LineWidth', 2);
+    %         xlabel('Angle (degrees)');
+    %         xticks(rad2deg(uDir));
+    %         xticklabels(arrayfun(@num2str, rad2deg(uDir), 'UniformOutput', false));
+    %         ylabel('Mean Z-Score Response');
+    %         title(sprintf('Tuning Curve cluster %d',i));
+    %         grid on;
+    %         ylim([floor(min(meanZScoresSig,[],'all')) ceil(max(meanZScoresSig,[],'all'))])
+    %
+    %         clusterColors = colorsForValues(find(idx ==k(i)),:);
+    %
+    %         for j = 1:length(pl)
+    %             set(pl(j),'color',clusterColors(j,:)); % Change colour of plot.
+    %         end
+    %
+    %     end
+    %
+    %
+    %     colormap(flipud(customColormap))
+    %     cb = colorbar();
+    %     cb.TickLabels = flip(linspace(floor(min(verticalDepthSig)/100)*100,ceil(max(verticalDepthSig)/100)*100,11));
+    %     cb.Label.String = 'Depth';
+    %     cb.Label.FontSize = 12;
+    %     cd('\\132.66.45.127\data\Large_scale_mapping_NP\Immobilized_exp\Orientation_tuning_figs');
+    %     print(fig, sprintf('%s-MovBall-clustersR.png',NP.recordingName),'-dpng');
     %close all
 
 
 
     % Enhance the plot with error bars showing the standard error of the mean
-%     sem = stdResponses / sqrt(numTrials); % Standard Error of the Mean
-%     hold on;
-%     errorbar(angles, meanZScores, sem, 'LineStyle', 'none', 'Color', 'k');
-%     hold off;
-% 
-%     sse = [];
-%     for k = 1:10
-%         [idx, C, sumd] = kmeans(meanZScores, k);
-%         sse(end+1) = sum(sumd);
-%     end
-%     figure;
-%     plot(1:10, sse, '-o');
-%     xlabel('Number of clusters k');
-%     ylabel('Sum of squared distances');
-%     close all
+    %     sem = stdResponses / sqrt(numTrials); % Standard Error of the Mean
+    %     hold on;
+    %     errorbar(angles, meanZScores, sem, 'LineStyle', 'none', 'Color', 'k');
+    %     hold off;
+    %
+    %     sse = [];
+    %     for k = 1:10
+    %         [idx, C, sumd] = kmeans(meanZScores, k);
+    %         sse(end+1) = sum(sumd);
+    %     end
+    %     figure;
+    %     plot(1:10, sse, '-o');
+    %     xlabel('Number of clusters k');
+    %     ylabel('Sum of squared distances');
+    %     close all
 
-%     % Assuming 'data' is your dataset
-%     k = 3; % Example number of clusters
-%     [idx, C] = kmeans(meanZScores, k);
-% 
-%     % Visualize the clusters (assuming 2D data for simplicity)
-%     figure;
-%     gscatter(meanZScores(:,1), meanZScores(:,2), idx);
-%     title('Neuron Clustering with K-means');
-%     xlabel('Feature 1');
-%     ylabel('Feature 2');
-%     legend('Cluster 1', 'Cluster 2', 'Cluster 3');
+    %     % Assuming 'data' is your dataset
+    %     k = 3; % Example number of clusters
+    %     [idx, C] = kmeans(meanZScores, k);
+    %
+    %     % Visualize the clusters (assuming 2D data for simplicity)
+    %     figure;
+    %     gscatter(meanZScores(:,1), meanZScores(:,2), idx);
+    %     title('Neuron Clustering with K-means');
+    %     xlabel('Feature 1');
+    %     ylabel('Feature 2');
+    %     legend('Cluster 1', 'Cluster 2', 'Cluster 3');
 
 
-    exampleU = MaxWindows{u};
+    exampleU = NeuronVals{u};
 
     spkRateR = max_mean_value;
 
@@ -629,16 +653,16 @@ for ex =1:size(data,1)
 
     sDirections = sort(directions);
 
-%    tunning = sDirections(max_position(:,1));
+    %    tunning = sDirections(max_position(:,1));
 
     MinusRB = spkRateR - spkRateBM;
 
     %K-means clustering --> Look at sidekick rply
     %1% preprocessing the data
-    %- Pass each neuron into a row? Use 3D matrix directly? Or use raster plot as image? Ask Mark. 
+    %- Pass each neuron into a row? Use 3D matrix directly? Or use raster plot as image? Ask Mark.
     %- Normalize the data (Z-score?)
-    %- 
-
+    %-
+end
     % Rasters plots per Neuron
     for plotOp = plotexamplesMB
         if plotexamplesMB == 1
@@ -739,80 +763,274 @@ for ex =1:size(data,1)
 
 
     end
+    %% Position heatmap
 
-end 
+    if ReceptiveField ==1
+        %%%
 
+        %Get X and Y positions
 
+        Xpos = cell2mat(ball.VSMetaData.allPropVal(22));
 
+        Ypos = cell2mat(ball.VSMetaData.allPropVal(23));
 
+        sizeN = length(unique(sizes));
+        sizeX = size(Xpos);
+        %%% X Y stucture = speed, offsets, directions, frames
+        % A = [stimOn directions' offsets' sizes' speeds' orientations'] = Order of
+        % categories (bigger divs to smaller divs.
 
+        %%%Create a matrix with trials that have unique positions
+        ChangePosX = zeros(sizeX(1)*sizeX(2)*sizeX(3)*sizeN*trialDivision,sizeX(4));
+        ChangePosY = zeros(sizeX(1)*sizeX(2)*sizeX(3)*sizeN*trialDivision,sizeX(4));
 
-%% Position heatmap
+        j=1;
 
-
-A = [stimOn directions' offsets' sizes' speeds'];
-
-C = sortrows(A,[5 2 3 4]);
-
-sizeV = C(:,4);
-
-
-%Sort directions:
-
-directimesSorted = C(:,1)';
-
-%%%
-
-%Get X and Y positions
-
-X = cell2mat(ball.VSMetaData.allPropVal(22));
-
-Y = cell2mat(ball.VSMetaData.allPropVal(23));
-
-% %times values of frames per trial
-% 
-% times = [];
-% 
-% for t = 1:length(directimesSorted)
-% 
-%     times = [times linspace(directimesSorted(t),directimesSorted(t)+round(stimDur),length(X))];
-% 
-% end
-sizeN = length(unique(sizes));
-sizeX = size(X);
-%%% X Y stucture = speed, offsets, directions, frames
-
-%%%Create a matrix with trials that have unique positions
-ChangePosX = zeros(sizeX(1)*sizeX(2)*sizeX(3)*sizeN*trialDivision,sizeX(4));
-ChangePosY = zeros(sizeX(1)*sizeX(2)*sizeX(3)*sizeN*trialDivision,sizeX(4));
-
-j=1;
-
-for sp = 1:sizeX(1) %speeds
-    for of = 1:sizeX(2) %offsets
+        %For loop order determines the order of categories in ChangePosX = allTrials x nFrames
         for d = 1:sizeX(3) %directions
-            
-            ChangePosX(j:j+sizeN*trialDivision-1,:) = repmat(squeeze(X(sp,of,d,:))',sizeN*trialDivision,1); 
+            for of = 1:sizeX(2) %offsets
+                for sp = 1:sizeX(1) %speeds
 
-            ChangePosY(j:j+sizeN*trialDivision-1,:) = repmat(squeeze(Y(sp,of,d,:))',sizeN*trialDivision,1); 
+                    ChangePosX(j:j+sizeN*trialDivision-1,:) = repmat(squeeze(Xpos(sp,of,d,:))',sizeN*trialDivision,1); %Size is not represented in X matrix.
 
-            j = j+sizeN*trialDivision;
-            
+                    ChangePosY(j:j+sizeN*trialDivision-1,:) = repmat(squeeze(Ypos(sp,of,d,:))',sizeN*trialDivision,1);
+
+                    j = j+sizeN*trialDivision;
+
+                end
+            end
         end
+
+        % Calculate the receptive field by multiplying normalized spike rate in frame by the image of each frame.
+
+        [Mb] = BuildBurstMatrix(goodU,round(p.t),round((stims-preBase)),round(preBase)); %Baseline matrix plus
+
+        Mb = mean(Mb,3); %mean across time bins
+
+        spkRateBM = mean(Mb);
+
+        A = [stimOn directions' offsets' speeds' orientations', sizes'];
+        [C indexS] = sortrows(A,[2 3 4 5 6]);
+
+        %4. Sort directions:
+        directimesSorted = C(:,1)';
+        sizeV = C(:,6);
+
+        delayResp = 200; %Based on unit 20 PV103_1
+        msPerFarme= round(stimDur/sizeX(4));
+
+        coorRect = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
+
+        [x, y] = meshgrid(1:coorRect(3)/10,1:coorRect(4)/10);
+
+        sizesU = unique(sizeV);
+
+        %Initialize matrices:
+        matrixForNorm = zeros();
+
+        RFu = zeros(sizeN,coorRect(4)/10,coorRect(3)/10,nN,"single");
+
+        % Fill in the matrix with the counts of repeated coordinates
+        SpeedSum = zeros(speedN,coorRect(4)/10,coorRect(3)/10,nN,"single");
+        Stemp = zeros(coorRect(4)/10,coorRect(3)/10,nN,"single");
+        DirecSum = zeros(direcN,coorRect(4)/10,coorRect(3)/10,nN,"single");
+        Dtemp = Stemp;
+        OrientSum = zeros(orientN,coorRect(4)/10,coorRect(3)/10,nN,"single");
+        Otemp = Stemp;
+        Si = 1;Di = 1;Oi = 1;
+
+        for i = 1:trialDivision*sizeN:length(ChangePosX)
+
+            %Matrix is sorted first by dir, then by size,
+            [MtrialCat] = BuildBurstMatrix(goodU,round(p.t),round((directimesSorted(i:i+trialDivision*sizeN-1))+delayResp),...
+                round(mean(directimesSortedOff(i:i+trialDivision*sizeN-1)-directimesSorted(i:i+trialDivision*sizeN-1))));
+
+            % Step 1: Reshape A to group elements to be averaged
+            tempA = reshape(MtrialCat, [sizeN, size(MtrialCat,1)/sizeN, size(MtrialCat,2), size(MtrialCat,3)]);
+
+            % Step 2: Calculate the mean along the 1st dimension
+            tempB = squeeze(mean(tempA, 2));
+            if length(size(tempB))<3
+                tempB = reshape(tempB,[1,size(tempB,1),size(tempB,2)]);
+            end
+
+            % Step 3: Reshape the result to get the final matrix
+            mSpkRate = tempB-spkRateBM; %T
+
+            j = 1;
+            tr = 1;
+            while j <= length(MtrialCat)
+
+                matrix_nXnY = zeros(sizeN,coorRect(4)/10,coorRect(3)/10,"single");
+                %matrixResp = zeros(coorRect(4),coorRect(3),nN,"single");
+
+                centerX = ChangePosX(i,tr)/10;
+                centerY = ChangePosY(i,tr)/10;
+                radius = sizesU/2;
+
+                % Calculate the distance of each point from the center
+                distances = sqrt((x - centerX).^2 + (y - centerY).^2);
+
+                for r =1:sizeN
+                    % Set the values inside the circle to 1 (or any other value you prefer)
+                    matrix_nXnY(r,distances <= radius(r)/10) =1;
+                end
+
+                frameSpkR = mean(mSpkRate(:,:,j:min(tr*msPerFarme,length(MtrialCat))),3);
+                % Reshape frameSpkR to enable broadcasting
+                ReshA = reshape(frameSpkR,[sizeN,1,1,nN]);
+
+                %Repeat matrix_nXnY across the 4th dimension to match B's new shape
+                ReshB = repmat(matrix_nXnY,[1,1,1,nN]);
+
+                % Now, perform element-wise multiplication
+                matrixResp = ReshB.*ReshA;
+
+                %Feel individual params RF:
+                %Order of organization = directions' offsets' speeds' orientations', sizes'
+
+                if size(matrixResp,1) ~=1
+                    matR = squeeze(mean(matrixResp));
+                else
+                    matR = squeeze(matrixResp);
+                end
+                if speedN > 1
+                    Stemp = Stemp + matR;
+                    if ismember((i-1)/(nT/direcN/offsetN/speedN), 1:speedN)
+                        SpeedSum(Si,:,:,:) = squeeze(SpeedSum(Si,:,:,:))+Stemp;
+                        Si = Si+1;
+                        if Si == speedN
+                            Si =1;
+                            Stemp = zeros(coorRect(4)/10,coorRect(3)/10,nN,"single");
+                        end
+                    end
+                end
+                if direcN > 1
+                    Dtemp = Dtemp + matR;
+                    if ismember((i-1)/(nT/direcN),1:direcN) %nT/direcN:nT/direcN:nT
+                        DirecSum(Di,:,:,:) = squeeze(DirecSum(Di,:,:,:))+Dtemp;
+                        Di = Di+1;
+                        if Di == direcN
+                            Di =1;
+                            Dtemp = zeros(coorRect(4)/10,coorRect(3)/10,nN,"single");
+                        end
+                    end
+                end
+                if orientN > 1
+                    Otemp = Otemp + matR;
+                    if ismember((i-1)/(nT/direcN/offsetN/speedN/orientN), 1:orientN)
+                        OrientSum(Oi,:,:,:) = squeeze(OrientSum(Oi,:,:,:))+Otemp;
+                        Oi = Oi+1;
+                        if Oi == direcN
+                            Oi =1;
+                            Dtemp = zeros(coorRect(4)/10,coorRect(3)/10,nN,"single");
+                        end
+                    end
+                end
+                j = tr*msPerFarme;
+                tr = tr+1;
+                RFu = RFu+matrixResp;
+                matrixForNorm = matrixForNorm+matrix_nXnY;
+            end
+        end
+        normMatrix = repmat(matrixForNorm,[1,1,1,nN]).*reshape(spkRateBM,[1,1,1,length(spkRateBM)]);
+        normRFu = RFu./normMatrix; %expected random rate
+
+        cd(NP.recordingDir)
+        save(sprintf('RFu_MovingBall-%s',NP.recordingName),'normRFu')
+        save(sprintf('NormMatrix_MovingBall-%s',NP.recordingName),'normMatrix')
+        save(sprintf('RFuSpeed_MovingBall-%s',NP.recordingName),'SpeedSum')
+        save(sprintf('RFuOrient_MovingBall-%s',NP.recordingName),'OrientSum')
+        save(sprintf('RFuDirec_MovingBall-%s',NP.recordingName),'DirecSum')
+
+
     end
+
 end
 
 
 
+
+
+
+
+
+%%
+fun = @(block_struct) ...
+   mean(block_struct.data,'all');
+for u = 1:size(goodU,2)
+    for s = 1:sizeN
+
+        M=squeeze(normRFu(s,:,:,u));
+        M2 = blockproc(M,[5 5],fun);
+        NaNs = isnan(M);
+        M(isnan(M))=-1;
+        M2 = blockproc(M,[5 5],fun);
+        %M=M+1;
+
+        figure;imagesc(M);colorbar
+        M2n = M;%normalize(M2,'center','mean');
+
+        maxBlock = max(M2n(~NaNs),[],'all');
+        minBlock = min(M2n(~NaNs),[],'all');
+
+        respDelta = sum(maxBlock-M2n((~NaNs)),'all',"omitnan")/numel(M2n((~NaNs)));
+        RTI = 1-((respDelta)^2/(maxBlock-minBlock)^2);
+
+    end
+
+end
+
+
+%%
+
+% Load an image
+img = squeeze(normRFu(:,:,17));
+
+% Convert to grayscale if it's not
+if size(img,3) == 3
+    img = rgb2gray(img);
+end
+
+% Define block size
+blockSize = [50, 50]; % example size
+
+% Define the function to find maximum
+fun = @(block_struct) max(block_struct.data(:));
+
+% Apply the function to each block
+maxBlock = blockproc(img, blockSize, fun);
+
+% Display the result
+imshow(maxBlock, []);
+
+figure(normRFu(normRFu~=-1))
+ td= squeeze(normRFu);
+ td = td(td~=-1);
+ figure;imagesc(td);
+
+figure;imagesc(squeeze(normRFu(:,:,:,17)));colorbar
+figure;imagesc(squeeze(RFu(:,:,:,17)));colorbar
+figure;imagesc(squeeze(matrixResp(:,:,20)))
+figure;imagesc(squeeze(matrixForNorm));colorbar
+figure;imagesc(matrix_nXnY);
+
+unique(matrix_nXnY)
+unique(matrixResp)
+unique(RFu(:,:,20))
+
+colorbar
+
+
+%% Calculate the spike sum per frame
+
+spikeSum = zeros(nT,length(goodU),sizeX(4));
+%spikeSumBase = mean(Mbase,3);
+
+% Make raster matrix that contains only stimulus. 
 msPerFarme= round(stimDur/sizeX(4));
 [Mr] = BuildBurstMatrix(goodU,round(p.t),round((directimesSorted)),round((stimDur)));
 [Mbase] = BuildBurstMatrix(goodU,round(p.t),round((directimesSorted-preBase)),round((preBase)));
-
-%% Calculate the spike sum
-
-spikeSum = zeros(trials,length(goodU),sizeX(4));
-spikeSumBase = mean(Mbase,3);
-
 
 for u = 1:length(goodU)
 
@@ -825,17 +1043,18 @@ for u = 1:length(goodU)
         spikeSum(:,u,f) = sum(Mu(:,1*j:min(f*msPerFarme,length(Mu))),2);
 
         j = f*msPerFarme;
-
     end
 end
-
 spikeSum = single(spikeSum);
-%%
+spikeRates=spikeSum./(msPerFarme/1000); %Divide by seconds per frame
+    
+
+%% Prepare for convolution
 %%get videos of every trial
 % Define the grid size
-xAxis = 1:cell2mat(ball.VSMetaData.allPropVal(64));%63 for pv103,64 for pv67 %65 PV139 and on   %:max(X,[],'all')-min(X,[],'all')-max(sizeV)/2;
+xAxis = 1:cell2mat(ball.VSMetaData.allPropVal(63));%63 for pv103,64 for pv67 %65 PV139 and on   %:max(X,[],'all')-min(X,[],'all')-max(sizeV)/2;
 
-yAxis = 1:cell2mat(ball.VSMetaData.allPropVal(64));%63 PV103,64 for pv67 %65 and on   %max(Y,[],'all')-min(Y,[],'all')-max(sizeV)/2;
+yAxis = 1:cell2mat(ball.VSMetaData.allPropVal(63));%63 PV103,64 for pv67 %65 and on   %max(Y,[],'all')-min(Y,[],'all')-max(sizeV)/2;
 
 %respU = [9,11,12,13,15,16,17,18,19,20,21,22,23,24,25,31]; %PV139_2
 
@@ -846,10 +1065,10 @@ yAxis = 1:cell2mat(ball.VSMetaData.allPropVal(64));%63 PV103,64 for pv67 %65 and
 %respU = [24]; %PV32_1
 %respU = [2,8,16]; %PV32_2
 %respU = [45,9]; %PV32_3
-respU = [18,22,24,26,42,46,47,50,53,56,61,64,65,68,73,79,81,84,89,90,94,97,98,100,101,102,103,104,107,108,112,...
-     113,119,120,121,124,127,130,131,133,137,138,141,142,144,145,147,149,151,154,157]; %PV67_1
+% respU = [18,22,24,26,42,46,47,50,53,56,61,64,65,68,73,79,81,84,89,90,94,97,98,100,101,102,103,104,107,108,112,...
+%      113,119,120,121,124,127,130,131,133,137,138,141,142,144,145,147,149,151,154,157]; %PV67_1
 %respU = [115,102,77,75]; %PV67_4
-%respU = [1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 20, 22, 23, 24, 28, 32, 34, 36]; %PV103_1
+respU = [1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 20, 22, 23, 24, 28, 32, 34, 36]; %PV103_1
 %respU = [2,23,25,28,20,22,25,28,29,32,34,36,37,38,39,40]; %PV103_2
 %respU = [3,7,10,14,15,17,18,19,20,26,33,46,50]; %PV103_3
 %respU = [5,8,13];%PV103_4
@@ -885,7 +1104,7 @@ for i = 1:speedN
     C(C(:,5) == uSpeed(i),5) = i;
 end
 
-centerXreal = cell2mat(ball.VSMetaData.allPropVal(62)); %PV139 63 %PV64 62 %PV103 61 
+centerXreal = cell2mat(ball.VSMetaData.allPropVal(61)); %PV139 63 %PV64 62 %PV103 61 
 %% Convolution
 %respU =[144,145,147,149,151,154,157];
 
@@ -932,6 +1151,7 @@ for u = 1:length(respU)
             xyScreen(distances <= radius) = 1;
 
             videoTrials(:,:,j) = xyScreen;
+            %figure;imagesc(xyScreen);
         end
 
         spikeMean = mean(spikeSum(i:i+trialDivision-1,respU(u),:))-mean(Mbase(i:i+trialDivision-1,respU(u),:),'all'); %Get the mean across same trials and substract the baseline
@@ -959,6 +1179,11 @@ for u = 1:length(respU)
     save(sprintf('RFuSize-%d',respU(u)),'RFuSize','-v7.3')
     save(sprintf('RFuSpeed-%d',respU(u)),'RFuSpeed','-v7.3')
 end
+%%
+
+
+
+
 %%
 %Delay = 204 ms = 12 bins of 17 ms
 
@@ -1076,20 +1301,21 @@ xlabel('insertions and animals (blue= visually responive units to Moving ball st
 %centerXreal = cell2mat(ball.VSMetaData.allPropVal(61)); %63 in PV139 and on
 %coords = [ChangePosX(:)+1-(centerXreal-length(yAxis)/2),ChangePosY(:)+1];%translate coordinates to 1080x1080
 
-%task: ask Mark about exact parameters of screen, what is the appopiate parameter? 
+%task: ask Mark about exact parameters of screen, what is the appropiate parameter? 
 
-difX = max(ChangePosX,[],'all') - min(ChangePosX,[],'all');
+difX = max(ChangePosX,[],'all') - min(ChangePosX,[],'all'); %max(X,[],'all')-min(X,[],'all')
 difY = max(ChangePosY,[],'all') - min(ChangePosY,[],'all');
 % 
 % nX = max(coords(:,1));
 % nY = max(coords(:,2));
 %[Cn, ~, ic] = unique(coords, 'rows', 'stable');
 %counts = accumarray(ic, 1);
+find(arrayfun(@(x) strcmp(x.allPropName , 'rect'), ball.VSMetaData));
+coorRect = cell2mat(ball.VSMetaData.allPropVal(57));
+find(contains(ball.VSMetaData.allPropName,'rect'));%63 in PV139 and on
 
-coorRect = cell2mat(ball.VSMetaData.allPropVal(57)); %63 in PV139 and on
-
-[x, y] = meshgrid(1:length(xAxis)+1, 1:length(yAxis)+1);
-%[x, y] = meshgrid(1:1920+1,1:1920+1);
+%[x, y] = meshgrid(1:length(xAxis)+1, 1:length(yAxis)+1);
+[x, y] = meshgrid(1:coorRect(3),1:coorRect(4));
 %[x, y] = meshgrid(1:difX,1:difY);
 sizesU = unique(sizeV);
 
@@ -1097,21 +1323,23 @@ matrixForNorm = zeros(length(xAxis)+1, length(yAxis)+1);
 %matrixForNorm  = zeros(1920+1,1920+1);
 %matrixForNorm  = zeros(difX,difY);
 
+matrixForNorm = zeros();
+
 for s = 1:sizeN
     % Step 3: Fill in the matrix with the counts of repeated coordinates
     for i = 1:trialDivision*sizeN:length(ChangePosX)
-        matrix_nXnY = zeros(length(xAxis)+1, length(yAxis)+1);
-        %matrix_nXnY = zeros(1920+1,1920+1);
+        %matrix_nXnY = zeros(length(xAxis)+1, length(yAxis)+1);
+        matrix_nXnY = zeros(coorRect(4),coorRect(3));
         %matrix_nXnY = zeros(difX,difY);
         for tr = 1:sizeX(4)
 
             %             centerX = Cn(i,1);
             %             centerY = Cn(i,2);
 
-            %centerX = ChangePosX(i,tr)-(centerXreal-length(yAxis)/2);
-            centerX = ChangePosX(i,tr)*length(xAxis)/coorRect(3);
-            %centerY = ChangePosY(i,tr);
-            centerY = (ChangePosY(i,tr)+(centerXreal-length(yAxis)/2))*length(yAxis)/coorRect(3);
+            centerX = ChangePosX(i,tr);%-(centerXreal-length(yAxis)/2);
+            %centerX = ChangePosX(i,tr)*length(xAxis)/coorRect(3);
+            centerY = ChangePosY(i,tr);
+            %centerY = (ChangePosY(i,tr)+(centerXreal-length(yAxis)/2))*length(yAxis)/coorRect(3);
 
             % Create a meshgrid of coordinate
             radius = sizesU(s)/2;

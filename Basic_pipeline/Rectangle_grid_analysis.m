@@ -56,7 +56,6 @@ stimDir = extractBetween(stimDir,1,endIndex);
 file = dir (stimDir);
 filenames = {file.name};
 
-
 file = dir (stimDir);
 filenames = {file.name};
 rectFiles = filenames(contains(filenames,"rectGrid"));
