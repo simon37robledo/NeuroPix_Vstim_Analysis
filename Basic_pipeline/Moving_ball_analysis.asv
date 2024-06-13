@@ -365,6 +365,7 @@ if ZscoresDo ==1
 
         NeuronVals(u,:,:) = NeuronRespProfile;
     end
+    save(sprintf('NeuronRespCat-%s',NP.recordingName),"NeuronVals")
 
     %     [MrespO] = BuildBurstMatrix(goodU,round(p.t/bin),round(directimesSorted/bin),round((stimDur+duration)/bin));
     %     Z_scores = (MrespO-spkRateBM)./denom;
@@ -383,19 +384,19 @@ if ZscoresDo ==1
         end
     end
 
+    save(sprintf('tuningC-%s',NP.recordingName),"tuningCurve")
 
     %Select significantly responsive units with shuffling plus Z-score:
-    rands = 1000;
+    rands = 300;
 
     if ~isfile(sprintf('randZscores-It-%d.mat',rands))
         RandZscoreU = zeros(rands, nN,2);
         for s = 1:rands
+            %%%Shuffle trials
             M_shuffTr=Mr(randperm(size(Mr,1)),:,:); %check if neuron is responsive to specific stim (shuffle across trials)
             M_shufMTrC = ConvBurstMatrix(M_shuffTr,fspecial('gaussian',[1 5],3),'same');
-            %             Mb_shufTr = mean(M_shuffTr(:,:,1:round(preBase/bin)),3);
-            %             Mb_shufTrM = mean(Mb_shufTr);
-            %             denomTr = std(Mb_shufTr)+eps;
 
+            %%%Shuffle times
             ti2 = zeros(1,length(p.t));
             for u = 1:nN
                 ti=p.t(p.ic(3,u):p.ic(4,u));
@@ -406,9 +407,12 @@ if ZscoresDo ==1
 
             M_shuffTi=BuildBurstMatrix(goodU,round(ti2/bin),round((stims-preBase)/bin),round((stimDur+preBase*2)/bin)); %check if neuron is visually response (shuffle across time)
             M_shufMTiC = ConvBurstMatrix(M_shuffTi,fspecial('gaussian',[1 5],3),'same');
-            %             Mb_shufTi = mean(M_shuffTi(:,:,1:round(preBase/bin)),3);
-            %             Mb_shufTiM = mean(Mb_shufTi);
-            %             denomTi = std(Mb_shufTi)+eps;
+            MB_shufTi = BuildBurstMatrix(goodU,round(ti2/bin),round((stims-preBase)/bin),round(preBase/bin));
+            MB_shufTi = mean(MB_shufTi,3);
+            spkRateBMS = mean(MB_shufTi); %total mean.
+            %denom = mad(MbC,0)+epsilon; %Calculate baseline variation of each neuron.
+
+            denomSti = std(MB_shufTi)+eps;
 
             NeuronRespProfileShTr = zeros(nT,nN);
             NeuronRespProfileShTi = zeros(nT,nN);
@@ -455,7 +459,7 @@ if ZscoresDo ==1
 
                     %. Z-score
                     NeuronRespProfileShTr(i,u) = (max_mean_value_Trialtr(i) - spkRateBM(u))/denom(u);%Mb_shufTrM(u))/denomTr(u); %Zscore
-                    NeuronRespProfileShTi(i,u) = (max_mean_value_Trialti(i) - spkRateBM(u))/denom(u);%Mb_shufTiM(u))/denomTi(u); %Zscore
+                    NeuronRespProfileShTi(i,u) = (max_mean_value_Trialti(i) - spkRateBMS(u))/denomSti(u);%Mb_shufTiM(u))/denomTi(u); %Zscore
 
                     k=k+1;
                 end
@@ -494,44 +498,51 @@ if ZscoresDo ==1
     end
 
     Zthreshold = 3;
-    meanZScores = squeeze(mean(tuningCurve,2));
+    maxZScores = squeeze(max(tuningCurve,[],2));
     %%Check if at least for 1 direction neuron is visually responsive:
 
     maxZS_vr = max(meanZScores,[],2);
 
-    pvalTr = (sum(squeeze(RandZscoreU(:,:,1)) >= maxZS_vr') +1)/(rands+1);
-    pvalTi = (sum(squeeze(RandZscoreU(:,:,2)) >= maxZS_vr') +1)/(rands+1);
+    pvalTr = (sum(squeeze(RandZscoreU(:,:,1)) >= maxZScores') +1)/(rands+1);
+    pvalTi = (sum(squeeze(RandZscoreU(:,:,2)) >= maxZScores') +1)/(rands+1);
 
-    find(pvalTr<0.05 & pvalTr<0.02)
+    figure;hist
 
-    randddd2 = squeeze(RandZscoreU(:,:,1));
+    save(sprintf('pvalTrials-%d',NP.recordingName),'pvalTr')
+    save(sprintf('pvalTime-%d',NP.recordingName),'pvalTi')
 
-    %Calculate direction: if neuron has 2 big peaks (equivalent angles (hue), or if neuron has 1
-    %big peak (hue), or if neuron has multiple big peaks.
-    binarizedS = meanZScores>Zthreshold;
 
-    %remove neurons that have zero spiking rate in 97% of the trials
-    rateTrials = mean(Mr,3);
-    tuningCurveS = tuningCurve(sum(rateTrials==0)./size(rateTrials,1)<0.95,:,:);
-
-    meanZScores = squeeze(mean(tuningCurveS(~isoutlier(tuningCurveS,2)),2));
-    meanZScoresSig =  meanZScores(any(meanZScores > Zthreshold, 2),:);
-    verticalDepthSig = verticalDepth(any(meanZScores > Zthreshold, 2));
-
-    figure;
-    plot(rad2deg(uDir), meanZScoresSig(1,:), 'LineWidth', 2);
+%     find(pvalTr<0.05 & pvalTr<0.02)
+% 
+%     randddd2 = squeeze(RandZscoreU(:,:,1));
+% 
+%     %Calculate direction: if neuron has 2 big peaks (equivalent angles (hue), or if neuron has 1
+%     %big peak (hue), or if neuron has multiple big peaks.
+%     binarizedS = meanZScores>Zthreshold;
+% 
+%     %remove neurons that have zero spiking rate in 97% of the trials
+%     rateTrials = mean(Mr,3);
+%     tuningCurveS = tuningCurve(sum(rateTrials==0)./size(rateTrials,1)<0.95,:,:);
+% 
+%     meanZScores = squeeze(mean(tuningCurveS(~isoutlier(tuningCurveS,2)),2));
+%     meanZScoresSig =  meanZScores(any(meanZScores > Zthreshold, 2),:);
+%     verticalDepthSig = verticalDepth(any(meanZScores > Zthreshold, 2));
+% 
+%     figure;
+%     plot(rad2deg(uDir), meanZScores(1,:), 'LineWidth', 2);
 
     %Tuning index
     OI = sqrt(sum(meanZScoresSig.*sin(2*uDir),2).^2 + sum(meanZScoresSig.*cos(2*uDir),2).^2)./sum(meanZScoresSig,2); % OI calculated as in Dragoi and Swindale.
 
+    a = sum()
 
-    nColors = 64; % Number of colors in the colormap
-    red = [linspace(0, 1, nColors)]'; % Red component increases linearly
-    green = [linspace(0, 0, nColors)]'; % Green component is always 0
-    blue = [linspace(1, 0, nColors)]'; % Blue component decreases linearly
-    customColormap = [red, green, blue]; % Combine into an nColors-by-3 matrix
 
-    normalizedValues = round(rescale([floor(min(verticalDepthSig')/100)*100; verticalDepthSig'; ceil(max(verticalDepthSig')/100)*100], 1, nColors)); %
+%     nColors = 64; % Number of colors in the colormap
+%     red = [linspace(0, 1, nColors)]'; % Red component increases linearly
+%     green = [linspace(0, 0, nColors)]'; % Green component is always 0
+%     blue = [linspace(1, 0, nColors)]'; % Blue component decreases linearly
+%     customColormap = [red, green, blue]; % Combine into an nColors-by-3 matrix
+%     normalizedValues = round(rescale([floor(min(verticalDepthSig')/100)*100; verticalDepthSig'; ceil(max(verticalDepthSig')/100)*100], 1, nColors)); %
 
     %Normalize and scale values to 1-64
     colorsForValues = customColormap(round(normalizedValues(2:end-1)), :); % Get corresponding color for each value
@@ -635,22 +646,22 @@ if ZscoresDo ==1
     %     legend('Cluster 1', 'Cluster 2', 'Cluster 3');
 
 
-    exampleU = NeuronVals{u};
-
-    spkRateR = max_mean_value;
-
-    mSpk = mean(spkRateR);
-
-    Zscore = (spkRateR - (spkRateBM + spkRateR)/2)./denom;
-
-    RespU = GoodU_or(Zscore>3);
-    RespUInd =  find(Zscore>3);
-
-    sDirections = sort(directions);
-
-    %    tunning = sDirections(max_position(:,1));
-
-    MinusRB = spkRateR - spkRateBM;
+%     exampleU = NeuronVals{u};
+% 
+%     spkRateR = max_mean_value;
+% 
+%     mSpk = mean(spkRateR);
+% 
+%     Zscore = (spkRateR - (spkRateBM + spkRateR)/2)./denom;
+% 
+%     RespU = GoodU_or(Zscore>3);
+%     RespUInd =  find(Zscore>3);
+% 
+%     sDirections = sort(directions);
+% 
+%     %    tunning = sDirections(max_position(:,1));
+% 
+%     MinusRB = spkRateR - spkRateBM;
 
     %K-means clustering --> Look at sidekick rply
     %1% preprocessing the data
@@ -950,7 +961,7 @@ end
 
 
 
-%% Find shape of receptive field and whether it is signifficanlty
+%% Find shape of receptive field and whether it is signifficanlty different than the rest of the image. 
 fun = @(block_struct) ...
    mean(block_struct.data,'all');
 for u = 1:size(goodU,2)
