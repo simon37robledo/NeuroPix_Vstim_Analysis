@@ -8,12 +8,12 @@ summPlot = 0;
 plotexamplesMB =0;
 newTIC = 0;
 ex=1;
-ZscoresDo=0;
-ReceptiveField = 1;
+ZscoresDo=1;
+ReceptiveField = 0;
 
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =19:size(data,1)
+for ex =1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     %ex = 25;
@@ -35,17 +35,14 @@ for ex =19:size(data,1)
     file = dir (stimDir);
     filenames = {file.name};
     ballFiles = filenames(contains(filenames,"linearlyMovingBall"));
-    %
-    %     if isempty(ballFiles)
-    %
-    %     end
-    %
-    %     if isempty(ballFiles)
-    %         %disp()
-    %         w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
-    %         warning()
-    %         continue
-    %     end
+
+    
+        if isempty(ballFiles)
+            %disp()
+            w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
+            warning(w)
+            continue
+        end
 
     directions = [];
     offsets = [];
@@ -167,7 +164,7 @@ for ex =19:size(data,1)
     verticalDepth = sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - goodUdepth);
 
     %7. Load raster matrices
-    bin = 50;
+    bin = 1;
     preBase = 300;%round(3*interStimStats/4);
 
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
@@ -332,7 +329,7 @@ if ZscoresDo ==1
                 mean_value = mean(sub_matrix(:)); %Compute mean of each window
 
                 % Update the maximum mean value and its position (a
-                % window is selected across each trial)
+                % window is selected across each trial division
                 if mean_value >  max_mean_value_Trial(k)
                     max_mean_value_Trial(k) = mean_value;
                     max_position_Trial(k,:) = [i j];
@@ -388,12 +385,11 @@ if ZscoresDo ==1
 
 
     %Select significantly responsive units with shuffling plus Z-score:
-    rands = 200;
+    rands = 300;
 
     if ~isfile(sprintf('randZscores-It-%d.mat',rands))
         RandZscoreU = zeros(rands, nN,2);
         for s = 1:rands
-
             M_shuffTr=Mr(randperm(size(Mr,1)),:,:); %check if neuron is responsive to specific stim (shuffle across trials)
             M_shufMTrC = ConvBurstMatrix(M_shuffTr,fspecial('gaussian',[1 5],3),'same');
             %             Mb_shufTr = mean(M_shuffTr(:,:,1:round(preBase/bin)),3);
@@ -472,7 +468,7 @@ if ZscoresDo ==1
             meanTshuffledTi = zeros(u,numel(tDivList));
 
             %
-            for td = 1:numel(tDivList) %take means across trials to look at random times
+            for td = 1:numel(tDivList) %take means across trial divisions to look at random times
                 meanTshuffledTi(:,td) = mean(NeuronRespProfileShTi(tDivList(td):tDivList(td)+trialDivision-1,:));
                 meanTshuffledTr(:,td) = mean(NeuronRespProfileShTr(tDivList(td):tDivList(td)+trialDivision-1,:));
             end
@@ -858,7 +854,7 @@ end
 
             j = 1;
             tr = 1;
-            while j <= length(MtrialCat)
+            while tr <= size(ChangePosX,2)%length(MtrialCat) | 
 
                 matrix_nXnY = zeros(sizeN,coorRect(4)/10,coorRect(3)/10,"single");
                 %matrixResp = zeros(coorRect(4),coorRect(3),nN,"single");
@@ -954,7 +950,7 @@ end
 
 
 
-%%
+%% Find shape of receptive field and whether it is signifficanlty different than the rest of the image. 
 fun = @(block_struct) ...
    mean(block_struct.data,'all');
 for u = 1:size(goodU,2)
