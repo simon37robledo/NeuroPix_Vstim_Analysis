@@ -28,6 +28,10 @@ TTL_TSf = TTL_TS(idx_StartEnd(1)+1:idx_StartEnd(2)); % Select TTLs between these
 
 
 check = diff(TTL_TSf) - diff(VideoTS{:,:})'.*1000; %Difference of difference between frames. It should be close to 0.0 ms
+%%
+pathV = '\\132.66.45.127\data\Large_scale_mapping_NP\\Awake_exp\SA5\SA5_Experiment_10_05_23\Insertion1\Instertion1_Camera1_20230510-163510.mp4';
+
+
 
 
 

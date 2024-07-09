@@ -56,7 +56,7 @@ sizeText = 13;
 offsetTextX = -1.3;
 offsetTextY = 0;
 offsetTextZ = 1;
-
+%%
 %%%%%%%%%PV103 No micromanipulator - imaging:
 
 Ins1PV103 = [39.74 49 -21.44];
@@ -225,12 +225,11 @@ InsAnglesPV32 = [69 72 72];
 InsDepthsPV32 = [2400 2600 2200];
 
 
-
+%%
 animalD = {InsDepthsPV67,InsDepthsPV103,InsDepthsPV27};
 
 animalA = {InsAnglesPV67,InsAnglesPV103,InsAnglesPV27};
-
-
+plotInser =1;
 if plotInser ==1
 
     for a = 1:length(animalA) %X doesn't change
@@ -245,7 +244,19 @@ if plotInser ==1
         point2 = [animals{a}(:,1),animals{a}(:,2)+YDist',animals{a}(:,3)-verticalDepth'];
 
         for i = 1:length(animals{a})
-            plot3([point1(i,1),point2(i,1)],[point1(i,2),point2(i,2)],[point1(i,3),point2(i,3)],'LineWidth', 1, 'Color',colorA{a})
+           
+
+            %plot3([point1(i,1),point2(i,1)],[point1(i,2),point2(i,2)],[point1(i,3),point2(i,3)],'LineWidth', 2) %'Color',colorA{a});
+            x= linspace(point1(i,1),point2(i,1),size(rLFP,1)/4);
+            y= linspace(point1(i,2),point2(i,2),size(rLFP,1)/4);
+            z = linspace(point1(i,3),point2(i,3),size(rLFP,1)/4);
+            c = mean(rLFP,2);
+            %patch(x,y,z,c,'FaceColor','none','EdgeColor','interp');colorbar
+             i =2;
+            surface([x(:), x(:)], [y(:), y(:)], [z(:), z(:)], ...
+                [c(:), c(:)], 'EdgeColor','flat', 'FaceColor','none','LineWidth',6);cb=colorbar;
+            cb.Label.String = 'microVolts';
+             set(gcf,'Color','white');
             hold on
         end
 

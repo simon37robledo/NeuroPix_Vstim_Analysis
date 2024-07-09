@@ -3,10 +3,10 @@
 
 %% Phy commmand: phy template-gui params.py
 %Order of batch= FFF, movBall, rectGrid, RectNoise, Gratings.
-ins = 1:4;
-basic_path = '\\132.66.45.127\data\Large_scale_mapping_NP\\Immobilized_exp\PV67';
-exp = 'PV67_Experiment_5_7_23';
-animal = "PV67";
+ins = 1:2;
+basic_path = '\\132.66.45.127\data\Large_scale_mapping_NP\\Immobilized_exp\PV102';
+exp = 'PV102_experiment_18_7_23';
+animal = "PV102";
 in_ind =1; %initialize insertion index. 
 ttl_index =1;
 in_ind =1;
@@ -52,7 +52,7 @@ InsDepths = [3909 3931];
 
 %% Iterate through insertions
 
-for in = ins
+for in = 2
 
 
 path = convertStringsToChars(basic_path+string(filesep)+exp+string(filesep)+"Insertion"+in+string(filesep)+"catgt_"+exp+"_"+in+"_g0");
@@ -254,14 +254,12 @@ if spikes == 1
 
     for u = 1:length(GoodU_or)
 
-        
+        u = 184;
         %Position per unit:
 
         cluster_info.ch(cluster_info.ch ==0) = 1; %Change channel 0 to 1.
 
         ch = cluster_info.ch(cluster_info.cluster_id == GoodU_or(u));
-
-        title_stim = sprintf('Insertion-%d-FFF-Unit-%d-channel-#%d', in, GoodU_or(u), cluster_info.ch(cluster_info.cluster_id == GoodU_or(u)));
 
 
         ShankDist(u) = InserDepth - (NP.chLayoutPositions(2,ch));
@@ -271,7 +269,7 @@ if spikes == 1
         XDist(u) = cos(deg2rad(AngleInser))*ShankDist(u); %X distance of unit from insertion
 
         %Title:
-        title_stim = sprintf('Insertion-%d-FFF-Unit-%d-channel-#%d', in, GoodU_or(u), cluster_info.ch(cluster_info.cluster_id == GoodU_or(u)));
+        title_stim = sprintf('Insertion-%d-Directions-Unit(%d)-%d-channel-#%d', in, GoodU_or(u),u, cluster_info.ch(cluster_info.cluster_id == GoodU_or(u)));
 
         if rasters ==1
             %Build burst matrix.

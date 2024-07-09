@@ -1,329 +1,306 @@
 %%% Rect Grid Analysis
 
-path = '\\sil3\data\\Large_scale_mapping_NP\lizards\PV139\PV139_Experiment_6_2_24\Insertion1\catgt_PV139_Experiment_6_2_24_1_g0';
 
-basic_pathPV102 = '\\132.66.45.127\data\Large_scale_mapping_NP\\Immobilized_exp\PV102';
-expPV102 = 'PV102_experiment_18_7_23';
+cd('\\sil3\data\Large_scale_mapping_NP')
+excelFile = 'Experiment_Excel.xlsx';
 
-basic_pathPV103 = '\\132.66.45.127\data\Large_scale_mapping_NP\\Immobilized_exp\PV103';
-expPV103 = 'PV103_Experiment_12_6_23';
+data = readtable(excelFile);
 
-basic_pathPV67 = '\\132.66.45.127\data\Large_scale_mapping_NP\\Immobilized_exp\PV67';
-expPV67= 'PV67_experiment_5_7_23';
+%Optionall
+plotRasters =0;
+heatMap = 1;
+ex=1;
 
-basic_pathPV27 = '\\132.66.45.127\data\Large_scale_mapping_NP\\Immobilized_exp\PV27';
-expPVPV27 = 'PV27_Experiment_25_6_23';
-
-basic_pathPV139 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV139';
-expPV139 = 'PV139_Experiment_6_2_24';
-
-basic_pathPV59 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV59';
-expPV59 = 'PV59_Experiment_20_2_24';
-
-basic_pathPV32 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV32';
-expPV32 = 'PV32_Experiment_18_3_24';
-
-basicPathA = {basic_pathPV67,basic_pathPV103,basic_pathPV27,basic_pathPV139,basic_pathPV59,basic_pathPV32};
-
-expA = {expPV67,expPV103,expPVPV27,expPV139,expPV59,expPV32};
-
-RGttl_Index = {3,1,1,[2,1],2,2};
-
-a =1;
-in ="4";
-
-path = convertStringsToChars(string(basicPathA{a})+string(filesep)+string(expA{a})+string(filesep)+"Insertion"+...
-                in+string(filesep)+"catgt_"+string(expA{a})+"_"+in+"_g0");
-
-NP = NPAPRecording(path); 
-cd(path)
-
-newExp =false;
 
 %%
+for ex =1:size(data,1)
+    %%%%%%%%%%%% Load data and data paremeters
+    %1. Load NP class
+    path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
+        +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
+    cd(path)
+    NP = NPAPRecording(path);
 
 
-%%%Moving ball inputs, NP, stimOn, stimOff, plots, neuron, ttlIndex
+    %%%Moving ball inputs, NP, stimOn, stimOff, plots, neuron, ttlIndex
+
+    patternIndex = strfind(string(NP.recordingDir), "\catgt");
+
+    endIndex = patternIndex(1)-1;
+    stimDir = string(NP.recordingDir);
+    stimDir = extractBetween(stimDir,1,endIndex);
+
+    file = dir (stimDir);
+    filenames = {file.name};
+
+    file = dir (stimDir);
+    filenames = {file.name};
+    rectFiles = filenames(contains(filenames,"rectGrid"));
+    positionsMatrix = [];
+    offsets = [];
+    sizes = [];
+    seqMatrix = [];
 
 
-patternIndex = strfind(string(NP.recordingDir), "\catgt");
+    if isempty(rectFiles)
+        %disp()
+        w= sprintf('No rectangle grid files where found in %s. Skipping into next experiment.',NP.recordingName);
+        warning(w)
+        continue
+    end
 
-endIndex = patternIndex(1)-1;
-stimDir = string(NP.recordingDir);
-stimDir = extractBetween(stimDir,1,endIndex);
+    j =1;
+    if size(rectFiles) ~= [0 0]
 
-file = dir (stimDir);
-filenames = {file.name};
+        for i = rectFiles
+            rect= load(stimDir+"\"+string(i));
 
-file = dir (stimDir);
-filenames = {file.name};
-rectFiles = filenames(contains(filenames,"rectGrid"));
-positionsMatrix = [];
-offsets = [];
-sizes = [];
-seqMatrix = [];
-
-j =1;
-if size(rectFiles) ~= [0 0]
-
-    for i = rectFiles
-        rect= load(stimDir+"\"+string(i));
-
-        if newExp 
-            %%New exp
-            seqMatrix = [seqMatrix cell2mat(rect.VSMetaData.allPropVal(18))];
-            sizes = [sizes cell2mat(rect.VSMetaData.allPropVal(23))];
-            stimDurStats = cell2mat(rect.VSMetaData.allPropVal(42))*1000;
-            interStimStats = cell2mat(rect.VSMetaData.allPropVal(32))*1000;
-        else
-            %Old exp
-            seqMatrix = [seqMatrix cell2mat(rect.VSMetaData.allPropVal(16))];
            
-            stimDurStats = cell2mat(rect.VSMetaData.allPropVal(38))*1000;
-            interStimStats = cell2mat(rect.VSMetaData.allPropVal(28))*1000;
+                %%New exp
+                seqMatrix = [seqMatrix cell2mat(rect.VSMetaData.allPropVal(find(strcmp(rect.VSMetaData.allPropName,'pos'))))];
+                if ex >18 || ex <28
+                    sizes = [sizes cell2mat(rect.VSMetaData.allPropVal(find(strcmp(rect.VSMetaData.allPropName,'tilingRatios'))))];
+                end
+                stimDurStats = cell2mat(rect.VSMetaData.allPropVal(42))*1000;
+                interStimStats = cell2mat(rect.VSMetaData.allPropVal(32))*1000;
+     
+            j = j+1;
+        end
+        disp('Visual stats extracted!')
+    else
+        disp('Directory does not exist!');
+    end
+
+    positionsMatrix = [cell2mat(rect.VSMetaData.allPropVal(find(strcmp(rect.VSMetaData.allPropName,'pos2X'))))...
+            ,cell2mat(rect.VSMetaData.allPropVal(find(strcmp(rect.VSMetaData.allPropName,'pos2Y'))))];%NewExp
+    rectSizes = cell2mat(rect.VSMetaData.allPropVal(find(strcmp(rect.VSMetaData.allPropName,'rectSide'))));
+
+    if ex<19 || ex >27
+        %OldExp
+        sizes = repmat(cell2mat(rect.VSMetaData.allPropVal(5)),1,length(seqMatrix));
+    end
+
+    nSize = length(unique(sizes));
+    % Triggers:
+
+    Ordered_stims= strsplit(data.VS_ordered{ex},',');
+    containsRG = cellfun(@(x) contains(x,'RG'),Ordered_stims);
+    ttlInd = find(containsRG);
+
+    [stimOn stimOff] = NPdiodeExtract(NP,0,"rectGrid",ttlInd,16,0);
+
+    [stimOn stimOff] = NPdiodeExtract(NP,0,"rectGrid",ttlInd,16,0);
+    missedT = find((stimOff-stimOn)<500); %Missed tri als
+
+    stimDur = mean(stimOff'-stimOn');
+    interStim = mean(stimOn(2:end)-stimOff(1:end-1));
+
+    A = [stimOn seqMatrix' sizes'];
+
+    [C indRG]= sortrows(A,[2 3]);
+
+    %Sort directions:
+
+    directimesSorted = C(:,1)';
+
+    cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
+
+    %Good units
+
+    GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
+
+    p = NP.convertPhySorting2tIc(NP.recordingDir);
+
+    %Select good units
+    label = string(p.label');
+
+    goodU = p.ic(:,label == 'good');
+
+    % Build raster plots per unit
+
+    if plotRasters == 1
+        for plotRasters=1
+    cd(NP.recordingDir)
+    if ~exist(path+"\Figs",'dir')
+        mkdir Figs
+    end
+    cd(NP.recordingDir + "\Figs")
+
+    bin=20;
+    win=stimDur+stimInter;
+    preBase = round(stimInter/20)*10;
+
+    [Mr]=BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(win/bin));
+
+    [nT,nN,nB] = size(Mr);
+    %indRG --> sorted infexes
+
+    trialsPerCath = length(seqMatrix)/(length(unique(seqMatrix)));
+
+    PositionsTotal = positionsMatrix(seqMatrix(indRG),:);
+
+
+    [posS,indexX] = sortrows(PositionsTotal,1); %Sort first dimension because tile layout moves through columns
+
+    MrS = Mr(indexX,:,:);
+
+
+
+    for u =1:length(goodU)
+        t = tiledlayout(sqrt(max(seqMatrix)), sqrt(max(seqMatrix)),'TileSpacing','tight');
+
+        j=1;
+
+        if trialsPerCath>20
+            mergeTrials = 5;
+
+            Mr2 = zeros(nT/mergeTrials,nB);
+
+            for i = 1:mergeTrials:nT
+
+                meanb = mean(squeeze(MrS(i:min(i+mergeTrials-1, end),u,:)),1);
+
+                Mr2(j,:) = meanb;
+
+                j = j+1;
+
+            end
+        else
+            Mr2=MrS(:,u,:);
+            mergeTrials =1;
         end
 
-        j = j+1;
+
+        [T,B] = size(Mr2);
+
+        for i = 1:trialsPerCath/mergeTrials:T
+            %Build raster
+            M = Mr2(i:min(i+trialsPerCath/mergeTrials-1, end),:);
+            [nTrials,nTimes]=size(M);
+            nexttile
+            imagesc((1:nTimes)*bin,1:nTrials,squeeze(M));colormap(flipud(gray(64)));
+            xline(preBase, '--', LineWidth=2, Color="#77AC30");
+            xline((stimDur+preBase), '--', LineWidth=2, Color="#0072BD");
+            xticks([preBase round(round(stimDur/100))*100+preBase]);
+            if nSize >1
+                yline([trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials-1]+0.5,LineWidth=1)
+            end
+            caxis([0 1]);
+            set(gca,'YTickLabel',[]);
+
+            if i < T - (trialsPerCath/mergeTrials)*max(positionsMatrix(:))-1
+                set(gca,'XTickLabel',[]);
+
+            end
+        end
+        fig = gcf;
+        set(fig, 'Color', 'w');
+        colorbar
+        % Set the color of the figure and axes to black
+        title(t,sprintf('Rect-GRid-raster-U%d',u))
+        ylabel(t,sprintf('%d trials',nTrials*mergeTrials))
+        fig.Position = [227         191        1413         781];
+        %prettify_plot
+        print(fig,sprintf('%s-rect-GRid-raster-U%d.png',NP.recordingName,u),'-dpng')
+        close
     end
-    disp('Visual stats extracted!')
-else
-    disp('Directory does not exist!');
-end
 
-if newExp
-    positionsMatrix = [cell2mat(rect.VSMetaData.allPropVal(16)),cell2mat(rect.VSMetaData.allPropVal(17))];%NewExp
-    rectSizes = cell2mat(rect.VSMetaData.allPropVal(22));
-else
-    positionsMatrix = [cell2mat(rect.VSMetaData.allPropVal(14)),cell2mat(rect.VSMetaData.allPropVal(15))]; %OldExp
-    rectSizes = cell2mat(rect.VSMetaData.allPropVal(22));
-    sizes = repmat(cell2mat(rect.VSMetaData.allPropVal(5)),1,length(seqMatrix));
-end
+        end
+    end
 
-%% Triggers:
+    if heatMap ==1
+    % Build heat map
 
-ttlInd = RGttl_Index{a};
-[stimOn stimOff] = NPdiodeExtract(NP,0,"rectGrid",ttlInd,16,0); 
+    cd(NP.recordingDir)
+    if ~exist(path+"\Figs",'dir')
+        mkdir Figs
+    end
+    cd(NP.recordingDir + "\Figs")
 
-[stimOn stimOff] = NPdiodeExtract(NP,0,"rectGrid",ttlInd,16,0); 
-missedT = find((stimOff-stimOn)<500); %Missed tri als
+    trialDiv  = length(seqMatrix)/length(unique(seqMatrix))/nSize;
 
-stimDur = mean(stimOff'-stimOn');
+    offsetR=400; %ms for offset response
 
+    bin =1;
+    [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round(stimDur)/bin);
+    [Mro] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+stimDur)/bin),round(interStim)/bin);
 
+    [nT,nN,NB] = size(Mr);
+    [nTo,nNo,NBo] = size(Mro);
 
 
-A = [stimOn seqMatrix' sizes'];
+    MrC = zeros(round(nT/trialDiv),nN, NB+NBo);
 
-[C indRG]= sortrows(A,[2 3]);
+    %%Create summary of identical trials
 
-%Sort directions:
+    for u = 1:length(goodU)
+        j=1;
 
-directimesSorted = C(:,1)';
+        for i = 1:trialDiv:nT
 
+            meanRon = mean(squeeze(Mr(i:i+trialDiv-1,u,:)));
 
-%%
+            meanRoff =  mean(squeeze(Mro(i:i+trialDiv-1,u,:)));
 
-cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
-
-%Good units
-
-GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
-
-p = NP.convertPhySorting2tIc(NP.recordingDir);
-
-%Select good units
-label = string(p.label');
-
-goodU = p.ic(:,label == 'good');
-
-
-%%
-% Build raster plots per unit
-
-cd(NP.recordingDir)
-if ~exist(path+"\Figs",'dir') 
-    mkdir Figs
-end
-cd(NP.recordingDir + "\Figs")
-
-bin=20;
-win=stimDur+stimInter;
-preBase = round(stimInter/20)*10;
-
-[Mr]=BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(win/bin));
-
-[nT,nN,nB] = size(Mr);
-%indRG --> sorted infexes 
-
-trialsPerCath = length(seqMatrix)/(length(unique(seqMatrix)));
-
-PositionsTotal = positionsMatrix(seqMatrix(indRG),:);
-
-
-[posS,indexX] = sortrows(PositionsTotal,1); %Sort first dimension because tile layout moves through columns
-
-MrS = Mr(indexX,:,:);
-
-nSize = length(unique(sizes));
-
-
-
-for u =1:length(goodU)
-    t = tiledlayout(sqrt(max(seqMatrix)), sqrt(max(seqMatrix)),'TileSpacing','tight');
-
-    j=1;
-
-    if trialsPerCath>20
-        mergeTrials = 5;
-
-        Mr2 = zeros(nT/mergeTrials,nB);
-
-        for i = 1:mergeTrials:nT
-
-            meanb = mean(squeeze(MrS(i:min(i+mergeTrials-1, end),u,:)),1);
-
-            Mr2(j,:) = meanb;
+            MrC(j,u,:) = [meanRon meanRoff]; %Combine on and off response
 
             j = j+1;
 
         end
-    else
-        Mr2=MrS(:,u,:);
-        mergeTrials =1;
-    end
-
-
-    [T,B] = size(Mr2);
-
-    for i = 1:trialsPerCath/mergeTrials:T
-        %Build raster
-        M = Mr2(i:min(i+trialsPerCath/mergeTrials-1, end),:);
-        [nTrials,nTimes]=size(M);
-        nexttile
-        imagesc((1:nTimes)*bin,1:nTrials,squeeze(M));colormap(flipud(gray(64)));
-        xline(preBase, '--', LineWidth=2, Color="#77AC30");
-        xline((stimDur+preBase), '--', LineWidth=2, Color="#0072BD");
-        xticks([preBase round(round(stimDur/100))*100+preBase]);
-        if nSize >1
-            yline([trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials-1]+0.5,LineWidth=1)
-        end
-        caxis([0 1]);
-        set(gca,'YTickLabel',[]);
-
-        if i < T - (trialsPerCath/mergeTrials)*max(positionsMatrix(:))-1
-            set(gca,'XTickLabel',[]);
-
-        end
-    end
-    fig = gcf;
-    set(fig, 'Color', 'w');
-    colorbar
-    % Set the color of the figure and axes to black
-    title(t,sprintf('Rect-GRid-raster-U%d',u))
-    ylabel(t,sprintf('%d trials',nTrials*mergeTrials))
-    fig.Position = [227         191        1413         781];
-    %prettify_plot
-    print(fig,sprintf('%s-rect-GRid-raster-U%d.png',NP.recordingName,u),'-dpng')
-    close
-end
-
-%% Build heat map
-
-cd(NP.recordingDir)
-if ~exist(path+"\Figs",'dir')
-    mkdir Figs
-end
-cd(NP.recordingDir + "\Figs")
-
-trialDiv  = length(seqMatrix)/length(unique(seqMatrix))/nSize;
-
-offsetR=400; %ms for offset response
-
-bin =10;
-[Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round(stimDur+offsetR)/bin);
-
-[nT,nN,NB] = size(Mr);
-
-MrC = zeros(round(nT/trialDiv),nN, floor(nB*2.5/4)-floor(nB/10)+floor(offsetR/bin));
-
-
-%%Create summary of identical trials
-
-for u = 1:length(goodU)
-    j=1;
-
-    for i = 1:trialDiv:nT
-
-        meanRon = mean(squeeze(Mr(i:i+trialDiv-1,u,floor(nB/10)+1:floor(nB*2.5/4))));
-
-        meanRoff =  mean(squeeze(Mr(i:i+trialDiv-1,u,floor(stimDur/bin)+1:end)));
-
-        MrC(j,u,:) = [meanRon meanRoff]; %Combine on and off response
-
-        j = j+1;
-
-    end
-end
-
-MrMean = mean(MrC,3);
-
-
-[Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin));
-
-Nb2=  mean(Mb,3);
-
-Nbase = mean(Mb,[1 3]);
-
-
-%figure;imagesc(squeeze(MrC(:,18,:)));
-
-points = {'.','+','*','o'};
-%%
-cd(NP.recordingDir + "\Figs")
-respU = [138,134,127,124,123,121,118,112]; %PV67-1 %check Offset response also. 
-respU = [51,28];
-% Create a meshgrid of coordinates
-
-screenSide = rect.VSMetaData.allPropVal{64}; %Same as moving ball
-[x, y] = meshgrid(1:screenSide, 1:screenSide);
-%screenSide = (max(rect.VSMetaData.allPropVal{21,1}.Y4{1,4},[],'all'))
-
-%exU =[1];
-
-cd
-
-RFuT = zeros(screenSide,screenSide,length(u));
-
-for u = respU
-
-    j=1;
-
-   %u =12;
-
-  %  RFu = zeros(screenSide,screenSide,length(C)/);
-
-  pxyScreen = zeros(screenSide,screenSide);
-
-    VideoScreen = zeros(screenSide,screenSide,length(C)/trialDiv);
-
-    if newExp
-        prop = 21;
-    else
-        prop =19;
     end
    
+
+    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin));
+
+    Nb2=  mean(Mb,3);
+
+    Nbase = mean(Mb,[1 3]);
+
+    MrMean = mean(MrC,3)-Nbase;
+
+    cd(NP.recordingDir + "\Figs")
+%     respU = [138,134,127,124,123,121,118,112]; %PV67-1 %check Offset response also.
+%     respU = [51,28];
+    % Create a meshgrid of coordinates
+
+    reduF = 10; 
+    screenSide = rect.VSMetaData.allPropVal{find(strcmp(rect.VSMetaData.allPropName,'rect'))}; %Same as moving ball
+
+    screenRed = screenSide(4)/reduF;
+    [x, y] = meshgrid(1:screenRed, 1:screenRed);
+    %screenSide = (max(rect.VSMetaData.allPropVal{21,1}.Y4{1,4},[],'all'))
+
+    RFuT = zeros(screenRed,screenRed,length(u));
+
+    j=1;
+
+    %u =12;
+
+    %  RFu = zeros(screenSide,screenSide,length(C)/);
+
+    pxyScreen = zeros(screenRed,screenRed);
+
+    VideoScreen = zeros(screenRed,screenRed,length(C)/trialDiv);
+
+    prop = find(strcmp(rect.VSMetaData.allPropName,'rectData'));
+
+
     for i = 1:trialDiv:length(C)
 
-        xyScreen = zeros(screenSide,screenSide); %%Make calculations if sizes>1 and if experiment is new and the shape is a circle. 
-       
+        xyScreen = zeros(screenRed,screenRed)'; %%Make calculations if sizes>1 and if experiment is new and the shape is a circle.
+
         if nSize>1 && string(rect.VSMetaData.allPropVal{7}) == "circle"
-            Xc = round((rect.VSMetaData.allPropVal{prop,1}.X2{1,C(i,3)}(C(i,2))-rect.VSMetaData.allPropVal{prop,1}.X1{1,C(i,3)}(C(i,2)))/2+rect.VSMetaData.allPropVal{prop,1}.X1{1,C(i,3)}(C(i,2)));%...
+            
+            Xc = round((rect.VSMetaData.allPropVal{prop,1}.X2{1,C(i,3)}(C(i,2))-rect.VSMetaData.allPropVal{prop,1}.X1{1,C(i,3)}(C(i,2)))/2)+rect.VSMetaData.allPropVal{prop,1}.X1{1,C(i,3)}(C(i,2));%...
             %-min(rect.VSMetaData.allPropVal{21,1}.Y2{1,4},[],'all'))+conversion;
-            Yc = round((rect.VSMetaData.allPropVal{prop,1}.Y4{1,C(i,3)}(C(i,2))-rect.VSMetaData.allPropVal{prop,1}.Y1{1,C(i,3)}(C(i,2)))/2+rect.VSMetaData.allPropVal{prop,1}.Y1{1,C(i,3)}(C(i,2)));%...
+            Xc = Xc/reduF;
+            
+            Yc = round((rect.VSMetaData.allPropVal{prop,1}.Y4{1,C(i,3)}(C(i,2))-rect.VSMetaData.allPropVal{prop,1}.Y1{1,C(i,3)}(C(i,2)))/2)+rect.VSMetaData.allPropVal{prop,1}.Y1{1,C(i,3)}(C(i,2));%...
             %-min(rect.VSMetaData.allPropVal{21,1}.Y2{1,4},[],'all'))+conversion;
-
+            Yc = Yc/reduF;
+           
             r = round((rect.VSMetaData.allPropVal{prop,1}.X2{1,C(i,3)}(C(i,2))-rect.VSMetaData.allPropVal{prop,1}.X1{1,C(i,3)}(C(i,2)))/2);
-
+            r= r/reduF;
             % maxX = rect.VSMetaData.allPropVal{21,1}.X2{1,1};
 
 
@@ -342,7 +319,7 @@ for u = respU
 
             VideoScreen(:,:,j) = xyScreen;
 
-        elseif nSize ==1 %%Add the possibility of several sizes but square. 
+        elseif nSize ==1 %%Add the possibility of several sizes but square.
 
             X2 = round(rect.VSMetaData.allPropVal{prop,1}.X2(C(i,2)));
             X1 = round(rect.VSMetaData.allPropVal{prop,1}.X1(C(i,2)));
@@ -365,52 +342,69 @@ for u = respU
         end
         % x = zeros(1800,1800,100*length(C)/trialDiv);
 
-       pxyScreen = pxyScreen+xyScreen;
+        pxyScreen = pxyScreen+xyScreen;
 
-       %[Mc]=convn(squeeze(M)',fspecial('gaussian',[1 5],3),'same');
+        %[Mc]=convn(squeeze(M)',fspecial('gaussian',[1 5],3),'same');
 
-       %M(1,1,:) = Mc;
+        %M(1,1,:) = Mc;
 
-       %conV = convn(VideoScreen,M,'same');
+        %conV = convn(VideoScreen,M,'same');
 
-       %[MaxIm ind] = max(conV(Xc,Yc,:)); %%Delay according to max
+        %[MaxIm ind] = max(conV(Xc,Yc,:)); %%Delay according to max
 
-       %conVM = conV(:,:,ind);
+        %conVM = conV(:,:,ind);
 
-       %RFu = RFu+conVM;
+        %RFu = RFu+conVM;
 
-       j=j+1;
-        
-%        figure; plot(1:length(squeeze(M)),squeeze(M)')
-% 
-%        figure; plot(1:length(squeeze(M)),squeeze(Mc)')
+        j=j+1;
+
+        %        figure; plot(1:length(squeeze(M)),squeeze(M)')
+        %
+        %        figure; plot(1:length(squeeze(M)),squeeze(Mc)')
     end
 
-  %  M = MrMean(:,u)'./Nbase(u);
+    %  M = MrMean(:,u)'./Nbase(u);
 
-    epsilon = 0.01;
+    VD = repmat(VideoScreen,[1 1 1 nN]);
 
-    denom = mad(Nb2(u),0)+epsilon; %mean(Mb,0)+epsilon; %
+    Res = reshape(MrMean,[1,1,size(MrMean,1),nN]);
 
-   % mSpk = mean(spkRateR);
+    RFu = squeeze(sum(VD.*Res,3));
 
-    M = ( MrMean(:,u)' - (Nbase(u) + MrMean(:,u)')./2)./denom;
+    figure;imagesc(normRFu(:,:,51))
+
+    normMatrix = repmat(pxyScreen,[1,1,nN]).*reshape(Nbase,[1,1,nN]);
+
+    normRFu = RFu./normMatrix;
+
+    save(sprintf('RFuStatic-%s',NP.recordingName),"normRFu")
 
 
-    RFu = mean(bsxfun(@times, VideoScreen, reshape(M, 1, 1, [])),3);
-    %figure;imagesc(RFu)
-    fig = figure;imagesc(RFu./pxyScreen)
-    caxis([0 0.02]);
-    colorbar; max(RFu./pxyScreen,[],'all')
-    xlabel('X pixels')
-    ylabel('Y pixels')
-    title(sprintf('RFu-%d-Static',u))
-    prettify_plot
-    
-    print(fig,sprintf('%s-RFu-%d-Static.png',NP.recordingName,u),'-dpng')
-    close
-  
 
+
+
+%     epsilon = 0.01;
+% 
+%     denom = mad(Nb2(u),0)+epsilon; %mean(Mb,0)+epsilon; %
+% 
+%     % mSpk = mean(spkRateR);
+% 
+% %     M = ( MrMean(:,u)' - (Nbase(u) + MrMean(:,u)')./2)./denom;
+% 
+%     RFu = mean(bsxfun(@times, VideoScreen, reshape(M, 1, 1, [])),3);
+%     %figure;imagesc(RFu)
+%     fig = figure;imagesc(RFu./pxyScreen)
+%     caxis([0 0.02]);
+%     colorbar; max(RFu./pxyScreen,[],'all')
+%     xlabel('X pixels')
+%     ylabel('Y pixels')
+%     title(sprintf('RFu-%d-Static',u))
+%     prettify_plot
+% 
+%     print(fig,sprintf('%s-RFu-%d-Static.png',NP.recordingName,u),'-dpng')
+%     close
+
+    end
 end
 
 
