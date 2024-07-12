@@ -47,13 +47,19 @@ expPV59 = 'PV59_Experiment_20_2_24';
 basic_pathPV32 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV32';
 expPV32 = 'PV32_Experiment_18_3_24';
 
+basic_pathPV32 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV32';
+expPV32 = 'PV32_Experiment_18_3_24';
+
+basic_pathPV152 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV152';
+expPV152 = 'PV152_Experiment_11_7_24';
+
 
 %% Basic variables
-base_dir = string(basic_pathPV32)+"\"+string(expPV32);
+base_dir = string(basic_pathPV152)+"\"+string(expPV152);
 
 run_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT"; %Folder that has catgt and tprime subfolders
-insertion = "4";
-fileName = "PV32_Experiment";
+insertion = "1";
+fileName = "PV152_Experiment";
 runs = "mult";
 dig_CH = "1";
 concat = 1;

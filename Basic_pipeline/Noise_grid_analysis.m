@@ -8,7 +8,7 @@ data = readtable(excelFile);
 for ex =1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
-    ex=19;
+    ex=28; %Good recording with noise grid, rectangle grid, moving ball, in awake Laudakia. With far eye videos. 
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
     cd(path)
