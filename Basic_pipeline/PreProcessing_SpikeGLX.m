@@ -24,6 +24,18 @@
 % - runs : If within the insertion there is only one continous run then runs
 % = "single"
 
+    try
+        cd(path)
+    catch
+        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+        if strcmp(originP,'sil3\data')
+            path = replaceBetween(path,"","\Large_scale","W:");
+        else
+            path = replaceBetween(path,"","\Large_scale","Y:");
+        end
+        cd(path)
+    end
+
 %% %% Phy commmand: phy template-gui params.py
 
 basic_pathPV102 = '\\132.66.45.127\data\Large_scale_mapping_NP\\Immobilized_exp\PV102';
