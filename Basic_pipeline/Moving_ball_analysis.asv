@@ -395,7 +395,7 @@ toc
     for u = 1:nN
         NeuronD = squeeze(NeuronVals(u,:,[1  5]));
         for d = 1:direcN
-            tuningCurve(u,d) = max(NeuronD(NeuronD(:,2)==udir(d),1))';
+            tuningCurve(u,d) = max(NeuronD(NeuronD(:,2)==udir(d),1))'; %Selecting top direction. 
         end
     end
 
@@ -1303,7 +1303,6 @@ for convNeuron = 1
             RFuSize =  load(sprintf('RFuSizeC-%s',NP.recordingName),'RFuSize').RFuSize;
             RFuSpeed = load(sprintf('RFuSpeedC-%s',NP.recordingName),'RFuSpeed').RFuSpeed;
 
-
         end
 
         end
@@ -1319,16 +1318,18 @@ xticklabels(1:13)
 grid on
 set(gcf, 'Color', 'w')
 
-%%%%%%% Find max receptive field and how localized it is (entropy): It runs
-%%%%%%% a ball shaped window that moves across the image of the previously
-%%%%%%% calculated convolution. 
-RFuSizeSav = load(sprintf('RFuSizeC-%s',NP.recordingName)).RFuSize;
-RFuDirSav = load(sprintf('RFuDirC-%s',NP.recordingName)).RFuDir;
+
 % 
 % implay(squeeze((RFuSizeSav(1,:,:,:,13))))
 % 
 % implay(squeeze(convolved_result_reshaped(:,:,:,13)))
-%% Size analysis -> 1. hacer la grafica que pide Mark, diferentes Neuronas. 2. Calcular entropia en experimento y graficar contra la prfundidad. 3. Escribirle a sebastian caldas. 
+%% %%%%%%% Find max receptive field and how localized it is (entropy): It runs
+%%%%%%% a ball shaped window that moves across the image of the previously
+%%%%%%% calculated convolution. 
+RFuSizeSav = load(sprintf('RFuSizeC-%s',NP.recordingName)).RFuSize;
+RFuDirSav = load(sprintf('RFuDirC-%s',NP.recordingName)).RFuDir; 
+
+%Size analysis -> 1. hacer la grafica que pide Mark, diferentes Neuronas. 2. Calcular entropia en experimento y graficar contra la prfundidad. 3. Escribirle a sebastian caldas. 
 
 convMeanSize = zeros(sizeN,coorRect(4)/10,coorRect(3)/10,length(respU));
 maxValdelayS = zeros(sizeN,length(respU));
@@ -1372,8 +1373,8 @@ for s=1:sizeN
     center_col = zeros(size(convolved_result, 3), size(convolved_result, 4));
 
     % Find the maximum values and their positions for each slice across the 3rd and 4th dimensions
-    for j = 1:size(A, 4)
-        for i = 1:size(A, 3)
+    for j = 1:size(convolved_result_reshaped, 4)
+        for i = 1:size(convolved_result_reshaped, 3)
             % Extract the 2D slice
             slice = convolved_result_reshaped(:, :, i, j);
             % Find the maximum value and its position

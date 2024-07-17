@@ -395,7 +395,7 @@ toc
     for u = 1:nN
         NeuronD = squeeze(NeuronVals(u,:,[1  5]));
         for d = 1:direcN
-            tuningCurve(u,d) = max(NeuronD(NeuronD(:,2)==udir(d),1))';
+            tuningCurve(u,d) = max(NeuronD(NeuronD(:,2)==udir(d),1))'; %Selecting top direction. 
         end
     end
 

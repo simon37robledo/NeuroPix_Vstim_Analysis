@@ -44,26 +44,49 @@ else
     file = dir (stimDir);
     filenames = {file.name};
 
-    if ismoving
 
+    %%% add SDG and BB
 
-        ballFiles = filenames(contains(filenames,"linearlyMovingBall"));
+    % Define the valid options
+    validOptions = {'MB', 'SDG', 'BB'};
 
-        directions = [];
-        offsets = [];
+    % Validate the input
+    stimName = validatestring(stimName, validOptions);
 
-        j =1;
-        if size(ballFiles) ~= [0 0]
+    % Example logic based on the validated input
+    switch stimName
+        case 'MB' %%Linearly moving ball
+            stimtype= 'linearlyMovingBall';
 
-            for i = ballFiles
-                ball= load(stimDir+"\"+string(i));
+        case 'SDG' %%Static and drifting gratings
+            stimtype = 'StaticDrifting';
 
-                j = j+1;
-            end
-            disp('Visual stats extracted!')
-        else
-            disp('Directory does not exist!');
+        case 'BB' %%Linearly moving bouncing balls
+            stimtype = 'linearlyMovingBouncing';
+
+        case 'RG' %%Rectangle grid
+            stimtype = 'rectGrid';
+
+        case 'FFF' %%Full field flash
+            stimtype = 'fullFieldFlash';
+
+        case 'RGN' %%Rectangle Grid Noise
+            stimtype = 'rectNoiseGrid';
+
+        otherwise
+            error('Invalid input option.');
+    end
+
+    stimFiles = filenames(contains(filenames,stimtype));
+    j =1;
+    if size(stimFiles) ~= [0 0]
+        for i = stimFiles
+            stim = load(stimDir+"\"+string(i));
+            j = j+1;
         end
+        disp('Visual stats extracted!')
+    else
+        disp('Directory does not exist!');
     end
 
     %%%%%GET UN-SYNCED DIGITAL TRIGGERS %%%%%%%%%%%%%%%%%%%%%%
@@ -140,11 +163,13 @@ else
         onset = [];
         offset = [];
 
-        nFrames = unique(cell2mat(ball.VSMetaData.allPropVal(21)));
-
-        framesTrial = ball.VSMetaData.allPropVal{21,1}(1,1,1);
-
-        FramesPsec = 60;%ball.VSMetaData.allPropVal{60,1};
+        if string(stimName) == "MB"
+            nFrames = unique(cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'nFrames')))));
+        elseif string(stimName) == "SDG"
+             nFrames = size(cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'flipOnsetTimeStamp')))),2);
+        end
+        
+        FramesPsec = cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'fps'))));%ball.VSMetaData.allPropVal{60,1};
 
         samplesPframe = 1/FramesPsec*(NP.samplingFrequencyNI);
 
@@ -152,83 +177,106 @@ else
         for i = 1:length(stimOn)
 
 
+            %%%%Initialize variables and define start and end of snip of
+            %%%%signal:
+
             pklocUpN = [];
             pklocDownN = [];
             %i=44;
             startSnip  = round((stimOn(i)-stimOn(1))*(NP.samplingFrequencyNI/1000))+1;
             endSnip  = round((stimOff(i)-stimOn(1)+100)*(NP.samplingFrequencyNI/1000));
 
+             %%%%Apply median filter and make sure that selection does not go out of bounds:
             if endSnip>length(AllD)
                 signal = AllD(startSnip:end);
-                fDat=medfilt1(AllD(startSnip:end),15);
+                fDat=medfilt1(signal,15);      
             else
                 signal =(AllD(startSnip:endSnip));
-                fDat=medfilt1(AllD(startSnip:endSnip-1),15);
+                fDat=medfilt1(signal(1:end-1),15); %median dilter is used to mantained edges and facilitate downshifts more efectively         
             end
 
-            stdS = std(signal);
 
-            [pkvalsUp, pklocUp] = findpeaks(signal,'MinPeakProminence',0.8*stdS,'MinPeakDistance',samplesPframe*2-samplesPframe*0.3);
+            %%%%Apply low pass filter:
+
+            % Use the designfilt function to create a low-pass filter
+            d = designfilt('lowpassiir', 'FilterOrder', 4, ...
+                'HalfPowerFrequency', frameRate+5, 'SampleRate', NP.samplingFrequencyNI);
+            % Apply the filter using filtfilt to preserve phase
+            
+            fDat = filtfilt(d, fDat);
+
+            %%%%Add higher or lower values at the end of the signal for last frame to be detected as
+            %%peak:
+
+            n=10; %samples to add at the end for last signal be recognized as peaks
+            y = 0.01;%Step in which additional samples change value
+
+            if mean(signal(end)-1000)> signal(end)
+
+                signal = [signal;signal(end) + (1:n-1)' * y];
+                fDat = [fDat;fDat(end) + (1:n-1)' * y];
+            
+            else %mean(signal(end)-1000)< signal(end)
+
+                signal = [signal;signal(end) -  (1:n-1)' * y];
+                fDat = [fDat;fDat(end) - (1:n-1)' * y];
+            end
+
+            %%%%Detect peaks
+            stdS = std(signal);
+            [pkvalsUp, pklocUp] = findpeaks(fDat,'MinPeakProminence',0.8*stdS,'MinPeakDistance',samplesPframe*2-samplesPframe*0.3);
 
             [pkvalsDown, pklocDown] = findpeaks(fDat*-1,'MinPeakProminence',0.8*stdS,'MinPeakDistance',samplesPframe*2-samplesPframe*0.3);
 
-            %filter out outlier peaks If there are more peaks than max
-            %
+            %%%%filter out outlier peaks If there are more peaks than max
+            
+            [cpts, ~] = findchangepts(signal, 'MaxNumChanges', 3, 'Statistic', 'mean'); %Detect signifficant changes in signal statistics
+            %3 main changes happen in SDG, the On signal, the start of frames, and
+            %the off signal. 
 
-            pklocUp = pklocUp(pklocUp>1100);
-            dF = diff(pklocUp); %Filter out initial false peaks contained in a trial that starts late. 
-            dFf = find(dF<mean(dF)*2);
-            pklocUp = pklocUp(dFf(1):end);
 
-            pklocDown = pklocDown(pklocDown>1100); %% 100 is the normal delay between the difital trigger and the analog onset. 
+            %%%%To eliminate risk of noise peaks in SDG, allow frame shifts
+            %%%%only after static phase of gratings
+            if string(stimName) == "SDG"
+                pklocUpM = pklocUp(pklocUp>cpts(2));
+                pklocDownM = pklocDown(pklocDown>cpts(2));
+            end
 
-%             if length(pklocUp) > nFrames/2 || length(pklocDown) > nFrames/2
-%                 pklocUp = pklocUp(pkvalsUp<max(pkvalsUp)-0.5*std(pkvalsUp)&kvalsUp>max(pkvalsUp)+0.5*std(pkvalsUp));
-% 
-%                 pklocDown = pklocDown(pkvalsDown<mean(pkvalsDown)+0.5*std(pkvalsDown)&pkvalsDown>mean(pkvalsDown)-0.5*std(pkvalsDown));
-%             end
+            if mean(signal(1:cpts(1))) > mean(signal(cpts(1):cpts(1)+100-n)) %signal starts in down shift 
+                pklocDown = [cpts(1); pklocDownM];
+                %pklocUp = [pklocUpM;cpts(3)];
+            else
+                %pklocDown = [pklocDownM;cpts(3)];%signal starts in up shift 
+                pklocUp = [cpts(1);pklocUpM];
+            end
 
-            %             firstF = min(pklocDown(1),pklocUp(1));
-            %             if mean(signal(1:firstF))>mean(signal)
-            %                 iFrame = find(signal(1:firstF)<mean(signal(1:firstF)));
-            %             else
-            %                 iFrame = find(signal(1:firstF)>mean(signal(1:firstF)));
-            %             end
-            %
-            %             iniFrame = iFrame(1);
-            %
-            %             lastF = max(pklocDown(end),pklocUp(end));
-            %             if mean(signal(lastF:end))>mean(signal)
-            %                 eFrame = find(signal(lastF:end)<mean(signal(lastF:end)));
-            %             else
-            %                 eFrame = find(signal(lastF:end)>median(signal(lastF:end)));
-            %             end
-            %
-            %             endFrame = lastF+eFrame(end);
-            %
-            %             eframe = pklocUp+eFrame(1);
+%             dF = diff(pklocUp); %Filter out initial false peaks contained in a trial that starts late.
+%             dFf = find(dF<mean(dF)*2);
+%             pklocUp = pklocUp(dFf(1):end);          
+             %%% 100 is the normal delay between the difital trigger and the analog onset.
+            
 
             %%%Start frame:
-
-            if (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(1) < pklocDown(1)
-
-                pklocDownN = [pklocUp(1)-samplesPframe;pklocDown];
-
-            elseif (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(1) > pklocDown(1)
-
-                pklocUpN = [pklocDown(1)-samplesPframe;pklocUp];
-
-            end
+% 
+%             if (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(1) < pklocDown(1)
+% 
+%                 pklocDownN = [pklocUp(1)-samplesPframe;pklocDown];
+% 
+%             elseif (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(1) > pklocDown(1)
+% 
+%                 pklocUpN = [pklocDown(1)-samplesPframe;pklocUp];
+% 
+%             end
             %%%%end frame:
-            if (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(end) < pklocDown(end)
-
-                pklocUpN = [pklocUp;pklocDown(end)+samplesPframe;];
-
-            elseif (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(end) > pklocDown(end)
-
-                pklocDownN = [pklocDown;pklocUp(end)+samplesPframe];
-
-            end
+%             if (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(end) < pklocDown(end)
+% 
+%                 pklocUpN = [pklocUp;pklocDown(end)+samplesPframe;];
+% 
+%             elseif (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(end) > pklocDown(end)
+% 
+%                 pklocDownN = [pklocDown;pklocUp(end)+samplesPframe];
+% 
+%             end
 
             if isempty(pklocUpN)
                 pklocUpN = pklocUp;
@@ -237,11 +285,7 @@ else
                 pklocDownN = pklocDown;
             end
 
-            %%%%%%%
-
-%             if isempty(pklocDownN)||isempty(pklocUpN)
-% 2+2
-%             end
+            %%%% Assign trial On and Off . 
 
             [startP indS] =  min([pklocDownN(1),pklocUpN(1)]);
 
@@ -271,13 +315,32 @@ else
 
 
         end
+
+        %         %%%%%Test:
+%         labels = [ones(size(pklocDown)), 2 * ones(size(pklocUp))];
 % 
-%         %
+%         % Sort the combined vector and track the labels
+%         [sorted_vector, sorted_indices] = sort([pklocDown;pklocUp]);
+%         sorted_labels = labels(sorted_indices);
+%         Interlop = unique(diff(sorted_labels)); %yes they are, still I only get 148 frames. 
+
 %         figure()
-%         plot(signal)
+%         %subplot(2,1,1)
+%         plot(fDat);%hold on; plot(signal)
+% %         plot(normalize(signal,'range'))
+% %         [val in] = sort(abs(diff(signal)),'descend');
+% % 
+% %         [cpts, ~] = findchangepts(signal, 'MaxNumChanges', 3, 'Statistic', 'mean');
+% % 
+%         %xline(cpts);
 %         xline([pklocDown'])
-%         xline([pklocUp'],'red')% round(MBcrossDown(i)*)]+500)
-%         %         xline(pklocDown(1)-16.66*NP.samplingFrequencyNI/1000,'blue')
+%         xline([pklocUp'],'red')
+%         subplot(2,1,2)
+%         plot(normalize(diff(signal),'range'));
+%         xline([pklocDown'])
+%         xline([pklocUp'],'red')
+        % round(MBcrossDown(i)*)]+500)
+        %         xline(pklocDown(1)-16.66*NP.samplingFrequencyNI/1000,'blue')
         %         xline(endFrame,'green')
 
         %         xline((stimOn(1)-MBcrossUp(i))*NP.samplingFrequencyNI/1000,'red')
