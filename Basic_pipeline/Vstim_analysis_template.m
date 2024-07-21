@@ -27,7 +27,18 @@ for ex =[1 8 28]%1:size(data,1)
     end
     NP = NPAPRecording(path);
 
- %2. Extract moving ball statistics
+
+    %Create Figs and matData folders if they don't exist
+    if ~exist(path+"\Figs",'dir')
+        mkdir Figs
+    end
+
+    if ~exist(path+"\Figs",'dir')
+        mkdir matData
+    end
+
+
+ %2. Extract moving stim statistics
     patternIndex = strfind(string(NP.recordingDir), "\catgt");
 
     endIndex = patternIndex(1)-1;

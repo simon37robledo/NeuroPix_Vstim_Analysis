@@ -106,6 +106,8 @@ else
     offset = readmatrix(string(filenames(contains(filenames,sprintf("_tcat.nidq.xid_%d_2_0",digCH)))))*1000;
 
 
+
+
     stimOn = [];
     stimOff = [];
     stimInter = [];
@@ -184,7 +186,7 @@ else
             pklocDownN = [];
             %i=44;
             startSnip  = round((stimOn(i)-stimOn(1))*(NP.samplingFrequencyNI/1000))+1;
-            endSnip  = round((stimOff(i)-stimOn(1)+100)*(NP.samplingFrequencyNI/1000));
+            endSnip  = round((stimOff(i)-stimOn(1)+1000)*(NP.samplingFrequencyNI/1000));
 
              %%%%Apply median filter and make sure that selection does not go out of bounds:
             if endSnip>length(AllD)
@@ -230,7 +232,7 @@ else
 
             %%%%filter out outlier peaks If there are more peaks than max
             
-            [cpts, ~] = findchangepts(signal, 'MaxNumChanges', 3, 'Statistic', 'mean'); %Detect signifficant changes in signal statistics
+            [cpts, ~] = findchangepts(fDat, 'MaxNumChanges', 3, 'Statistic', 'mean'); %Detect signifficant changes in signal statistics
             %3 main changes happen in SDG, the On signal, the start of frames, and
             %the off signal. 
 
@@ -244,10 +246,11 @@ else
 
             if mean(signal(1:cpts(1))) > mean(signal(cpts(1):cpts(1)+100-n)) %signal starts in down shift 
                 pklocDown = [cpts(1); pklocDownM];
-                %pklocUp = [pklocUpM;cpts(3)];
+                pklocUp = pklocUpM;
             else
                 %pklocDown = [pklocDownM;cpts(3)];%signal starts in up shift 
                 pklocUp = [cpts(1);pklocUpM];
+                pklocDown = pklocDownM;
             end
 
 %             dF = diff(pklocUp); %Filter out initial false peaks contained in a trial that starts late.
@@ -316,27 +319,47 @@ else
 
         end
 
-        labels = [ones(size(A)), 2 * ones(size(B))];
-
-        % Sort the combined vector and track the labels
-        [sorted_vector, sorted_indices] = sort(combined_vector);
-        sorted_labels = labels(sorted_indices);
-        %%%%%Test:
-        figure()
-        %subplot(2,1,1)
-        plot(fDat);%hold on; plot(signal)
-%         plot(normalize(signal,'range'))
-%         [val in] = sort(abs(diff(signal)),'descend');
+        %         %%%%%Test:
+%         labels = [ones(size(pklocDown)), 2 * ones(size(pklocUp))];
 % 
-%         [cpts, ~] = findchangepts(signal, 'MaxNumChanges', 3, 'Statistic', 'mean');
+%         % Sort the combined vector and track the labels
+%         [sorted_vector, sorted_indices] = sort([pklocDown;pklocUp]);
+%         sorted_labels = labels(sorted_indices);
+%         Interlop = unique(diff(sorted_labels)); %yes they are, still I only get 148 frames. 
+%     
 % 
-        %xline(cpts);
-        xline([pklocDown'])
-        xline([pklocUp'],'red')
-        subplot(2,1,2)
-        plot(normalize(diff(signal),'range'));
-        xline([pklocDown'])
-        xline([pklocUp'],'red')
+% %%% Check other digital triggers:
+    %t = NP.getTrigger;
+    framesDigital = readmatrix(string(filenames(contains(filenames,sprintf("_tcat.nidq.xd_%d_3_0",digCH)))))*1000;
+    TTL = framesDigital(framesDigital>stimOn(i) & framesDigital<stimOff(i));
+% 
+%     simluatedLastFrames = round(max([pklocUp;pklocDown])+mean(diff([pklocUp(2:end);pklocDown(2:end)])));
+%     diodesimulated = [sort([pklocUp;pklocDown],'ascend');simluatedLastFrames;simluatedLastFrames+round(mean(diff([pklocUp(2:end);pklocDown(2:end)])))];
+%     figure;plot(diodesimulated-round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)))
+% 
+    figure;plot((sort([pklocUp;pklocDown],'ascend'))-round((TTL(1:end-2)-stimOn(i))*(NP.samplingFrequencyNI/1000)),'ro');%ylim([1400 1600])
+% 
+%     aaa(end)-aaab(end)
+% % %
+% %         figure()
+% %         %subplot(2,1,1)
+% %         plot(fDat);%hold on; plot(signal)
+% %         plot(normalize(signal,'range'))
+% %         [val in] = sort(abs(diff(signal)),'descend');
+% % 
+% %         [cpts, ~] = findchangepts(signal, 'MaxNumChanges', 3, 'Statistic', 'mean');
+% % 
+%         xline(cpts);
+%         xline([pklocDown'])
+%         xline([pklocUp'],'red')
+%         hold on; plot(round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)),ones(size(TTL))*max(fDat),'ro', 'MarkerSize', 0.2, 'LineWidth', 2,'MarkerFaceColor','b')
+% % 
+%         figure;plot(diff(sort([pklocUp;pklocDown])),'LineWidth',2)
+%         figure;plot(diff(TTL),'LineWidth',2)
+%         subplot(2,1,2)
+%         plot(normalize(diff(signal),'range'));
+%         xline([pklocDown'])
+%         xline([pklocUp'],'red')
         % round(MBcrossDown(i)*)]+500)
         %         xline(pklocDown(1)-16.66*NP.samplingFrequencyNI/1000,'blue')
         %         xline(endFrame,'green')
