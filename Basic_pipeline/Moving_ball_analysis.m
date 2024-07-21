@@ -9,7 +9,8 @@ plotexamplesMB =0;
 newTIC = 0;
 ex=1;
 ZscoresDo=0;
-Shuffling =0;
+Shuffling =1;
+repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
@@ -17,14 +18,34 @@ ReceptiveFieldConvolutions =1;
 x=1;
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =1:size(data,1)
+for ex = [7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
-ex=19;
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
-    cd(path)
+    try %%In case it is not run in Vstim computer, which has drives mapped differently
+        cd(path)
+    catch
+        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+        if strcmp(originP,'sil3\data')
+            path = replaceBetween(path,"","\Large_scale","W:");
+        else
+            path = replaceBetween(path,"","\Large_scale","Y:");
+        end
+        cd(path)
+    end
     NP = NPAPRecording(path);
+
+    %Create Figs and matData folders if they don't exist
+
+    if ~exist(path+"\Figs",'dir')
+        mkdir Figs
+    end
+
+    if ~exist(path+"\Figs",'dir')
+        mkdir matData
+    end
+
 
     %2. Extract moving ball statistics
     patternIndex = strfind(string(NP.recordingDir), "\catgt");
@@ -212,9 +233,6 @@ ex=19;
             % Apply the custom colormap
             colormap(customColormap);
             cd(NP.recordingDir)
-            if ~exist(path+"\Figs",'dir')
-                mkdir Figs
-            end
             cd(NP.recordingDir + "\Figs")
             print(fig, sprintf('%s-MovBall-summary.png',NP.recordingName),'-dpng');
         end
@@ -395,7 +413,7 @@ toc
     for u = 1:nN
         NeuronD = squeeze(NeuronVals(u,:,[1  5]));
         for d = 1:direcN
-            tuningCurve(u,d) = max(NeuronD(NeuronD(:,2)==udir(d),1))';
+            tuningCurve(u,d) = max(NeuronD(NeuronD(:,2)==udir(d),1))'; %Selecting top direction. 
         end
     end
 
@@ -421,7 +439,7 @@ for Shuffle =1
         rands = 1000;
 
         sMr = single(Mr);
-        if ~isfile(sprintf('randValues-It-%d.mat',rands))
+        if ~isfile(sprintf('randValues-It-%d.mat',rands))||repeatShuff==1
             %Select significantly responsive units with shuffling plus Z-score:
             RandValU = zeros(rands, nN,2,'single');
             tic
@@ -448,10 +466,10 @@ for Shuffle =1
                 B = reshape(sMr(randperm(size(MrC,1)),:,randperm(size(MrC,3))), [mergeTrials, size(Mr, 1)/mergeTrials, size(Mr, 2), size(Mr,3)]);
                 M_shuffTi =  squeeze(mean(B, 1));
 
-                %             MB_shufTi = BuildBurstMatrix(goodU,round(ti2/bin),round((stims-preBase)/bin),round(preBase/bin));
-                %             MB_shufTi = mean(MB_shufTi,3);
-                %             spkRateBMS = mean(MB_shufTi); %total mean.
-                %denom = mad(MbC,0)+epsilon; %Calculate baseline variation of each neuron.
+                MB_shufTi = BuildBurstMatrix(goodU,round(ti2/bin),round((stims-preBase)/bin),round(preBase/bin));
+                MB_shufTi = mean(MB_shufTi,3);
+                spkRateBMS = mean(MB_shufTi); %total mean.
+                denom = mad(MbC,0)+epsilon; %Calculate baseline variation of each neuron.
 
                 %denomSti = std(MB_shufTi)+eps;
                 NeuronRespProfileShTr = zeros(nN,'single');

@@ -110,6 +110,7 @@ else
     file = dir (base_dir);
 end
 
+
 filenames = {file.name};
 num = string(sum( ~cellfun(@isempty, strfind(filenames, fileName)))-1);
 
