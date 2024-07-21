@@ -24,17 +24,9 @@
 % - runs : If within the insertion there is only one continous run then runs
 % = "single"
 
-    try
-        cd(path)
-    catch
-        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-        if strcmp(originP,'sil3\data')
-            path = replaceBetween(path,"","\Large_scale","W:");
-        else
-            path = replaceBetween(path,"","\Large_scale","Y:");
-        end
-        cd(path)
-    end
+
+run_dir1 = "\\132.66.45.127\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT";
+run_dir2 = "Y:\Large_scale_mapping_NP\SpikeGLX\V4_catGT";
 
 %% %% Phy commmand: phy template-gui params.py
 
@@ -68,8 +60,7 @@ expPV152 = 'PV152_Experiment_11_7_24';
 
 %% Basic variables
 base_dir = string(basic_pathPV152)+"\"+string(expPV152);
-
-run_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT"; %Folder that has catgt and tprime subfolders
+%Folder that has catgt and tprime subfolders
 insertion = "1";
 fileName = "PV152_Experiment";
 runs = "mult";
@@ -78,17 +69,34 @@ concat = 1;
 syncChan = "6";
 
 %% Mice
-base_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_28_11_23";
-fileName = "Mice_exp_28";
+base_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\Mouse_rightV1_NP_8_7_24";
+fileName = "Mouse_rightV1_NP_8_7";
 insertion = "1";
-syncChan = "0";
+syncChan = "6";
+dig_CH ="2";
+concat = 1;
 
-dig_CH ="11";
-cd(base_dir)
 %% Command line excecution
-  
+
+try
+    cd(base_dir)
+catch
+    originP = cell2mat(extractBetween(base_dir,"\\","\Large_scale"));
+    if strcmp(originP,'sil3\data')
+        base_dir = replaceBetween(base_dir,"","\Large_scale","W:");
+    else
+        base_dir = replaceBetween(base_dir,"","\Large_scale","Y:");
+    end
+    cd(base_dir)
+end
+
+
 %0.0 Set directory to catGT directory
-cd(run_dir+"\CatGT-win")
+try
+    cd(run_dir1+"\CatGT-win")
+catch
+    cd(run_dir2+"\CatGT-win")
+end
 
 %0.1 Find experiment file name from base_dir
 out=regexp(base_dir,'\','split');
@@ -278,7 +286,11 @@ if num == "0" && insertion ~="-1"
 end
 
 
-cd(run_dir+"\CatGT-win")
+try
+    cd(run_dir1+"\CatGT-win")
+catch
+    cd(run_dir2+"\CatGT-win")
+end
 
 %4. Create command line for extracting nidaq
 
@@ -353,7 +365,13 @@ if ~exist(path+"\sync_events",'dir')
 end
 
 %Go to TPrime dir
-cd(run_dir + "\TPrime-win")
+
+
+try
+    cd(run_dir1 + "\TPrime-win")
+catch
+    cd(run_dir2 + "\TPrime-win")
+end
 
 
 
