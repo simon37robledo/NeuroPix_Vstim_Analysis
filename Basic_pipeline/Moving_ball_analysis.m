@@ -5,20 +5,25 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 0;
-plotexamplesMB =0;
+plotexamplesMB =1;
 newTIC = 0;
 ex=1;
-ZscoresDo=0;
-Shuffling =1;
+ZscoresDo=1;
+Shuffling =0;
 repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
-ReceptiveFieldConvolutions =1;
+ReceptiveFieldConvolutions =0;
 x=1;
+
+summPlot =1;
+
+%%%In shuffling make sure that response cat is selected equally between SDG
+%%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = [7 8 28]%1:size(data,1)
+for ex = [41 7 39]%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -42,7 +47,7 @@ for ex = [7 8 28]%1:size(data,1)
         mkdir Figs
     end
 
-    if ~exist(path+"\Figs",'dir')
+    if ~exist(path+"\matData",'dir')
         mkdir matData
     end
 
@@ -85,7 +90,10 @@ for ex = [7 8 28]%1:size(data,1)
 
             if ~isempty(find(strcmp(ball.VSMetaData.allPropName,'orientations'))) %Check if orientations are present (grid inside moving object).
                 orientations = [orientations cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'orientations'))))];
-            else
+            else %No orientations property exist
+                orientations = [orientations zeros(1,cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'nTotTrials')))))];
+            end
+            if isempty(orientations) %orientations property exists but is empty
                 orientations = [orientations zeros(1,cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'nTotTrials')))))];
             end
 
@@ -127,8 +135,8 @@ for ex = [7 8 28]%1:size(data,1)
     containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
     ttlInd = find(containsMB);
 
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"MovBall",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"MovBall",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
     %Check diode
     % for i = 1:length(stimOn)
@@ -207,7 +215,7 @@ for ex = [7 8 28]%1:size(data,1)
     Norm(Norm>2) = 2;
 
     %8. Plot summary response
-    summPlot =0;
+
     for plotOp = summPlot
         if summPlot
 
@@ -570,7 +578,7 @@ for Shuffle =1
 
         save(sprintf('pvalTrials-%s',NP.recordingName),'pvalTr')
         save(sprintf('pvalTime-%s',NP.recordingName),'pvalTi')
-        
+
 
     end
 end

@@ -48,7 +48,7 @@ else
     %%% add SDG and BB
 
     % Define the valid options
-    validOptions = {'MB', 'SDG', 'BB'};
+    validOptions = {'MB', 'SDG', 'BB', 'FFF','RGN','RG'};
 
     % Validate the input
     stimName = validatestring(stimName, validOptions);
@@ -176,6 +176,13 @@ else
         samplesPframe = 1/FramesPsec*(NP.samplingFrequencyNI);
 
 
+        if string(stimName) == "SDG"
+
+            staticTime = cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'static_time'))));
+
+        end
+
+
         for i = 1:length(stimOn)
 
 
@@ -232,7 +239,7 @@ else
 
             %%%%filter out outlier peaks If there are more peaks than max
             
-            [cpts, ~] = findchangepts(fDat, 'MaxNumChanges', 3, 'Statistic', 'mean'); %Detect signifficant changes in signal statistics
+            [cpts, ~] = findchangepts(fDat, 'MaxNumChanges', 4, 'Statistic', 'mean'); %Detect signifficant changes in signal statistics
             %3 main changes happen in SDG, the On signal, the start of frames, and
             %the off signal. 
 
@@ -240,46 +247,44 @@ else
             %%%%To eliminate risk of noise peaks in SDG, allow frame shifts
             %%%%only after static phase of gratings
             if string(stimName) == "SDG"
-                pklocUpM = pklocUp(pklocUp>cpts(2));
-                pklocDownM = pklocDown(pklocDown>cpts(2));
+
+                try
+                    if length(pklocUp) > nFrames/2
+                        pklocUpM = pklocUp(pklocUp>cpts(2)&pklocUp<=cpts(3));
+                        pklocDownM = pklocDown(pklocDown>cpts(2)&pklocDown<=cpts(3));
+
+                        if length(pklocUpM)<nFrames/3
+                            pklocUpM = pklocUp(pklocUp>cpts(1)&pklocUp<=cpts(2));
+                        end
+                        if length(pklocUpM)<nFrames/3
+                            pklocUpM = pklocUp(pklocUp>cpts(2)&pklocUp<=cpts(4));
+                        end
+                        if length(pklocDownM)<nFrames/3
+                            pklocDownM = pklocDown(pklocDown>cpts(1)&pklocDown<=cpts(2));
+                        end
+                        if length(pklocDownM)<nFrames/3
+                            pklocDownM = pklocDown(pklocDown>cpts(2)&pklocDown<=cpts(4));
+                        end
+
+
+                        if mean(signal(1:cpts(1))) > mean(signal(cpts(1):cpts(1)+100-n)) %signal starts in down shift
+                            try
+                                pklocDown = [min(cpts(1),pklocDownM(1)-staticTime*NP.samplingFrequencyNI); pklocDownM];
+                            catch
+                                2+2
+                            end
+                            pklocUp = pklocUpM;
+                        else
+                            %pklocDown = [pklocDownM;cpts(3)];%signal starts in up shift
+                            pklocUp = [min(cpts(1),pklocUpM(1)-staticTime*NP.samplingFrequencyNI);pklocUpM];
+                            pklocDown = pklocDownM;
+                        end
+                    end
+                catch
+                    2+2
+                end
             end
 
-            if mean(signal(1:cpts(1))) > mean(signal(cpts(1):cpts(1)+100-n)) %signal starts in down shift 
-                pklocDown = [cpts(1); pklocDownM];
-                pklocUp = pklocUpM;
-            else
-                %pklocDown = [pklocDownM;cpts(3)];%signal starts in up shift 
-                pklocUp = [cpts(1);pklocUpM];
-                pklocDown = pklocDownM;
-            end
-
-%             dF = diff(pklocUp); %Filter out initial false peaks contained in a trial that starts late.
-%             dFf = find(dF<mean(dF)*2);
-%             pklocUp = pklocUp(dFf(1):end);          
-             %%% 100 is the normal delay between the difital trigger and the analog onset.
-            
-
-            %%%Start frame:
-% 
-%             if (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(1) < pklocDown(1)
-% 
-%                 pklocDownN = [pklocUp(1)-samplesPframe;pklocDown];
-% 
-%             elseif (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(1) > pklocDown(1)
-% 
-%                 pklocUpN = [pklocDown(1)-samplesPframe;pklocUp];
-% 
-%             end
-            %%%%end frame:
-%             if (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(end) < pklocDown(end)
-% 
-%                 pklocUpN = [pklocUp;pklocDown(end)+samplesPframe;];
-% 
-%             elseif (length(pklocUp) < nFrames/2 || length(pklocDown) < nFrames/2) && pklocUp(end) > pklocDown(end)
-% 
-%                 pklocDownN = [pklocDown;pklocUp(end)+samplesPframe];
-% 
-%             end
 
             if isempty(pklocUpN)
                 pklocUpN = pklocUp;
@@ -318,64 +323,22 @@ else
 
 
         end
+%%%%Test:
 
-        %         %%%%%Test:
-%         labels = [ones(size(pklocDown)), 2 * ones(size(pklocUp))];
-% 
-%         % Sort the combined vector and track the labels
-%         [sorted_vector, sorted_indices] = sort([pklocDown;pklocUp]);
-%         sorted_labels = labels(sorted_indices);
-%         Interlop = unique(diff(sorted_labels)); %yes they are, still I only get 148 frames. 
-%     
-% 
-% %%% Check other digital triggers:
-%     %t = NP.getTrigger;
-%     framesDigital = readmatrix(string(filenames(contains(filenames,sprintf("_tcat.nidq.xd_%d_3_0",digCH)))))*1000;
-%     TTL = framesDigital(framesDigital>stimOn(i) & framesDigital<stimOff(i));
-% 
-%     simluatedLastFrames = round(max([pklocUp;pklocDown])+mean(diff([pklocUp(2:end);pklocDown(2:end)])));
-%     diodesimulated = [sort([pklocUp;pklocDown],'ascend');simluatedLastFrames;simluatedLastFrames+round(mean(diff([pklocUp(2:end);pklocDown(2:end)])))];
-%     figure;plot(diodesimulated-round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)))
-% 
-    figure;plot(sort([pklocUp;pklocDown],'ascend')-round((TTL(1:end-2)-stimOn(i))*(NP.samplingFrequencyNI/1000)),'ro')
-% 
-%     aaa(end)-aaab(end)
-% % %
-% %         figure()
-% %         %subplot(2,1,1)
-% %         plot(fDat);%hold on; plot(signal)
-% %         plot(normalize(signal,'range'))
-% %         [val in] = sort(abs(diff(signal)),'descend');
-% % 
-% %         [cpts, ~] = findchangepts(signal, 'MaxNumChanges', 3, 'Statistic', 'mean');
-% % 
-%         xline(cpts);
-%         xline([pklocDown'])
-%         xline([pklocUp'],'red')
-%         hold on; plot(round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)),ones(size(TTL))*max(fDat),'ro', 'MarkerSize', 0.2, 'LineWidth', 2,'MarkerFaceColor','b')
-% % 
-%         figure;plot(diff(sort([pklocUp;pklocDown])),'LineWidth',2)
-%         figure;plot(diff(TTL),'LineWidth',2)
-%         subplot(2,1,2)
-%         plot(normalize(diff(signal),'range'));
-%         xline([pklocDown'])
-%         xline([pklocUp'],'red')
-        % round(MBcrossDown(i)*)]+500)
-        %         xline(pklocDown(1)-16.66*NP.samplingFrequencyNI/1000,'blue')
-        %         xline(endFrame,'green')
+%%% Check other digital triggers:
 
-        %         xline((stimOn(1)-MBcrossUp(i))*NP.samplingFrequencyNI/1000,'red')
-        %         xline(500,'blue')
-        %         xline((stimOff(1)-MBcrossUp(i))*NP.samplingFrequencyNI/1000,'red')
-        %
-        %
-        %         xline(onFrame*(NP.samplingFrequencyNI/1000)+500,'green')
-        %         xline(offFrame*(NP.samplingFrequencyNI/1000)+500,'red','.')
-        %
-        %         figure()
-        %         plot(AllD(round(length(AllD)-10*NP.samplingFrequencyNI):end))
-        %         xline((onFrame(onFrame>-10000+MBcrossDown(end))-MBcrossUp(1))*NP.samplingFrequencyNI/1000-round(length(AllD)-10*NP.samplingFrequencyNI));
-        %         xline((offFrame(offFrame>-10000+MBcrossDown(end))-MBcrossUp(1))*NP.samplingFrequencyNI/1000,'g')
+%(endP(end)-startP(1))/NP.samplingFrequencyNI
+figure()
+plot(fDat);%hold on; plot(signal)
+
+
+% [cpts, ~] = findchangepts(signal, 'MaxNumChanges', 3, 'Statistic', 'mean');
+% xline([startP(1) endP(end)])
+%xline(cpts);
+xline([pklocDown'])
+xline([pklocUp'],'red')
+%hold on; plot(round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)),ones(size(TTL))*max(fDat),'ro', 'MarkerSize', 0.2, 'LineWidth', 2,'MarkerFaceColor','b')
+
 
     else %Notmoving
 

@@ -57,12 +57,31 @@ expPV32 = 'PV32_Experiment_18_3_24';
 basic_pathPV152 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV152';
 expPV152 = 'PV152_Experiment_11_7_24';
 
+basic_pathPV43 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV43';
+expPV43 = 'PV43_Experiment_24_7_24';
+
+
+basic_pathPV104 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV104';
+expPV104= 'PV104_Experiment_5_8_24';
+
+basic_pathPV35 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV35';
+expPV35 = 'PV35_Experiment_18_8_24';
+
 
 %% Basic variables
-base_dir = string(basic_pathPV152)+"\"+string(expPV152);
+base_dir = string(basic_pathPV35)+"\"+string(expPV35);
+%Folder that has catgt and tprime subfolders
+insertion = "3";
+fileName = "PV35_Experiment";
+runs = "mult";
+dig_CH = "1";
+concat = 1;
+syncChan = "6";
+%% Basic variables
+base_dir = string(basic_pathPV104)+"\"+string(expPV104);
 %Folder that has catgt and tprime subfolders
 insertion = "1";
-fileName = "PV152_Experiment";
+fileName = "PV104_Experiment";
 runs = "mult";
 dig_CH = "1";
 concat = 1;
@@ -73,7 +92,7 @@ base_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\Mouse_r
 fileName = "Mouse_rightV1_NP_8_7";
 insertion = "1";
 syncChan = "6";
-dig_CH ="2";
+dig_CH ="3";
 concat = 1;
 
 %% Command line excecution
@@ -349,7 +368,7 @@ else
 
 end
 
-%%
+
 %5.0. Create sync folder
 
 if insertion ~= "-1"
