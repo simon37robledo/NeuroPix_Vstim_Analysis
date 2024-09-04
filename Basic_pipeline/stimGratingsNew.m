@@ -12,7 +12,7 @@ rands = 0;
 tuningIndex =0;
 boxplots = 0;
 
-examplesSDG = [7 6 5 4 3 2 1 ]%8 9 10 11 12 13 14 29 30 31 32 40 41 42 43];
+examplesSDG = [8 9 10 11 12 13 14 29 30 31 32 40 41 42 43];
 StaticResponses = cell(1,length(examplesSDG));
 MovingResponses = cell(1,length(examplesSDG));
 
@@ -215,11 +215,12 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
             [nT,nN,nB] = size(MrRast);
 
             for u =1:nN
-                f= figure('Color','w');
+                t= tiledlayout(2,1,"TileSpacing","tight"); %figure('Color','w');
+                nexttile
                 imagesc(squeeze(MrRast(:,u,:)));colormap(flipud(gray(64)));
                 title(sprintf('SDG|%s|UnitN-%d|UnitPhy-%d',strrep(NP.recordingName,'_','-'),u,GoodU_or(u)))
                 
-                xlabel('Time (ms)')
+              
                 xline(preR/binr, '-g', LineWidth=1.5);
                 xline(preR/binr+static_time/binr, '-b', LineWidth=1.5);
                 xline(nB-preR/binr,'-r',LineWidth=1.5)
@@ -239,8 +240,26 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
                 ax.YAxis(2).Color = 'k';
                 yticklabels(sort(uDir,'descend'))
                 ylabel('Angles')
+                lims =xlim;
+                xt = xticks;
+
+                nexttile
+                h = histogram(sum(squeeze(MrRast(:,u,:))),round(size(MrRast,3)/2));
+                xlim([lims(1)/(size(MrRast,3)/h.NumBins) lims(2)/(size(MrRast,3)/h.NumBins)])
+                xticks(round(xt/2))
+                xticklabels([preR:static_time:nB*binr])
+                xline(preR/binr/(size(MrRast,3)/h.NumBins),'-g', LineWidth=1.5);
+                xline(preR/binr/(size(MrRast,3)/h.NumBins)+static_time/binr/(size(MrRast,3)/h.NumBins)...
+                    , '-b', LineWidth=1.5)
+                xline(nB/(size(MrRast,3)/h.NumBins)-preR/binr/(size(MrRast,3)/h.NumBins),'-r',LineWidth=1.5)
+                xlabel('Time (ms)')
+                yticklabels((round(100*(yticks/size(MrRast,1)))/100)*1000/binr)
+                ylabel('Spike Rate (spikes/sec)')
+
+                set(gcf,'Color','w')
+                
                 cd(NP.recordingDir+"\Figs")
-                print(f, sprintf('SDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
+                print(t, sprintf('SDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
                 clear f
                 close all
             end

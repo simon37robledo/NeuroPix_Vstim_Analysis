@@ -195,6 +195,12 @@ else
             startSnip  = round((stimOn(i)-stimOn(1))*(NP.samplingFrequencyNI/1000))+1;
             endSnip  = round((stimOff(i)-stimOn(1)+1000)*(NP.samplingFrequencyNI/1000));
 
+            interstim = cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'interTrialDelay'))));
+
+            if interstim <1 %Check if interstim is less than 1 and modify endSnip
+                endSnip  = round((stimOff(i)-stimOn(1)+200)*(NP.samplingFrequencyNI/1000));
+            end
+
              %%%%Apply median filter and make sure that selection does not go out of bounds:
             if endSnip>length(AllD)
                 signal = AllD(startSnip:end);
@@ -239,14 +245,50 @@ else
 
             %%%%filter out outlier peaks If there are more peaks than max
             
-            [cpts, ~] = findchangepts(fDat, 'MaxNumChanges', 4, 'Statistic', 'mean'); %Detect signifficant changes in signal statistics
+            tic
+            numSegments = 2;
+            segmentLength = length(fDat) / numSegments;
+
+            % Initialize array to store change points from each segment
+            change_points = cell(1, numSegments);
+
+            % Use parfor for parallel processing
+            parfor par = 1:numSegments
+                segmentData = fDat((par-1)*segmentLength + 1:par*segmentLength);
+                [change_points{par} ~]= findchangepts(single(segmentData), 'MaxNumChanges', 1, 'Statistic', 'std');
+            end
+
+            % Combine results from all segments
+            try
+                cpts = cell2mat(change_points) + repelem(0:segmentLength:(numSegments-1)*segmentLength, cellfun(@numel, change_points));
+            catch
+                if isempty(change_points{2})
+                    change_points{2} = length(fDat);
+                end
+                if isempty(change_points{1})
+                    change_points{1} = 1;
+                end
+                cpts = cell2mat(change_points) + repelem(0:segmentLength:(numSegments-1)*segmentLength, cellfun(@numel, change_points));
+            end
+            toc
+            %[cpts1, ~] = findchangepts(single(fDat), 'MaxNumChanges', 2, 'Statistic', 'std'); %Detect signifficant changes in signal statistics
             %3 main changes happen in SDG, the On signal, the start of frames, and
             %the off signal. 
+            toc
+            if string(stimName) == "MB"
+                pklocUp = pklocUp(pklocUp<max(cpts));
 
+                pklocDown = pklocDown(pklocDown<max(cpts));
+
+                pklocUp = pklocUp(pklocUp>min(cpts));
+
+                pklocDown = pklocDown(pklocDown>min(cpts));
+            end
 
             %%%%To eliminate risk of noise peaks in SDG, allow frame shifts
             %%%%only after static phase of gratings
             if string(stimName) == "SDG"
+                 [cpts, ~] = findchangepts(fDat, 'MaxNumChanges', 4, 'Statistic', 'mean'); 
 
                 try
                     if length(pklocUp) > nFrames/2
@@ -295,7 +337,24 @@ else
 
             %%%% Assign trial On and Off . 
 
+            try
+
             [startP indS] =  min([pklocDownN(1),pklocUpN(1)]);
+
+            catch
+
+                [pkvalsUp, pklocUp] = findpeaks(fDat,'MinPeakProminence',0.8*stdS,'MinPeakDistance',samplesPframe*2-samplesPframe*0.3);
+
+                [pkvalsDown, pklocDown] = findpeaks(fDat*-1,'MinPeakProminence',0.8*stdS,'MinPeakDistance',samplesPframe*2-samplesPframe*0.3);
+
+       %%%Quick and dirty solution for failed trials=few
+                pklocUpN = pklocUp;
+                pklocDownN = pklocDown;
+
+                [startP indS] =  min([pklocDownN(1),pklocUpN(1)]);
+
+
+            end
 
             if indS ==1
                 startP = pklocDownN;
@@ -332,9 +391,10 @@ figure()
 plot(fDat);%hold on; plot(signal)
 
 
-% [cpts, ~] = findchangepts(signal, 'MaxNumChanges', 3, 'Statistic', 'mean');
-% xline([startP(1) endP(end)])
-%xline(cpts);
+%[cpts, ~] = findchangepts(signal, 'MaxNumChanges', 2, 'Statistic', 'std');
+% xline(startP(1))
+%     xline(endP(end))
+xline(cpts);
 xline([pklocDown'])
 xline([pklocUp'],'red')
 %hold on; plot(round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)),ones(size(TTL))*max(fDat),'ro', 'MarkerSize', 0.2, 'LineWidth', 2,'MarkerFaceColor','b')
