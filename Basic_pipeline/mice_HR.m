@@ -12,9 +12,38 @@ dur = 12;
 dur_var = 5;
 ttl_index =-1;
 %%
-recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse2\Mice_exp_29_11_23\Insertion2\catgt_Mice_exp_29_11_23_2_g0'; 
+recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\Mouse_rightV1_NP_8_7_24\Insertion1\catgt_Mouse_rightV1_NP_8_7_24_1_g0'; 
 %recPath1 = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_28_11_23\Insertion1\catgt_Mice_exp_28_11_23_1_g0'; 
 NP1= NPAPRecording(recPath1);
+%%
+cd(NP1.recordingDir)
+
+niStartsample = 50867337;
+apStartsample = 144056030;
+
+calSFheadstage = 30000.37799442897;
+calSFnidaq = 10593.236768802228;
+
+niStartTime = niStartsample/calSFnidaq;
+apStartTime = apStartsample/calSFheadstage;
+startDiff = niStartTime-apStartTime;
+totalSamplesNi = round(3365.0159792817526*calSFnidaq);
+totalSamplesAP = round(3365.2506*calSFheadstage); %Modify later with accurate probe info.
+
+samplesTimeAp = (1:totalSamplesAP)/calSFheadstage;
+samplesTimeNi = (niStartsample:totalSamplesNi)/calSFnidaq;
+
+samplesTimeNi(end)-startDiff;
+samplesTimeAp(end)
+
+
+
+
+figure;
+plot((niStartsample:totalSamplesNi),samplesTimeNi); hold on; plot((apStartsample:totalSamplesAP),samplesTimeAp); 
+
+figure;
+plot(samplesTimeAp-samplesTimeNi)
 
 
 %[astim, astimon, astimoff, astimdur,astiminter] = time_diode_synced(NP,base_dir, run_dir, insertion,t1,t2,dur,dur_var,ttl_index);
@@ -24,15 +53,15 @@ LFP_Esmolot22 = NP1.getDataLFP(1:384,round(NP1.recordingDuration_ms/2),5000);
 
 %% Get analog data (ECG)
 
-s = NP1.getAnalogData([1,3,4],0,round(NP1.recordingDuration_ms)-100);
+s = NP1.getAnalogData([1 2],0,round(NP1.recordingDuration_ms)-100);
 
-sECG = squeeze(s(3,:));
+sECG = squeeze(s(2,:));
 
 sDiode = squeeze(s(1,:));
 cd(NP1.recordingDir)
 
 save('ECG_Analog.mat',"sECG");
-
+% 
 save('AnalogData_Diode.mat','sDiode');
 
 %fb = dwtfilterbank('Wavelet','sym4','SignalLength',numel(s),'Level',3);
@@ -71,10 +100,10 @@ save('AnalogData_Diode.mat','sDiode');
      j = j+1;
  end
 
-
-save('GupTrigger.mat','stimOn')
-save('GdownTrigger.mat','stimOff')
-
+% 
+% save('GupTrigger.mat','stimOn')
+% save('GdownTrigger.mat','stimOff')
+% 
 % save('FFFupTrigger.mat','stimOn')
 % save('FFFdownTrigger.mat','stimOff')
 
@@ -82,9 +111,43 @@ save('GdownTrigger.mat','stimOff')
 % 
 % GdownTrigger = stimOff;
 %% triggers Diode
-%[stimOn stimOff onSync offSync] = NPdiodeExtract(NP1,0,"MovBall",1,11,0); 
+%[stimOn stimOff onSync offSync] = NPdiodeExtract(NP1,0,"MovBall",1,11,0); %%%Extract diode using function from diodeextract (special case, no sync)
 
+%%%%Specific case for no sync experiment
+fDat=medfilt1(sDiode,600);
+% d = designfilt('lowpassiir', 'FilterOrder', 4, ...
+%     'HalfPowerFrequency', 120, 'SampleRate', NP1.samplingFrequencyNI);
+%%% Apply the filter using filtfilt to preserve phase
+% 
+% fDat = filtfilt(d, fDat);
+stimOn = [];
+stimOff = [];
+startsFFF = load('Mouse_rightV1_NP_8_7_24_1_g0_tcat.nidq.xd_2_1_0.txt');
+endsFFF = load('Mouse_rightV1_NP_8_7_24_1_g0_tcat.nidq.xid_2_1_0.txt');
 
+for i = 1:length(endsFFF)
+
+    signal = fDat(round(startsFFF(i)*NP1.samplingFrequencyNI):round(endsFFF(i)*NP1.samplingFrequencyNI));
+    nofiltS = sDiode(round(startsFFF(i)*NP1.samplingFrequencyNI):round(endsFFF(i)*NP1.samplingFrequencyNI));
+    stdS = std(signal);
+
+    inSignal = signal*-1;
+    inSignal(inSignal>mean(inSignal))= mean(inSignal);
+    
+    signal(signal>mean(signal)) =mean(signal);
+
+    [pkvalsUp, pklocUp] = findpeaks(signal,'MinPeakProminence',0.8*stdS,'MinPeakDistance',NP1.samplingFrequencyNI*0.05);
+    [pkvalsDown, pklocDown] = findpeaks(inSignal,'MinPeakProminence',0.8*stdS,'MinPeakDistance',NP1.samplingFrequencyNI*0.05);
+%         figure;plot(signal(2000000:2050000));%hold on;plot(nofiltS(2000000:2050000));
+%         xline(pklocUp(pklocUp>2000000 & pklocUp<2050000)-2000000,'k');
+%         xline(pklocDown(pklocDown>2000000 & pklocDown<2050000)-2000000,'r');
+    stimOn = [stimOn pklocUp];
+    stimOff = [stimOff pklocDown];
+
+end
+
+save('FFFupTrigger.mat','stimOn')
+save('FFFdownTrigger.mat','stimOff')
 %% Plot analog data 
 
 figure
@@ -114,18 +177,22 @@ Fhp = 0.5; % High-pass filter cutoff frequency in Hz, adjust based on your needs
 [b, a] = butter(2, Fhp/Fn, 'high'); % 2nd order Butterworth filter
 ecgFiltered = filtfilt(b, a, sECG); % Zero-phase filtering to avoid phase shift
 
-[qrspeaks,locs] = findpeaks(ecgFiltered,'MinPeakHeight',0.8,...
+%ecgFiltered=medfilt1(ecgFiltered,500);
+
+[qrspeaks,locs] = findpeaks(ecgFiltered,'MinPeakHeight',mean(ecgFiltered)+1.8*std(ecgFiltered),...
     'MinPeakDistance',300);
+% 
+% figure()
+% plot(ecgFiltered(round(2520*NP1.samplingFrequencyNI):end));yline(mean(ecgFiltered)+std(ecgFiltered));%hold on;plot(normZeroOne(y(1:20000))) 
+% hold on
+% plot(locs(locs>round(2520*NP1.samplingFrequencyNI))-round(2520*NP1.samplingFrequencyNI),qrspeaks(locs>round(2520*NP1.samplingFrequencyNI)),'ro')
+% 
+% figure()
+% plot(sECG);%hold on;plot(normZeroOne(y(1:20000))) 
+% hold on
+% plot(locs,qrspeaks,'ro')
 
-figure()
-plot(ecgFiltered(round(2520*NP1.samplingFrequencyNI):end));%hold on;plot(normZeroOne(y(1:20000))) 
-hold on
-plot(locs(locs>round(2520*NP1.samplingFrequencyNI))-round(2520*NP1.samplingFrequencyNI),qrspeaks(locs>round(2520*NP1.samplingFrequencyNI)),'ro')
-
-figure()
-plot(sECG);%hold on;plot(normZeroOne(y(1:20000))) 
-hold on
-plot(locs,qrspeaks,'ro')
+locsms = locs/(NP1.samplingFrequencyNI/1000);
 
 %%
 
@@ -139,11 +206,13 @@ originSQW = readmatrix(dir(fullfile(NP1.recordingDir, '*nidq.xd_11_0_500.txt*'))
 
 locSync = interp1([originSQW(1)-1;originSQW;originSQW(end)+1]'*1000, [Neur(1)-1;Neur;Neur(end)+1]'*1000, locs/(NP1.samplingFrequencyNI/1000), 'linear');
 
+
+
 % fileID = fopen("Peak_sync"+".mat",'w');
 % fprintf(fileID, '%d\n', locSync);
 % fclose(fileID);
 
-save('Peak_sync.mat','locSync')
+save('Peak_nosync.mat','locsms')
 
 
 
@@ -181,8 +250,9 @@ end
 
 
 %% Build the TIC matrix
-p = NP1.convertPhySorting2tIc(NP1.recordingDir);
+p = NP1.convertPhySorting2tIc(NP1.recordingDir); %%Load and save neural data
 
+cd(NP1.recordingDir)
 %p = NP1.convertBCSorting2tIc(NP1.recordingDir);
 
 %p = NP1.convertBCSorting2tIc(NP1.recordingDir);
@@ -194,6 +264,19 @@ label = string(p.label');
 
 goodU = p.ic(:,label == 'good');
 
+[M]=squeeze(BuildBurstMatrix(goodU,round(p.t),0,round(NP1.recordingDuration_ms)));
+
+% 
+% spike_times = double(readNPY('spike_times_original.npy'))*(NP1.samplingFrequency)/(30000);
+% 
+% writeNPY(spike_times,'spike_times.npy');
+
+%*30000/NP1.samplingFrequencyAP
+
+
+save('SpikesPerNeuron.mat','M','-v7.3') %%Multiply times as Mark says.
+
+%%
 bin=2;
 win= 160;
 start = 40;
@@ -202,7 +285,9 @@ cluster_info = readtable(string(NP1.recordingDir) + "\cluster_info.tsv",  "FileT
 GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
 GoodU_orDepth = cluster_info.depth(cluster_info.group=="good");
 
-verticalDepth = 3800 - GoodU_orDepth;
+verticalDepth = sin(deg2rad(72.5))*(2832 - GoodU_orDepth);
+
+
 cd(NP1.recordingDir)
 save('unitDepth',"verticalDepth");
 
@@ -213,7 +298,7 @@ hb1 = hb(hb < msInject);
 
 %% Build the burst matrix Before esmolol 
 
-[M]=squeeze(BuildBurstMatrix(goodU,round(p.t),0,round(NP1.recordingDuration_ms)));
+
 
 [nTrials,nNeurons,nTimes]=size(M);
 %%

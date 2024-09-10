@@ -33,7 +33,7 @@ for ex =[1 8 28]%1:size(data,1)
         mkdir Figs
     end
 
-    if ~exist(path+"\Figs",'dir')
+    if ~exist(path+"\matData",'dir')
         mkdir matData
     end
 
