@@ -16,6 +16,41 @@ function [onsetSync offsetSync onSync offSync] = NPdiodeExtract(NP,ismoving,stim
 %%%%MATLAB PTB SPECS: %%%%%%%%%%%%%%%%%%%%%%
 cd(NP.recordingDir)
 
+validOptions = {'MB', 'SDG', 'BB', 'FFF','RGN','RG','NS','NSC'};
+
+% Validate the input
+stimName = validatestring(stimName, validOptions);
+
+% Example logic based on the validated input
+switch stimName
+    case 'MB' %%Linearly moving ball
+        stimtype= 'linearlyMovingBall';
+
+    case 'SDG' %%Static and drifting gratings
+        stimtype = 'StaticDrifting';
+
+    case 'BB' %%Linearly moving bouncing balls
+        stimtype = 'linearlyMovingBouncing';
+
+    case 'RG' %%Rectangle grid
+        stimtype = 'rectGrid';
+
+    case 'FFF' %%Full field flash
+        stimtype = 'fullFieldFlash';
+
+    case 'RGN' %%Rectangle Grid Noise
+        stimtype = 'rectNoiseGrid';
+
+    case 'NS' %%Novelty stim
+        stimtype = 'NoveltyStim';
+
+    case 'NSC' %%Novelty stim control
+        stimtype = 'NoveltyStimC';
+
+    otherwise
+        error('Invalid input option.');
+end
+
 fileName = "DIODE_"+string(stimName);
 
 
@@ -48,46 +83,19 @@ else
     %%% add SDG and BB
 
     % Define the valid options
-    validOptions = {'MB', 'SDG', 'BB', 'FFF','RGN','RG'};
+    
 
-    % Validate the input
-    stimName = validatestring(stimName, validOptions);
-
-    % Example logic based on the validated input
-    switch stimName
-        case 'MB' %%Linearly moving ball
-            stimtype= 'linearlyMovingBall';
-
-        case 'SDG' %%Static and drifting gratings
-            stimtype = 'StaticDrifting';
-
-        case 'BB' %%Linearly moving bouncing balls
-            stimtype = 'linearlyMovingBouncing';
-
-        case 'RG' %%Rectangle grid
-            stimtype = 'rectGrid';
-
-        case 'FFF' %%Full field flash
-            stimtype = 'fullFieldFlash';
-
-        case 'RGN' %%Rectangle Grid Noise
-            stimtype = 'rectNoiseGrid';
-
-        otherwise
-            error('Invalid input option.');
-    end
-
-    stimFiles = filenames(contains(filenames,stimtype));
-    j =1;
-    if size(stimFiles) ~= [0 0]
-        for i = stimFiles
-            stim = load(stimDir+"\"+string(i));
-            j = j+1;
-        end
-        disp('Visual stats extracted!')
-    else
-        disp('Directory does not exist!');
-    end
+%     stimFiles = filenames(contains(filenames,stimtype));
+%     j =1;
+%     if size(stimFiles) ~= [0 0]
+%         for i = stimFiles
+%             stim = load(stimDir+"\"+string(i));
+%             j = j+1;
+%         end
+%         disp('Visual stats extracted!')
+%     else
+%         disp('Directory does not exist!');
+%     end
 
     %%%%%GET UN-SYNCED DIGITAL TRIGGERS %%%%%%%%%%%%%%%%%%%%%%
 
