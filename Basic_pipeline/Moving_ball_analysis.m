@@ -5,24 +5,24 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 0;
-plotexamplesMB =1;
+plotexamplesMB =0;
 newTIC = 0;
 ZscoresDo=1; redoResp=1;
 Shuffling =1;
 repeatShuff =1;
 ReceptiveFieldFixedDelay = 0;
-tuning =0;
+tuning =1;
 depthPlot =0;
 ReceptiveFieldConvolutions =0;
 x=1;
-examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43]; %[1 2 3 4 5 6 7 8 9 10 11 12 13 14 29 30 31 32 40 41 42 43]:
+examplesSDG =[28 29 30 31 40 41 42 43]; %[1 2 3 4 5 6 7 8 9 10 11 12 13 14 29 30 31 32 40 41 42 43]:
 summPlot =0;
 
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = examplesSDG%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -191,10 +191,10 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     goodU = p.ic(:,label == 'good');
     goodSPKS = p.nSpks(label == 'good');
     goodAmp = p.neuronAmp(label == 'good');
-    goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
+    %goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
 
     %6. Get depths of units correcting for angle and micromanipulator depth:
-    verticalDepth = sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - goodUdepth);
+    %verticalDepth = sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - goodUdepth);
 
     %7. Load raster matrices
     bin = 1;
@@ -343,10 +343,10 @@ if ZscoresDo ==1
     %Merge trials:
 
     mergeTrials = trialDivision;
-
-    Bd = reshape(Mbd, [mergeTrials, size(Mbd, 1)/mergeTrials, size(Mbd, 2), size(Mbd,3)]);
-
-    Mbd2 = mean(squeeze(mean(Bd, 1)),3);
+% 
+%     Bd = reshape(Mbd, [mergeTrials, size(Mbd, 1)/mergeTrials, size(Mbd, 2), size(Mbd,3)]);
+% 
+%     Mbd2 = mean(squeeze(mean(Bd, 1)),3);
 
 
     B = reshape(MrC, [mergeTrials, size(Mr, 1)/mergeTrials, size(Mr, 2), size(Mr,3)]);
@@ -370,7 +370,7 @@ if ZscoresDo ==1
         max_mean_value_Trial = zeros(1,nT);
         for i = 1:nT %Iterate across trials
             uM = squeeze(Mr2(i,u,:))';%Create matrix per unique trial conditions
-            uMb = Mbd2(i,u);
+            %uMb = Mbd2(i,u);
            
             max_mean_value_Trial(k) = -Inf;
 
@@ -402,7 +402,7 @@ if ZscoresDo ==1
             %4%. Resp - Baseline
             % NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - (spkRateBM(u)+max_mean_value_Trial(i))/2)/denom(u); %Zscore
             %NeuronRespProfile(k,4) = (max_mean_value_Trial(k) - spkRateBM(u))/denom(u); %Zscore
-            NeuronRespProfile(k,4) = max_mean_value_Trial(k)-uMb;
+            NeuronRespProfile(k,4) = max_mean_value_Trial(k)-spkRateBM(u);
             %Assign visual stats to last columns of NeuronRespProfile. Select
             %according  to trial (d) the appropiate parameter > directions'offsets' sizes' speeds' freq'
             NeuronRespProfile(k,5) = C(i*mergeTrials,2);
@@ -430,7 +430,7 @@ toc
     udir = unique(directions);
 
     for u = 1:nN
-        NeuronD = squeeze(NeuronVals(u,:,[4  5]));
+        NeuronD = squeeze(NeuronVals(u,:,[1 5]));
         for d = 1:direcN
             tuningCurve(u,d) = max(NeuronD(NeuronD(:,2)==udir(d),1))'; %Selecting top direction. 
         end
@@ -476,7 +476,6 @@ for Shuffle =1
                     %%%Shuffle trials
                     %check if neuron is responsive to specific stim (shuffle across trials)
                     %M_shufMTrC = ConvBurstMatrix(M_shuffTr,fspecial('gaussian',[1 5],3),'same');
-
                     B = reshape(sMr(randperm(size(Mr,1)),:,:), [mergeTrials, size(Mr, 1)/mergeTrials, size(Mr, 2), size(Mr,3)]);
                     M_shuffTr =  squeeze(mean(B, 1));
 
@@ -508,7 +507,6 @@ for Shuffle =1
 %                     MB_shuff =  squeeze(mean(B, 1));
 %                     MB_shuff = squeeze(mean(MB_shuff,3));
                     
-
                     NeuronRespProfileShTr = zeros(nN,'single');
                     NeuronRespProfileShTi = zeros(nN,'single');
                     NeuronRespProfileShDiff = zeros(nN,'single');
@@ -523,7 +521,7 @@ for Shuffle =1
                         for i = 1:nT %Iterate across trials
                             uMTr = squeeze(M_shuffTr(i,u,:))';%Create matrix per unique trial conditions
                             uMTi = squeeze(M_shuffTi(i,u,:))';%Create matrix per unique trial conditions
-                            uMB = Mbd2(i,u);
+                            %uMB = Mbd2(i,u);
 
                             %Create 2 matrices, for mean inside max window, and for position of window, for each trial
                             max_mean_value_Trialtr = zeros(1,nT);
@@ -560,7 +558,7 @@ for Shuffle =1
                             %                     NeuronRespProfileShTi(i,u) = (max_mean_value_Trialti(i) - spkRateBMS(u))/denomSti(u);%Mb_shufTiM(u))/denomTi(u); %Zscore
                             NeuronRespProfileShTr(i,u) = max_mean_value_Trialtr(i);
                             NeuronRespProfileShTi(i,u) = max_mean_value_Trialti(i);
-                            NeuronRespProfileShDiff(i,u) = max_mean_value_Trialti(i)-uMB;
+                            NeuronRespProfileShDiff(i,u) = max_mean_value_Trialti(i)-spkRateBM(u);
                             k=k+1;
 
                             %                     NeuronRespProfileShTr = squeeze(mean(M_shuffTr(psT(u),u,psB(u):psB(u)+round(duration/bin))));
@@ -614,12 +612,11 @@ for Shuffle =1
         pvalTr = (sum(squeeze(RandValU(:,:,1)) >= maxZScores') +1)/(rands+1);
         pvalTi = (sum(squeeze(RandValU(:,:,2)) >= maxZScores') +1)/(rands+1);
         pvalDiff = (sum(squeeze(RandValU(:,:,3)) >= maxZScores') +1)/(rands+1);
-
-sum(pvalDiff<0.03)
         %figure;histogram(squeeze(RandZscoreU(:,15,1)))
 
         save(sprintf('pvalTrials-%s',NP.recordingName),'pvalTr')
         save(sprintf('pvalTime-%s',NP.recordingName),'pvalTi')
+        save(sprintf('pvalDiff-%s',NP.recordingName),'pvalDiff')
 
  
     end
@@ -863,7 +860,7 @@ end
 for plotOp = plotexamplesMB
     if plotexamplesMB == 1
 
-        eNeuron =1:length(goodU); %8
+        eNeuron =34;%1:length(goodU); %8
         %eNeuron = 1;
 
         orderS = [2 3 4 5;4 2 3 5;5 2 3 4;3 2 4 5];
@@ -976,6 +973,21 @@ for plotOp = plotexamplesMB
                 fig.Position = [353    42   734   954];
                 print(fig, sprintf('%s-MovBall-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
                 close
+
+                %%%Polar plot
+                tuningCurve = (load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve)*1000; %convert to spikes/sec
+                theta = deg2rad(uDir); %linspace(0, 2*pi, size(tuningCurve,2)+1);  % 9 points for 8 bars (because it's circular)
+                  % Remove the last value to avoid duplication of the first
+                pf = figure;
+                % Create the polar plot
+                polarplot([theta, theta(1)], [tuningCurve(eNeuron,:), tuningCurve(eNeuron,1)], '-o')
+                set(pf,"Color",'w')
+                ax = gca;
+                ax.ThetaTick = uDir;
+                title(sprintf('PolarPlot-U.%d-Unit-phy-%d',u,GoodU_or(u)));
+                print(fig, sprintf('%s-MovBall-polarPlot-U%d.png',NP.recordingName,u),'-dpng');
+                close
+
 
             end
 
@@ -1430,12 +1442,12 @@ end
 
 
 
-
-set(gca, 'YDir', 'reverse');
-xticks([1:5:5*13])
-xticklabels(1:13)
-grid on
-set(gcf, 'Color', 'w')
+% 
+% set(gca, 'YDir', 'reverse');
+% xticks([1:5:5*13])
+% xticklabels(1:13)
+% grid on
+% set(gcf, 'Color', 'w')
 
 
 % 
