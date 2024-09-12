@@ -220,12 +220,4 @@ for ex = [40 41 42 43]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%Control
 
 
-
-
-
-
-
-
-
-
 end

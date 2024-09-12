@@ -6,7 +6,7 @@ data = readtable(excelFile);
 controlNS = 1;
 
 %%
-for ex = [41 42 ]%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = [40 41 42 43]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -192,7 +192,7 @@ for ex = [41 42 ]%examplesSDG%[7 8 28]%1:size(data,1)
         end
     else
 
-        posUnames = mat2cell(uPos)
+        posUnames = num2cell(string(uPos));
         for u = 1:nN
             f = figure('Visible', 'on');
 
@@ -201,7 +201,7 @@ for ex = [41 42 ]%examplesSDG%[7 8 28]%1:size(data,1)
 
             xline(preBase/bin, '-g', LineWidth=1.5);
             xline(preBase/bin+stimDur/bin, '-b', LineWidth=1.5);
-            yline([nT/length(uPos):nT/length(uPos):nT-1],LineWidth=1.5,LabelHorizontalAlignment="left")
+            yline([nT/length(uPos):nT/length(uPos):nT],'-',posUnames,LabelHorizontalAlignment="right")
             ylabel('Trials')
             xlabel('time (ms)')
             xticks([0:round((preBase/2)/bin):size(Mr,3)])
@@ -218,14 +218,6 @@ for ex = [41 42 ]%examplesSDG%[7 8 28]%1:size(data,1)
 
 
     %%%Control
-
-
-
-
-
-
-
-
 
 
 end

@@ -15,14 +15,15 @@ tuning =1;
 depthPlot =0;
 ReceptiveFieldConvolutions =0;
 x=1;
-examplesSDG =[28 29 30 31 40 41 42 43]; %[1 2 3 4 5 6 7 8 9 10 11 12 13 14 29 30 31 32 40 41 42 43]:
+examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 summPlot =0;
+pv27 = [8 9 10 11 12 13 14];
 
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = examplesSDG%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = examplesSDG %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -161,6 +162,8 @@ for ex = examplesSDG%examplesSDG%[7 8 28]%1:size(data,1)
     stimDur = mean(-stimOn+stimOff); %When dealing with different speeds, save different stim durs, and create M for each speed
     A = [stimOn directions' offsets' sizes' speeds' orientations'];
     [C indexS] = sortrows(A,[2 3 4 5 6]);
+
+    find(-stimOn+stimOff>3000)
 
     %4. Sort directions:
     directimesSorted = C(:,1)';

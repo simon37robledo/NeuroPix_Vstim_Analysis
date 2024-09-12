@@ -53,16 +53,19 @@ end
 
 fileName = "DIODE_"+string(stimName);
 
+MovExist =  exist(NP.recordingDir+"\"+fileName+"OnFrame"+".txt",'file') & exist(NP.recordingDir+"\"+fileName+"OffFrame"+".txt",'file')...
+        & exist(NP.recordingDir+"\"+fileName+"Onset"+".txt",'file') & exist(NP.recordingDir+"\"+fileName+"Offset"+".txt",'file') & ismoving;
 
-if exist(NP.recordingDir+"\"+fileName+"OnFrame"+".txt",'file') & exist(NP.recordingDir+"\"+fileName+"OffFrame"+".txt",'file')...
-        & exist(NP.recordingDir+"\"+fileName+"Onset"+".txt",'file') & exist(NP.recordingDir+"\"+fileName+"Offset"+".txt",'file') & ismoving
+nonMovExist = exist(NP.recordingDir+"\"+fileName+"Onset"+".txt",'file') & exist(NP.recordingDir+"\"+fileName+"Offset"+".txt",'file');
+
+if MovExist
 
     onsetSync = readmatrix(fileName+"Onset"+".txt");
     offsetSync =  readmatrix(fileName+"Offset"+".txt");
     onSync = readmatrix(fileName+"OnFrame"+".txt");
     offSync = readmatrix(fileName+"OffFrame"+".txt");
 
-elseif exist(NP.recordingDir+"\"+fileName+"Onset"+".txt",'file') & exist(NP.recordingDir+"\"+fileName+"Offset"+".txt",'file') 
+elseif nonMovExist
 
     onsetSync = readmatrix(fileName+"Onset"+".txt");
     offsetSync =  readmatrix(fileName+"Offset"+".txt");
@@ -85,17 +88,17 @@ else
     % Define the valid options
     
 
-%     stimFiles = filenames(contains(filenames,stimtype));
-%     j =1;
-%     if size(stimFiles) ~= [0 0]
-%         for i = stimFiles
-%             stim = load(stimDir+"\"+string(i));
-%             j = j+1;
-%         end
-%         disp('Visual stats extracted!')
-%     else
-%         disp('Directory does not exist!');
-%     end
+    stimFiles = filenames(contains(filenames,stimtype));
+    j =1;
+    if size(stimFiles) ~= [0 0]
+        for i = stimFiles
+            stim = load(stimDir+"\"+string(i));
+            j = j+1;
+        end
+        disp('Visual stats extracted!')
+    else
+        disp('Directory does not exist!');
+    end
 
     %%%%%GET UN-SYNCED DIGITAL TRIGGERS %%%%%%%%%%%%%%%%%%%%%%
 
@@ -173,9 +176,9 @@ else
         onset = [];
         offset = [];
 
-        if string(stimName) == "MB"
-            nFrames = unique(cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'nFrames')))));
-        elseif string(stimName) == "SDG"
+%         if string(stimName) == "MB"
+%             nFrames = unique(cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'nFrames')))));
+        if string(stimName) == "SDG"
              nFrames = size(cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'flipOnsetTimeStamp')))),2);
         end
         
@@ -187,12 +190,10 @@ else
         if string(stimName) == "SDG"
 
             staticTime = cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'static_time'))));
-
         end
 
 
         for i = 1:length(stimOn)
-
 
             %%%%Initialize variables and define start and end of snip of
             %%%%signal:
@@ -217,7 +218,6 @@ else
                 signal =(AllD(startSnip:endSnip));
                 fDat=medfilt1(signal(1:end-1),15); %median dilter is used to mantained edges and facilitate downshifts more efectively         
             end
-
 
             %%%%Apply low pass filter:
 
@@ -335,7 +335,6 @@ else
                 end
             end
 
-
             if isempty(pklocUpN)
                 pklocUpN = pklocUp;
             end
@@ -402,7 +401,7 @@ plot(fDat);%hold on; plot(signal)
 %[cpts, ~] = findchangepts(signal, 'MaxNumChanges', 2, 'Statistic', 'std');
 % xline(startP(1))
 %     xline(endP(end))
-xline(cpts);
+%xline(cpts);
 xline([pklocDown'])
 xline([pklocUp'],'red')
 %hold on; plot(round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)),ones(size(TTL))*max(fDat),'ro', 'MarkerSize', 0.2, 'LineWidth', 2,'MarkerFaceColor','b')
