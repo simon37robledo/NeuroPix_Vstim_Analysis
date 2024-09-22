@@ -10,7 +10,7 @@
 
 %stimName = "rectGrid";
 
-function [onsetSync offsetSync onSync offSync] = NPdiodeExtract(NP,ismoving,stimName,ttl_index,digCH,syncCH) %dig -16/1 sync 0/6
+function [onsetSync offsetSync onSync offSync] = NPdiodeExtract(NP,newDiode,ismoving,stimName,ttl_index,digCH,syncCH) %dig -16/1 sync 0/6
 
 %
 %%%%MATLAB PTB SPECS: %%%%%%%%%%%%%%%%%%%%%%
@@ -58,14 +58,14 @@ MovExist =  exist(NP.recordingDir+"\"+fileName+"OnFrame"+".txt",'file') & exist(
 
 nonMovExist = exist(NP.recordingDir+"\"+fileName+"Onset"+".txt",'file') & exist(NP.recordingDir+"\"+fileName+"Offset"+".txt",'file');
 
-if MovExist
+if MovExist && newDiode == 0
 
     onsetSync = readmatrix(fileName+"Onset"+".txt");
     offsetSync =  readmatrix(fileName+"Offset"+".txt");
     onSync = readmatrix(fileName+"OnFrame"+".txt");
     offSync = readmatrix(fileName+"OffFrame"+".txt");
 
-elseif nonMovExist
+elseif nonMovExist && newDiode == 0
 
     onsetSync = readmatrix(fileName+"Onset"+".txt");
     offsetSync =  readmatrix(fileName+"Offset"+".txt");

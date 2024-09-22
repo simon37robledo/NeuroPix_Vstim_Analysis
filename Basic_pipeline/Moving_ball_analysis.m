@@ -6,7 +6,7 @@ data = readtable(excelFile);
 %Optionall
 summPlot = 0;
 plotexamplesMB =0;
-newTIC = 0;
+newTIC = 1;
 ZscoresDo=1; redoResp=1;
 Shuffling =1;
 repeatShuff =1;
@@ -23,7 +23,7 @@ pv27 = [8 9 10 11 12 13 14];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = examplesSDG %1:size(data,1)
+for ex = [40 41 42 43] %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -135,8 +135,8 @@ for ex = examplesSDG %1:size(data,1)
     containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
     ttlInd = find(containsMB);
 
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
     %Check diode
     % for i = 1:length(stimOn)
