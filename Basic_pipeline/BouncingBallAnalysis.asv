@@ -108,34 +108,25 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     % Create a meshgrid for the image coordinates
     [cols, rows] = meshgrid(1:imgSize(2), 1:imgSize(1));
 
-    nTrials = length(xi{1});
-
     % Draw each dot on the image
 
-    Images = cell(1,nTrials);
+    for t = 
+    for i = 1:dotNumbers
+        % Compute distance from the current dot's center
+        distance = sqrt((cols - x(i)).^2 + (rows - y(i)).^2);
 
-    for tr = 1:nTrials
-        x = single(xi{1}{tr}(:,1)); 
-        y = single(xi{1}{tr}(:,2)); 
-        for i = 1:dotNumbers
-            % Compute distance from the current dot's center
-            distance = sqrt((cols - x(i)).^2 + (rows - y(i)).^2);
-            
-            % Set pixels within the radius of the dot to white
-            image(distance <= dotSize/2) = 1;  % White dot
-        end
-        Images{tr} = image;
-
+        % Set pixels within the radius of the dot to white
+        image(distance <= dotRadius) = 1;  % White dot
     end
 
 
     %3. Load Triggers (diode)
     Ordered_stims= strsplit(data.VS_ordered{ex},',');
-    containsBB = cellfun(@(x) contains(x,'BB'),Ordered_stims);
-    ttlInd = find(containsBB);
+    containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
+    ttlInd = find(containsMB);
 
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"BB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"BB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
 
     stimInter= mean(stimOn(2:end)-stimOff(1:end-1)); % When dealing with different speeds, save different stim durs, and create M for each speed
@@ -157,6 +148,8 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
 
     %If new tic matrix needs to be used, move oldTIc files and run convertPhySorting2tIc
     cd(NP.recordingDir)
+
+
 
 
 end

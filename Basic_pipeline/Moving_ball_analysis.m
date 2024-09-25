@@ -19,11 +19,13 @@ examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 summPlot =0;
 pv27 = [8 9 10 11 12 13 14];
 
+newDiode =0;
+
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = [40 41 42 43] %1:size(data,1)
+for ex = pv27 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -135,8 +137,8 @@ for ex = [40 41 42 43] %1:size(data,1)
     containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
     ttlInd = find(containsMB);
 
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
     %Check diode
     % for i = 1:length(stimOn)
@@ -361,7 +363,7 @@ if ZscoresDo ==1
     cd(NP.recordingDir)
 
     %Real data:
-    tic
+    
     for u =1:nN
         % Slide the window over the matrix
         %unit matrix
@@ -426,7 +428,7 @@ if ZscoresDo ==1
     else
         NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
     end
-toc
+
     %Create tunning curve, based on direction tunning curve 
     tuningCurve = zeros(nN,direcN);
 
@@ -1041,7 +1043,11 @@ for receptiveField=1 %%ReceptiveFieldMethod1
 
             % Calculate the receptive field by multiplying normalized spike rate in frame by the image of each frame.
 
-            [Mb] = BuildBurstMatrix(goodU,round(p.t),round((stims-preBase)),round(preBase)); %Baseline matrix plus
+            goodNeurons = load(sprintf('pvalTime-%s',NP.recordingName)).pvalTi;
+
+            goodNeurons = find(goodNeurons<0.05);
+
+            [Mb] = BuildBurstMatrix(goodU(:,goodNeurons),round(p.t),round((stims-preBase)),round(preBase)); %Baseline matrix plus
 
             Mb = mean(Mb,3); %mean across time bins
 
@@ -1080,7 +1086,7 @@ for receptiveField=1 %%ReceptiveFieldMethod1
             for i = 1:trialDivision*sizeN:length(ChangePosX)
 
                 %Matrix is sorted first by dir, then by size,
-                [MtrialCat] = BuildBurstMatrix(goodU,round(p.t),round((directimesSorted(i:i+trialDivision*sizeN-1))+delayResp),...
+                [MtrialCat] = BuildBurstMatrix(goodU(:,goodNeurons),round(p.t),round((directimesSorted(i:i+trialDivision*sizeN-1))+delayResp),...
                     round(mean(directimesSortedOff(i:i+trialDivision*sizeN-1)-directimesSorted(i:i+trialDivision*sizeN-1))));
 
                 % Step 1: Reshape A to group elements to be averaged
