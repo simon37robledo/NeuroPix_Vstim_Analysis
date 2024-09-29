@@ -329,9 +329,8 @@ uniqueAngles = 0:45:315;
 
 groups = T.depth;
 group_names = {'0','45','90','135','180','215','270','315'};
-pthcond = T.DSI > prctile(DSIv,50);
 for a = 1:8
-    groupA{a} = groups(T.pAngles == uniqueAngles(a) & groups>=0 & T.Animals==4);
+    groupA{a} = groups(T.pAngles == uniqueAngles(a) & groups>=0 & T.DSI);
 end
 
 
@@ -407,10 +406,6 @@ xlabel('Angles');
 grid on;
 hold off;
 set(gcf,'Color','w')
-
-%%
-figure;
-scatter(T.DSI,T.depth)
 
 
 

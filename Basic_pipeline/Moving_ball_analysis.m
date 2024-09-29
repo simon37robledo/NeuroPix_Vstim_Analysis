@@ -8,14 +8,17 @@ summPlot = 0;
 plotexamplesMB =0;
 newTIC = 1;
 ZscoresDo=1; redoResp=1;
-Shuffling =1;
-repeatShuff =1;
+Shuffling =0;
+repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =1;
 depthPlot =0;
 ReceptiveFieldConvolutions =0;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
+
+%examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
+
 summPlot =0;
 pv27 = [8 9 10 11 12 13 14];
 
@@ -25,7 +28,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = pv27 %1:size(data,1)
+for ex = 40 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -196,7 +199,9 @@ for ex = pv27 %1:size(data,1)
     goodU = p.ic(:,label == 'good');
     goodSPKS = p.nSpks(label == 'good');
     goodAmp = p.neuronAmp(label == 'good');
-    %goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
+    goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
+
+
 
     %6. Get depths of units correcting for angle and micromanipulator depth:
     %verticalDepth = sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - goodUdepth);
@@ -435,7 +440,7 @@ if ZscoresDo ==1
     udir = unique(directions);
 
     for u = 1:nN
-        NeuronD = squeeze(NeuronVals(u,:,[1 5]));
+        NeuronD = squeeze(NeuronVals(u,:,[1 5])); %1, mean response, 5, direction.
         for d = 1:direcN
             tuningCurve(u,d) = max(NeuronD(NeuronD(:,2)==udir(d),1))'; %Selecting top direction. 
         end
