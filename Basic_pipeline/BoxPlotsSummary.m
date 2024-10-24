@@ -408,9 +408,10 @@ grid on;
 hold off;
 set(gcf,'Color','w')
 
-%%
-figure;
-scatter(T.DSI,T.depth)
+
+
+
+
 
 
 

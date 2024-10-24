@@ -6,14 +6,15 @@ data = readtable(excelFile);
 %Optionall
 summPlot = 0;
 plotexamplesMB =0;
-newTIC = 1;
-ZscoresDo=1; redoResp=1;
+newTIC = 0;
+ZscoresDo=1; redoResp=0;
 Shuffling =0;
 repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
-tuning =1;
+tuning =0;
 depthPlot =0;
-ReceptiveFieldConvolutions =0;
+ReceptiveFieldConvolutions =1;
+repeatConv =1;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
@@ -28,7 +29,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 40 %1:size(data,1)
+for ex = 41 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -86,7 +87,6 @@ for ex = 40 %1:size(data,1)
     orientations = [];
 
     j =1;
-
 
     if size(ballFiles) ~= [0 0]
 
@@ -632,7 +632,8 @@ for Shuffle =1
     end
 end
 end
-    end
+    
+    end %End of Z-score data
 
 
 %     find(pvalTr<0.05 & pvalTr<0.02)
@@ -890,7 +891,7 @@ for plotOp = plotexamplesMB
         %             %3%. WindowBin
         %             NeuronRespProfile(k,3) = max_position_Trial(k,2);
 
-        uDir = unique(rad2deg(directions));
+        uDir = unique(directions);
         bin0 = bin;
         bin =50;
         trialsPerAngle = trialDivision*offsetN*speedN*sizeN*orientN;
@@ -1272,7 +1273,7 @@ end
 for convNeuron = 1
     if ReceptiveFieldConvolutions ==1
 
-        if ~isfile(sprintf('RFuC-%s.mat',NP.recordingName))%exist
+        if ~isfile(sprintf('RFuC-%s.mat',NP.recordingName)) || repeatConv%exist
             %%A. CONVOLUTION SETUP
             %%%%%%%%%%Load X and Y ball positions
             Xpos = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballTrajectoriesX'))));
@@ -1431,15 +1432,17 @@ for convNeuron = 1
                 RFuSize(Usize == C(i,6),:,:,:,:) = squeeze(RFuSize(Usize == C(i,6),:,:,:,:))+Co;
                 RFuSpeed(Uspeed == C(i,4),:,:,:,:) = squeeze(RFuSpeed(Uspeed == C(i,4),:,:,:,:))+Co;
 
-                NormVideo = NormVideo+videoTrials;
+                NormVideo = NormVideo+videoTrials;%.*reshape(spkRateBM,[1 1 1 length(spkRateBM)]);
 
                 RFu = RFu+Co;
             end
             toc
+
             save(sprintf('RFuC-%s',NP.recordingName),'RFu','-v7.3')
             save(sprintf('RFuDirC-%s',NP.recordingName),'RFuDir','-v7.3')
             save(sprintf('RFuSizeC-%s',NP.recordingName),'RFuSize','-v7.3')
             save(sprintf('RFuSpeedC-%s',NP.recordingName),'RFuSpeed','-v7.3')
+            save(sprintf('NormVideo-%s',NP.recordingName),'NormVideo','-v7.3')
 
         else
 
@@ -1468,90 +1471,7 @@ end
 % implay(squeeze((RFuSizeSav(1,:,:,:,13))))
 % 
 % implay(squeeze(convolved_result_reshaped(:,:,:,13)))
-%% %%%%%%% Find max receptive field and how localized it is (entropy): It runs
-%%%%%%% a ball shaped window that moves across the image of the previously
-%%%%%%% calculated convolution. 
-RFuSizeSav = load(sprintf('RFuSizeC-%s',NP.recordingName)).RFuSize;
-RFuDirSav = load(sprintf('RFuDirC-%s',NP.recordingName)).RFuDir; 
 
-%Size analysis -> 1. hacer la grafica que pide Mark, diferentes Neuronas. 2. Calcular entropia en experimento y graficar contra la prfundidad. 3. Escribirle a sebastian caldas. 
-
-convMeanSize = zeros(sizeN,coorRect(4)/10,coorRect(3)/10,length(respU));
-maxValdelayS = zeros(sizeN,length(respU));
-maxInddelayS = zeros(sizeN,length(respU));
-
-for s=1:sizeN
-
-    % Parameters for the circular mask
-    radius = Usize(s)/10; % Define the radius of the circular window
-    % Create a circular mask
-    [X, Y] = meshgrid(-radius:radius, -radius:radius);
-    circular_mask = (X.^2 + Y.^2) <= radius^2;
-
-    % Normalize the circular mask so that the sum of the mask elements is 1
-    circular_mask = double(circular_mask);
-    circular_mask = circular_mask / sum(circular_mask(:));
-
-    % Use convolution to find the sum of elements inside the circular window
-    A = squeeze(RFuSizeSav(s,:,:,:,:));
-    A_reshaped = reshape(A, size(A, 1), size(A, 2), []);
-
-    %convolved_result = convn(A, reshape(circular_mask,[size(circular_mask,1),size(circular_mask, 2), 1, 1]), 'same');
-
-    convolved_result = convn(A_reshaped, circular_mask, 'same');
-    % Reshape the convolved result back to the original 4D structure
-    convolved_result_reshaped = reshape(convolved_result, size(A, 1), size(A, 2), size(A, 3), size(A, 4));
-
-    padding =150;
-    A_padded = padarray(A, [0, 0, padding,0], 'post');
-
-    % Note: The filter should be expanded to 3D by adding a singleton dimension
-    circular_mask_3d = reshape(circular_mask, [size(circular_mask, 1), size(circular_mask, 2), 1, 1]);
-
-    % Perform the convolution
-    convolved_result_reshaped = convn(A_padded, circular_mask, 'same');
-
-
-    % Initialize arrays to store results
-    max_means = zeros(size(convolved_result, 3), size(convolved_result, 4));
-    center_row = zeros(size(convolved_result, 3), size(convolved_result, 4));
-    center_col = zeros(size(convolved_result, 3), size(convolved_result, 4));
-
-    % Find the maximum values and their positions for each slice across the 3rd and 4th dimensions
-    for j = 1:size(convolved_result_reshaped, 4)
-        for i = 1:size(convolved_result_reshaped, 3)
-            % Extract the 2D slice
-            slice = convolved_result_reshaped(:, :, i, j);
-            % Find the maximum value and its position
-            [max_means(i, j), max_idx] = max(slice(:));
-            [max_row, max_col] = ind2sub(size(slice), max_idx);
-            % Adjust positions to get the center of the circular mask
-            center_row(i, j) = max_row + radius;
-            center_col(i, j) = max_col + radius;
-        end
-    end
-
-    [max_across_3rd, idx_3rd] = max(max_means, [], 1);
-
-    maxValdelayS(s,:) = max_across_3rd;
-
-    maxInddelayS(s,:) = idx_3rd;
-
-    for u = 1:length(respU)
-        convMeanSize(s,:,:,u) =  squeeze(convolved_result_reshaped(:,:,idx_3rd(u),u));
-    end
-end
-A_normalized = squeeze(convMeanSize(1,:,:,:));
-for k = 1:length(respU)
-    slice = A_normalized(:, :, k);
-    min_val = min(slice(:));
-    max_val = max(slice(:));
-    A_normalized(:, :, k) = (slice - min_val) / (max_val - min_val);
-end
-
-[m i] = max(max_means(:,27))
-figure;plot(max_means(:,27)');xline(90);xline(i,'Color','r');xlabel('frames');ylabel('max mean value')
-implay(A_normalized)
 
 %% Dir analysis
 
@@ -1562,7 +1482,7 @@ maxInddelayD = zeros(direcN,length(respU));
 for d=1:direcN
 
     % Parameters for the circular mask
-    radius = Usize(s)/10; % Define the radius of the circular window
+    radius = Usize(s1)/10; % Define the radius of the circular window
     % Create a circular mask
     [X, Y] = meshgrid(-radius:radius, -radius:radius);
     circular_mask = (X.^2 + Y.^2) <= radius^2;
@@ -1572,7 +1492,7 @@ for d=1:direcN
     circular_mask = circular_mask / sum(circular_mask(:));
 
     % Use convolution to find the sum of elements inside the circular window
-    A = squeeze(RFuSizeSav(s,:,:,:,:));
+    A = squeeze(RFuSizeSav(s1,:,:,:,:));
     A_reshaped = reshape(A, size(A, 1), size(A, 2), []);
 
     %convolved_result = convn(A, reshape(circular_mask,[size(circular_mask,1),size(circular_mask, 2), 1, 1]), 'same');
@@ -1602,9 +1522,9 @@ for d=1:direcN
 
     [max_across_3rd, idx_3rd] = max(max_means, [], 1);
 
-    maxValdelayS(s,:) = max_across_3rd;
+    maxValdelayS(s1,:) = max_across_3rd;
 
-    maxInddelayS(s,:) = idx_3rd;
+    maxInddelayS(s1,:) = idx_3rd;
 
 end
 

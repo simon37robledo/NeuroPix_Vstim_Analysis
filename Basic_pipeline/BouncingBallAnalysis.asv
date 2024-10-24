@@ -101,7 +101,7 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     imgSize = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
     imgSize = sort(imgSize(3:4));
 
-%
+%%
     grayLevel = 0.5;  % Gray background (range 0 to 1, where 0=black, 1=white)
     image = zeros(round(imgSize./dotSize),'single');  % Initialize the image with gray
 
@@ -131,7 +131,7 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     end
 
     %figure;imagesc(image);
-%
+%%
     ifi = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ifi'))));
     nFrames = ceil((stimDurSt/1000)/ifi);
     visualFieldRect = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'visualFieldRect'))));
@@ -179,7 +179,7 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     implay(vidTrial)
 
 
-    %
+    %%
     %3. Load Triggers (diode)
     Ordered_stims= strsplit(data.VS_ordered{ex},',');
     containsBB = cellfun(@(x) contains(x,'BB'),Ordered_stims);
@@ -193,6 +193,7 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     stimDur = mean(-stimOn+stimOff); %When dealing with different speeds, save different stim durs, and create M for each speed
     
     
+
     %5. Load data to select good units
     cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
     GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
@@ -213,7 +214,7 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     [nT,nN,nB] = size(Mr);
 
     RFu = zeros(nN,size(vidTrial,1),size(vidTrial,2));
-%
+%%
     for u =31%1:nN
         for tr = 1:nT
 
@@ -224,9 +225,13 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
         end
     end
 
+
+2
 figure;imagesc(squeeze(RFu(u,:,:)));
 
 conv2(A(:,:,k,t), circular_mask, 'same');
+
+    
 
 
 end
