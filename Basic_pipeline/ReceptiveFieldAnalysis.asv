@@ -120,6 +120,10 @@ RFuSizeSav = load(sprintf('RFuSizeC-%s',NP.recordingName)).RFuSize;
 RFuDirSav = load(sprintf('RFuDirC-%s',NP.recordingName)).RFuDir; 
 NormVideo = load(sprintf('NormVideo-%s',NP.recordingName)).NormVideo; 
 
+RFuC =  load(sprintf('RFuC-%s',NP.recordingName)).RFu; 
+
+implay(squeeze(RFuC(:,:,:,8)))
+
 sizeN = size(RFuSizeSav,1);
 xSize= size(RFuSizeSav,2);
 ySize= size(RFuSizeSav,1);
@@ -132,8 +136,6 @@ convMeanSize = zeros(sizeN,coorRect(4)/10,coorRect(3)/10,length(respU));
 maxValdelayS = zeros(sizeN,length(respU));
 maxInddelayS = zeros(sizeN,length(respU));
 
-
-
 sumVid = squeeze(sum(NormVideo,3));
 repeatedNormvid = single(repmat(reshape(sumVid,size(sumVid,1),size(sumVid,2),1,size(sumVid,3)),[1 1 size(RFu,3) 1]));
 %repeatedNormvid(repeatedNormvid==0) = 1;
@@ -142,8 +144,8 @@ repeatedNormvid = single(repmat(reshape(sumVid,size(sumVid,1),size(sumVid,2),1,s
 %
 NormVideo2= NormVideo;
 NormVideo2(NormVideo2==0) =1;
-% %
-figure;imagesc(squeeze(repeatedNormvid(:,:,5,9)));colorbar %do norm of baseline at the end, %change normalization, %check eye videos of pv35
+
+%figure;imagesc(squeeze(repeatedNormvid(:,:,5,9)));colorbar %do norm of baseline at the end, %change normalization, %check eye videos of pv35
 for s=1:sizeN
 
     % Parameters for the circular mask
@@ -215,7 +217,6 @@ for s=1:sizeN
         for k = 1:size(A, 3) %for frame
             % Perform convolution in the first two dimensions with the circular mask
             meanSlices(:,:,k) = conv2(A(:,:,k,t), circular_mask, 'same');
-
             % Compute the entropy of the resulting 2D slice
             currentSlice = meanSlices(:,:,k);
             entropyValues(k) = entropy(currentSlice);  % MATLAB's entropy function

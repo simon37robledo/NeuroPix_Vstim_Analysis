@@ -101,9 +101,9 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     imgSize = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
     imgSize = sort(imgSize(3:4));
 
-%
+%%
     grayLevel = 0.5;  % Gray background (range 0 to 1, where 0=black, 1=white)
-    image = zeros(round(imgSize./dotSize),'single');  % Initialize the image with gray
+    % Initialize the image with gray
 
     % Create a meshgrid for the image coordinates
     %[cols, rows] = meshgrid(1:imgSize(2), 1:imgSize(1));
@@ -118,7 +118,8 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
 
     for tr = 1:nTrials
         x = single(round(xi{1}{tr}(:,1)./dotSize)); 
-        y = single(round(xi{1}{tr}(:,2)./dotSize)); 
+        y = single(round(xi{1}{tr}(:,2)./dotSize));
+        image = zeros(round(imgSize./dotSize),'single');
         for i = 1:dotNumbers
             % Compute distance from the current dot's center
             distance = sqrt((cols - x(i)).^2 + (rows - y(i)).^2);
@@ -130,7 +131,9 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
 
     end
 
-    %figure;imagesc(image);
+    figure;imagesc(image);
+    figure;imagesc(Images{1});
+    %%
 %
     ifi = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ifi'))));
     nFrames = ceil((stimDurSt/1000)/ifi);
@@ -142,44 +145,49 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     %[cols, rows] = meshgrid(1:round(imgSize(2)/dotSize), 1:round(imgSize(1)/dotSize));
     %videosTrial = matfile('videosTrialBouncingB.mat','Writable',true);
 
-    for i =1:nTrials
-        x=single(xi{1}{i});
-        v=single(vi{1}{i});
-        xAll=zeros([size(x),nFrames],'single');
-        xAll(:,:,1)=round(x./dotSize);
-        vidTrial = zeros(size(cols,1),size(cols,2),nFrames,'single');
-        for f=2:nFrames
-            %grayLevel = 0.5;  % Gray background (range 0 to 1, where 0=black, 1=white)
-            image = zeros(round(imgSize./dotSize),'single');
-            xAll(:,:,f)=xAll(:,:,f-1)+v*ifi;
-            p1=xAll(:,1,f)>=visualFieldRect(3) | xAll(:,1,f)<=visualFieldRect(1);
-            p2=xAll(:,2,f)>=visualFieldRect(4) | xAll(:,2,f)<=visualFieldRect(2);
-            pC=p1|p2;
-            xAll(pC,:,f)=xAll(pC,:,f-1)-v(pC,:)*ifi;
-            v(p1,1)=-v(p1,1);
-            v(p2,2)=-v(p2,2);
-            xAll(pC,:,f)=xAll(pC,:,f-1)+v(pC,:)*ifi;
+    if ~isfile('videosTrialBouncingB.mat')
+        for i =1:nTrials
+            x=single(xi{1}{i});
+            v=single(round(vi{1}{i}./dotSize));
+            xAll=zeros([size(x),nFrames],'single');
+            xAll(:,:,1)=round(x./dotSize);
+            vidTrial = zeros(size(cols,1),size(cols,2),nFrames,'single');
+            for f=2:nFrames
+                %grayLevel = 0.5;  % Gray background (range 0 to 1, where 0=black, 1=white)
+                image = zeros(round(imgSize./dotSize),'single');
+                xAll(:,:,f)=xAll(:,:,f-1)+v*ifi;
+                p1=xAll(:,1,f)>=visualFieldRect(3) | xAll(:,1,f)<=visualFieldRect(1);
+                p2=xAll(:,2,f)>=visualFieldRect(4) | xAll(:,2,f)<=visualFieldRect(2);
+                pC=p1|p2;
+                xAll(pC,:,f)=xAll(pC,:,f-1)-v(pC,:)*ifi;
+                v(p1,1)=-v(p1,1);
+                v(p2,2)=-v(p2,2);
+                xAll(pC,:,f)=xAll(pC,:,f-1)+v(pC,:)*ifi;
 
-            xCoor = xAll(:,1,f);
-            yCoor = xAll(:,2,f);
-            
-            for d = 1:dotNumbers
-                % Compute distance from the current dot's center
-                distance = sqrt((cols - xCoor(d)).^2 + (rows - yCoor(d)).^2);
-                % Set pixels within the radius of the dot to white
-                image(distance <= dotSize/2) = 1;  % White dot
+                xCoor = xAll(:,1,f);
+                yCoor = xAll(:,2,f);
+
+                for d = 1:dotNumbers
+                    % Compute distance from the current dot's center
+                    distance = sqrt((cols - xCoor(d)).^2 + (rows - yCoor(d)).^2);
+                    % Set pixels within the radius of the dot to white
+                    image(distance <= 1/2) = 1;  % White dot
+                end
+                vidTrial(:,:,f) = image;
             end
-            vidTrial(:,:,f) = image; 
+            vidTrial(:,:,1) = round(Images{i});
+            videosTrial{i} = vidTrial;
+            %videosTrial.videosTrial(i,1) = vidTrial;
         end
-        vidTrial(:,:,1) = round(Images{i});
-        videosTrial{i} = vidTrial;
-        %videosTrial.videosTrial(i,1) = vidTrial;
+        save('videosTrialBouncingB.mat',"videosTrial",'-v7.3')
+    else
+        videosTrial = load('videosTrialBouncingB.mat').videosTrial;
     end
+    %implay(vidTrial)
+    
 
-    implay(vidTrial)
 
-
-    %
+    %%
     %3. Load Triggers (diode)
     Ordered_stims= strsplit(data.VS_ordered{ex},',');
     containsBB = cellfun(@(x) contains(x,'BB'),Ordered_stims);
@@ -207,18 +215,17 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
 
     staticTime = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'waitFromOnset'))))*1000;
 
-    delay = 100;
+    delay = 200;
     bin = ifi*1000;
-    [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'+staticTime+delay)/bin),nFrames); %response matrix
+    [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'+staticTime+delay)/bin),nFrames); %response matrix of onset of movement
     [nT,nN,nB] = size(Mr);
 
-    RFu = zeros(nN,size(vidTrial,1),size(vidTrial,2));
+    RFu = zeros(nN,size(videosTrial{1},1),size(videosTrial{1},2));
 %
-    for u =31%1:nN
+    for u =1:length(goodU)%1:nN
         for tr = 1:nT
 
-            Mrtr = (Mr(tr,u,:)).*videosTrial{1};
-            
+            Mrtr = (Mr(tr,u,:)).*videosTrial{tr};
             RFu(u,:,:) = squeeze(RFu(u,:,:))+sum(Mrtr,3);
 
         end
@@ -226,7 +233,62 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
 
 figure;imagesc(squeeze(RFu(u,:,:)));
 
-conv2(A(:,:,k,t), circular_mask, 'same');
+%%% Occupation matrix
+OccM = zeros(size(videosTrial{1},1),size(videosTrial{1},2));
 
+for tr = 1:nT
+    OccM = OccM + sum(videosTrial{tr},3);
+end
+
+
+
+figure;imagesc(OccM);
+
+%%% Normalized by occupation:
+
+%baseline:
+[Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-interStimStats)/bin),round((nFrames*ifi*1000+2000)/bin));
+
+MbUnit = squeeze(mean(squeeze(mean(Mb)),2));
+
+%Norm matrix per neurons:
+NormUnit = zeros(nN,size(videosTrial{1},1),size(videosTrial{1},2));
+
+for u = 1:nN
+    NormUnit(u,:,:) = OccM.*MbUnit(u);
+end
+
+
+%%%% To convolve with a circular kernel
+% Create a circular kernel (disk) with a radius of 5
+radius = 5;
+se = strel('disk', radius, 0);  % Structuring element (disk shape)
+circularKernel = se.Neighborhood;  % Convert the structuring element to a binary matrix
+
+% Normalize the circular kernel by dividing it by its sum
+normalizedKernel = circularKernel / sum(circularKernel(:));
+meanResult = zeros(nN,size(videosTrial{1},1),size(videosTrial{1},2));
+
+% Apply 2D convolution with 'same' size option to keep the original matrix size
+for u = 1:length(goodU)
+    meanResult(u,:,:) = conv2(squeeze(RFu(u,:,:)), normalizedKernel, 'same');
+    NormUnit(u,:,:) = conv2(squeeze(NormUnit(u,:,:)), normalizedKernel, 'same');
+end
+
+figure;imagesc(squeeze(meanResult(u,:,:)));
+title(sprintf('delay=%d',delay))
+
+figure;imagesc(squeeze(NormUnit(u,:,:)));
+title(sprintf('delay=%d',delay))
+
+%%% Normalized:
+NormR = meanResult./NormUnit;
+
+figure;imagesc(squeeze(NormR(31,:,visualFieldRect(1):visualFieldRect(3))));
+title(sprintf('delay=%d',delay))
+
+
+
+%%
 
 end
