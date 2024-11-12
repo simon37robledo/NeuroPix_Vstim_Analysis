@@ -101,7 +101,7 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     imgSize = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
     imgSize = sort(imgSize(3:4));
 
-%%
+
     grayLevel = 0.5;  % Gray background (range 0 to 1, where 0=black, 1=white)
     % Initialize the image with gray
 
@@ -133,7 +133,7 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
 
     figure;imagesc(image);
     figure;imagesc(Images{1});
-    %%
+    
 %
     ifi = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ifi'))));
     nFrames = ceil((stimDurSt/1000)/ifi);
@@ -187,7 +187,7 @@ for ex = 40%examplesSDG%[7 8 28]%1:size(data,1)
     
 
 
-    %%
+    
     %3. Load Triggers (diode)
     Ordered_stims= strsplit(data.VS_ordered{ex},',');
     containsBB = cellfun(@(x) contains(x,'BB'),Ordered_stims);
@@ -289,6 +289,6 @@ title(sprintf('delay=%d',delay))
 
 
 
-%%
+
 
 end

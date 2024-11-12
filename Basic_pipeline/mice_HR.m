@@ -38,7 +38,6 @@ samplesTimeAp(end)
 
 
 
-
 figure;
 plot((niStartsample:totalSamplesNi),samplesTimeNi); hold on; plot((apStartsample:totalSamplesAP),samplesTimeAp); 
 
@@ -111,7 +110,7 @@ save('AnalogData_Diode.mat','sDiode');
 % 
 % GdownTrigger = stimOff;
 %% triggers Diode
-%[stimOn stimOff onSync offSync] = NPdiodeExtract(NP1,0,"MovBall",1,11,0); %%%Extract diode using function from diodeextract (special case, no sync)
+%[stimOn stimOff onSync offSync] = NPdiodeExtract(NP1,1,0,"FFF",1,2); %%%Extract diode using function from diodeextract (special case, no sync)
 
 %%%%Specific case for no sync experiment
 fDat=medfilt1(sDiode,600);
@@ -255,7 +254,6 @@ p = NP1.convertPhySorting2tIc(NP1.recordingDir); %%Load and save neural data
 cd(NP1.recordingDir)
 %p = NP1.convertBCSorting2tIc(NP1.recordingDir);
 
-%p = NP1.convertBCSorting2tIc(NP1.recordingDir);
 
 %Select good units
 label = string(p.label');
@@ -264,7 +262,63 @@ label = string(p.label');
 
 goodU = p.ic(:,label == 'good');
 
-[M]=squeeze(BuildBurstMatrix(goodU,round(p.t),0,round(NP1.recordingDuration_ms)));
+triggersFFF = load('FFFupTrigger.mat');
+triggersFFF = triggersFFF.stimOn;
+
+triggersFFFon = load('Mouse_rightV1_NP_8_7_24_1_g0_tcat.nidq.xd_2_2_0.txt')*1000;
+
+triggersFFFoff = load('Mouse_rightV1_NP_8_7_24_1_g0_tcat.nidq.xid_2_2_0.txt')*1000;
+
+figure;
+plot(diff(triggersFFFon))
+ylim([0,5000])
+bin = 1000;
+
+stimsRange = [4000:4500];
+
+stimDur = mean(triggersFFFoff(stimsRange) - triggersFFFon(stimsRange));
+
+stimInter = mean(triggersFFFon(stimsRange(1:end-1)+1) - triggersFFFoff(stimsRange(1:end-1)));
+
+[M]=BuildBurstMatrix(goodU,round(p.t/bin),round((triggersFFFon(stimsRange)-stimInter/2)/bin)',round((stimDur+stimInter)/bin));
+
+
+[M2]=BuildBurstMatrix(goodU,round(p.t/bin),round(1/bin)',round(600000/bin));
+
+
+for u = 1:length(goodU)
+    fig = figure;
+    imagesc(squeeze(M(:,u,:)));colormap(flipud(gray(64)));
+    xline(stimInter/2/bin,'k', LineWidth=1.5)
+    xline(stimDur/bin+stimInter/2/bin,'k',LineWidth=1.5)
+    ylabel('Trials');xlabel('Time (ms)');
+    xticks([0 stimInter/2/bin stimInter/2/bin+stimDur/bin stimInter/bin+stimDur/bin])
+    xticklabels(round(xticks-stimInter/2/bin)*bin)
+    prettify_plot
+    if ~exist(NP1.recordingDir+"\Figs",'dir')
+        mkdir Figs
+    end
+    cd(NP1.recordingDir + "\Figs")
+    fig.Position = [1224         259         659         660];
+    exportgraphics(fig, sprintf('%s-FFF-ms%d-U%d.pdf',NP1.recordingName,stimDur,u), 'ContentType', 'vector');
+    close all
+
+end
+
+
+fig = figure;
+imagesc(squeeze(M2));colormap(flipud(gray(64)));
+ylabel('Neurons');xlabel('Time (min)');
+xticklabels(round(xticks*bin/1000/60))
+prettify_plot
+if ~exist(NP1.recordingDir+"\Figs",'dir')
+    mkdir Figs
+end
+cd(NP1.recordingDir + "\Figs")
+fig.Position = [1224         259         659         660];
+exportgraphics(fig, sprintf('%s-FFF-ms%d-allUnits-10min.pdf',NP1.recordingName,stimDur), 'ContentType', 'vector');
+close all
+
 
 % 
 % spike_times = double(readNPY('spike_times_original.npy'))*(NP1.samplingFrequency)/(30000);
@@ -289,7 +343,7 @@ verticalDepth = sin(deg2rad(72.5))*(2832 - GoodU_orDepth);
 
 
 cd(NP1.recordingDir)
-save('unitDepth',"verticalDepth");
+%save('unitDepth',"verticalDepth");
 
 %% times before esmolol injection
 hb = (locs/(NP1.samplingFrequencyNI/1000))';

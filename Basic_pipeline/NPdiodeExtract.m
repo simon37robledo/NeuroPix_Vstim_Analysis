@@ -483,45 +483,60 @@ xline([pklocUp'],'red')
 
     %%%% SYNC %%%%%%%%%%%%%%%%%%%%%%
 
-    % Search in for neural SQW and NI SQW and load them
-   
-    Neur = readmatrix(dir(fullfile(NP.recordingDir, '*imec0.ap.xd_384_6_500.txt*')).name);
-    originSQW = readmatrix(dir(fullfile(NP.recordingDir, sprintf('*nidq.xd_%d_%d_500.txt*',digCH,syncCH))).name);
-    if ismoving
-        offSync = interp1(originSQW'*1000, Neur'*1000, offFrame, 'linear');
-        onSync = interp1(originSQW'*1000, Neur'*1000, onFrame, 'linear');
+    if nargin>=7 %% If there is a sync waveform:
 
-        fileID = fopen(fileName+"OnFrame"+".txt",'w');
-        fprintf(fileID, '%d\n', onSync);
+        % Search in for neural SQW and NI SQW and load them
+
+        Neur = readmatrix(dir(fullfile(NP.recordingDir, '*imec0.ap.xd_384_6_500.txt*')).name);
+        originSQW = readmatrix(dir(fullfile(NP.recordingDir, sprintf('*nidq.xd_%d_%d_500.txt*',digCH,syncCH))).name);
+        if ismoving
+            offSync = interp1(originSQW'*1000, Neur'*1000, offFrame, 'linear');
+            onSync = interp1(originSQW'*1000, Neur'*1000, onFrame, 'linear');
+
+            fileID = fopen(fileName+"OnFrame"+".txt",'w');
+            fprintf(fileID, '%d\n', onSync);
+            fclose(fileID);
+
+            fileID = fopen(fileName+"OffFrame"+".txt",'w');
+            fprintf(fileID, '%d\n', offSync);
+            fclose(fileID);
+
+        end
+        onsetSync = interp1(originSQW'*1000, Neur'*1000, onset, 'linear');
+        fileID = fopen(fileName+"Onset"+".txt",'w');
+        fprintf(fileID, '%d\n', onsetSync);
         fclose(fileID);
 
-        fileID = fopen(fileName+"OffFrame"+".txt",'w');
-        fprintf(fileID, '%d\n', offSync);
+        offsetSync = interp1(originSQW'*1000, Neur'*1000, offset, 'linear');
+        fileID = fopen(fileName+"Offset"+".txt",'w');
+        fprintf(fileID, '%d\n', offsetSync);
         fclose(fileID);
+
+
+
+        % %test sync
+        %
+        % test = readmatrix('PV139_Experiment_6_2_24_1_g0_tcat.nidq.xd_1_2_0.txt');
+        % testS = interp1(originSQW, Neur, test, 'linear');
+        %
+        % testTprime = readmatrix('out_2.txt');
+        %
+        % t = [testTprime,testS];
+        %
+        % t(end,:)*1000
+
+    else
+
+        fileID = fopen(fileName+"Onset"+".txt",'w');
+        fprintf(fileID, '%d\n', onset);
+        fclose(fileID);
+
+        fileID = fopen(fileName+"Offset"+".txt",'w');
+        fprintf(fileID, '%d\n', offset);
+        fclose(fileID);
+
 
     end
-    onsetSync = interp1(originSQW'*1000, Neur'*1000, onset, 'linear');
-    fileID = fopen(fileName+"Onset"+".txt",'w');
-    fprintf(fileID, '%d\n', onsetSync);
-    fclose(fileID);
-
-    offsetSync = interp1(originSQW'*1000, Neur'*1000, offset, 'linear');
-    fileID = fopen(fileName+"Offset"+".txt",'w');
-    fprintf(fileID, '%d\n', offsetSync);
-    fclose(fileID);
-
-
-
-    % %test sync
-    %
-    % test = readmatrix('PV139_Experiment_6_2_24_1_g0_tcat.nidq.xd_1_2_0.txt');
-    % testS = interp1(originSQW, Neur, test, 'linear');
-    %
-    % testTprime = readmatrix('out_2.txt');
-    %
-    % t = [testTprime,testS];
-    %
-    % t(end,:)*1000
 
 end
 

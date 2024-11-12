@@ -67,12 +67,15 @@ expPV104= 'PV104_Experiment_5_8_24';
 basic_pathPV35 = '\\sil3\data\Large_scale_mapping_NP\lizards\PV35';
 expPV35 = 'PV35_Experiment_18_8_24';
 
+basic_pathSA8 = '\\sil3\data\Large_scale_mapping_NP\lizards\SA8';
+expSA8 = 'SA8_Experiment_7_11_24';
+
 
 %% Basic variables
-base_dir = string(basic_pathPV35)+"\"+string(expPV35);
+base_dir = string(basic_pathSA8)+"\"+string(expSA8);
 %Folder that has catgt and tprime subfolders
-insertion = "3";
-fileName = "PV35_Experiment";
+insertion = "2";
+fileName = "SA8_Experiment";
 runs = "mult";
 dig_CH = "1";
 concat = 1;
@@ -90,7 +93,7 @@ syncChan = "6";
 %% Mice
 base_dir = "\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\Mouse_rightV1_NP_8_7_24";
 fileName = "Mouse_rightV1_NP_8_7";
-insertion = "1";
+insertion = "2";
 syncChan = "6";
 dig_CH ="3";
 concat = 1;

@@ -39,8 +39,8 @@ else
     metaFullPath = inputCell{1};   % full path to the input res file
     [path, tempName, ext] = fileparts(metaFullPath);
     metaName = sprintf('%s%s', tempName, ext);
-    inputCell = varargin(2);
-    bProcLF = inputCell{1};  % append new fields to matching lf meta?
+    %inputCell = varargin(2);
+    %bProcLF = inputCell{1};  % append new fields to matching lf meta?
     bPlot = 0;
 end
 

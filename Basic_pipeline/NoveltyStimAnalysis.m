@@ -1,12 +1,12 @@
 cd('\\sil3\data\Large_scale_mapping_NP')
 excelFile = 'Experiment_Excel.xlsx';
 
-data = readtable(excelFile);
+data = readtable(excelFile,'Format','auto');
 
-controlNS = 1;
+controlNS = 0;
 
 %%
-for ex = [40 41 42 43]%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -110,12 +110,12 @@ for ex = [40 41 42 43]%examplesSDG%[7 8 28]%1:size(data,1)
 
     if controlNS
 
-        [stimOn stimOff ] = NPdiodeExtract(NP,0,"NSC",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
-        [stimOn stimOff] = NPdiodeExtract(NP,0,"NSC",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
+        [stimOn stimOff ] = NPdiodeExtract(NP,0,0,"NSC",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+        [stimOn stimOff] = NPdiodeExtract(NP,0,0,"NSC",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
     else
-        [stimOn stimOff ] = NPdiodeExtract(NP,0,"NS",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
-        [stimOn stimOff] = NPdiodeExtract(NP,0,"NS",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
+        [stimOn stimOff ] = NPdiodeExtract(NP,0,0,"NS",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+        [stimOn stimOff] = NPdiodeExtract(NP,0,0,"NS",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
     end
 
     stimInter= mean(stimOn(2:end)-stimOff(1:end-1)); % When dealing with different speeds, save different stim durs, and create M for each speed
@@ -168,9 +168,9 @@ for ex = [40 41 42 43]%examplesSDG%[7 8 28]%1:size(data,1)
 
     uPos = unique(positions);
 
-
     if ~controlNS
         for u = 1:nN
+            u =8;
             f = figure('Visible', 'off');
 
             imagesc(squeeze(Mr(:,u,:)));colormap(flipud(gray(64)));caxis([0 1])
@@ -187,6 +187,7 @@ for ex = [40 41 42 43]%examplesSDG%[7 8 28]%1:size(data,1)
             cd(NP.recordingDir+"\Figs")
             f.Position =[680   224   560   754];
             print(f, sprintf('NoveltyStim-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
+            exportgraphics(f, sprintf('NoveltyStimControl-%s-Unit-%d.pdf',NP.recordingName,u), 'ContentType', 'vector');
             close
 
         end
@@ -210,6 +211,7 @@ for ex = [40 41 42 43]%examplesSDG%[7 8 28]%1:size(data,1)
             cd(NP.recordingDir+"\Figs")
             f.Position =[680   224   560   754];
             print(f, sprintf('NoveltyStimControl-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
+            %exportgraphics(f, sprintf('NoveltyStimControl-%s-Unit-%d.pdf',NP.recordingName,u), 'ContentType', 'vector');
             close
 
         end
