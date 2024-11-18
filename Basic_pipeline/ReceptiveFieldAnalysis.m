@@ -41,13 +41,13 @@ for ex = 41
     filenames = {file.name};
     ballFiles = filenames(contains(filenames,"linearlyMovingBall"));
 
-    
-        if isempty(ballFiles)
-            %disp()
-            w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
-            warning(w)
-            continue
-        end
+%     
+%         if isempty(ballFiles)
+%             %disp()
+%             w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
+%             warning(w)
+%             continue
+%         end
 
     directions = [];
     offsets = [];
@@ -104,7 +104,126 @@ for ex = 41
     trialDivision = nT/(offsetN*direcN*speedN*sizeN*orientN); %Number of trials per unique conditions
     categ = nT/trialDivision;
 
+    %Create IC matrix
+    p = NP.convertPhySorting2tIc(NP.recordingDir);
+    label = string(p.label');
+    goodU = p.ic(:,label == 'good');
 
+    %% Calculate RFU in times where the eye is in the same position
+
+    %%% Artificial snippets of eye == position:
+
+    eyeEQpos = [stimOn(1)*2,stimOn(1)*20,stimOn(1)*101,stimOn(1)*300;stimOn(1)*4,stimOn(1)*21,stimOn(1)*200,stimOn(1)*310];
+
+    %3. Load Triggers (diode)
+    Ordered_stims= strsplit(data.VS_ordered{ex},',');
+    containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
+    ttlInd = find(containsMB);
+    %%%Extract diode times:
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+
+    stimInter= mean(stimOn(2:end)-stimOff(1:end-1)); % When dealing with different speeds, save different stim durs, and create M for each speed
+    stimDur = mean(-stimOn+stimOff); 
+
+
+    Xpos = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballTrajectoriesX'))));
+
+    Ypos = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballTrajectoriesY'))));
+
+    sizeN = length(unique(sizes));
+    sizeX = size(Xpos);
+    %%% X Y stucture = speed, offsets, directions, frames
+    % A = [stimOn directions' offsets' sizes' speeds' orientations'] = Order of
+    % categories (bigger divs to smaller divs.
+
+    %%%Create a matrix with trials that have unique positions
+    ChangePosX = zeros(sizeX(1)*sizeX(2)*sizeX(3)*sizeN*trialDivision,sizeX(4));
+    ChangePosY = zeros(sizeX(1)*sizeX(2)*sizeX(3)*sizeN*trialDivision,sizeX(4));
+
+    j=1;
+
+    %For loop order determines the order of categories in ChangePosX = allTrials x nFrames
+    for d = 1:sizeX(3) %directions
+        for of = 1:sizeX(2) %offsets
+            for sp = 1:sizeX(1) %speeds
+
+                ChangePosX(j:j+sizeN*trialDivision-1,:) = repmat(squeeze(Xpos(sp,of,d,:))',sizeN*trialDivision,1); %Size is not represented in X matrix.
+
+                ChangePosY(j:j+sizeN*trialDivision-1,:) = repmat(squeeze(Ypos(sp,of,d,:))',sizeN*trialDivision,1);
+
+                j = j+sizeN*trialDivision;
+
+            end
+        end
+    end
+    
+    %%% Generate times per frame:
+    timeFrames = zeros(size(ChangePosX));
+    for i = 1:length(stimOn)
+        timeFrames(i,:) = linspace(stimOn(i),stimOff(i),size(timeFrames,2));
+
+    end
+    
+    % Calculate the receptive field by multiplying normalized spike rate in frame by the image of each frame.
+    goodNeurons = load(sprintf('pvalTime-%s',NP.recordingName)).pvalTi;
+    goodNeurons = find(goodNeurons<0.05);
+
+    [Mb] = BuildBurstMatrix(goodU(:,goodNeurons),round(p.t),round((stims-preBase)),round(preBase)); %Baseline matrix plus
+
+    Mb = mean(Mb,3); %mean across time bins
+
+    spkRateBM = mean(Mb);
+
+    A = [stimOn directions' offsets' speeds' orientations', sizes'];
+    [C indexS] = sortrows(A,[2 3 4 5 6]);
+
+    %4. Sort directions:
+    directimesSorted = C(:,1)';
+    sizeV = C(:,6);
+
+    delayResp = 200; %Based on unit 20 PV103_1
+    msPerFarme= round(stimDur/sizeX(4));
+
+    coorRect = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
+
+    [x, y] = meshgrid(1:coorRect(3)/10,1:coorRect(4)/10);
+
+    sizesU = unique(sizeV);
+
+    %Initialize matrices:
+    matrixForNorm = zeros();
+
+    RFu = zeros(sizeN,coorRect(4)/10,coorRect(3)/10,nN,"single");
+
+    % Fill in the matrix with the counts of repeated coordinates
+    SpeedSum = zeros(speedN,coorRect(4)/10,coorRect(3)/10,nN,"single");
+    Stemp = zeros(coorRect(4)/10,coorRect(3)/10,nN,"single");
+    DirecSum = zeros(direcN,coorRect(4)/10,coorRect(3)/10,nN,"single");
+    Dtemp = Stemp;
+    OrientSum = zeros(orientN,coorRect(4)/10,coorRect(3)/10,nN,"single");
+    Otemp = Stemp;
+    Si = 1;Di = 1;Oi = 1;
+
+    for i = 1:size(eyeEQpos,2)
+         [Msnip] = BuildBurstMatrix(goodU(:,goodNeurons),round(p.t),round(eyeEQpos(i,1)+delayResp),round(eyeEQpos(i,2)-eyeEQpos(i,1))); %Baseline matrix plus
+
+
+
+   
+
+    end
+    normMatrix = repmat(matrixForNorm,[1,1,1,nN]).*reshape(spkRateBM,[1,1,1,length(spkRateBM)]);
+    normRFu = RFu./normMatrix; %expected random rate
+
+    cd(NP.recordingDir)
+    save(sprintf('RFu_MovingBall-%s',NP.recordingName),'normRFu')
+    save(sprintf('NormMatrix_MovingBall-%s',NP.recordingName),'normMatrix')
+    save(sprintf('RFuSpeed_MovingBall-%s',NP.recordingName),'SpeedSum')
+    save(sprintf('RFuOrient_MovingBall-%s',NP.recordingName),'OrientSum')
+    save(sprintf('RFuDirec_MovingBall-%s',NP.recordingName),'DirecSum')
+
+%%
 
 RFu = load(string(path)+filesep+"RFuC-"+string(NP.recordingName)).RFu;
 

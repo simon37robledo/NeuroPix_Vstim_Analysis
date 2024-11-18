@@ -5,6 +5,13 @@ missingFrames = {};
 
 missedFramesVID ={};
 
+cd('\\sil3\data\Large_scale_mapping_NP')
+excelFile = 'Experiment_Excel.xlsx';
+
+data = readtable(excelFile,'Format','auto');
+
+%%
+
 for ex = 41%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
@@ -23,8 +30,6 @@ for ex = 41%examplesSDG%[7 8 28]%1:size(data,1)
     end
     NP = NPAPRecording(path);
 
-
-
     [Ttrigger,chNumberT]=NP.getTrigger();
 
 
@@ -38,55 +43,52 @@ for ex = 41%examplesSDG%[7 8 28]%1:size(data,1)
     file = dir (vidDir);
     filenames = {file.name};
     vidFrames = filenames(contains(filenames,".csv"));
+    vidFrames = vidFrames{contains(vidFrames, "Camera")};
+
     vidName = filenames(contains(filenames,".mp4"));
 
-    vidTTLs = Ttrigger{7};
 
-    figure;
-    plot([1:length(vidTTLs)-1],diff(vidTTLs))
+%     figure;
+%     plot([1:length(vidTTLs)-1],diff(vidTTLs))
 
+    vidTTLs = Ttrigger{7}; %Camera trigger
     indexTTLs = find(diff(vidTTLs)>1000);
+
+    vidTTLs(indexTTLs(2))
+
+    cd(vidDir)
 
     if numel(indexTTLs) > 1 %%Select the triggers within start and stop of video
 
-        vidTTLsReal = vidTTLs(indexTTLs(1)+1:indexTTLs(2));
+        vidTTLs = vidTTLs(indexTTLs(1)+1:indexTTLs(2));
 
     else
-        vidTTLsReal = vidTTLs(indexTTLs(1)+1:end);
+        vidTTLs = vidTTLs(indexTTLs(1)+1:end); %If video was not stopped before acquisition ends
 
     end
-
-   
-    VideoTS = readtable(vidDir+filesep+vidFrames); %actually saved frames in video
-
-    %Check timing of missing frames:
-    figure;
-    plot([1:size(VideoTS,1)-1],diff(VideoTS.timestamp))
-
-    diffTS = diff(VideoTS.timestamp);
     
-    numMissedFrames = diffTS(diffTS>0.015)*100;
+    VideoTS = readtable(vidDir+filesep+vidFrames); %Real frames saved in video
 
-    %%% Modify digital triggers to reflect real frames
-    length(diffTS)+round(numMissedFrames);
+    timestampsRecF = (VideoTS.timestamp - VideoTS.timestamp(1))*1000; %Zero frames, t-start = 0, and convert to miliseconds
 
-    length(vidTTLsReal)
+    diffTS = diff(timestampsRecF); %Difference between zeroed frames
 
-    timestampsTTLS= vidTTLsReal;%(vidTTLsReal-vidTTLsReal(1));
+    %Plot missing frames
+%     figure;
+%     plot([1:size(VideoTS,1)-1],diffTS)
 
-    timestampsRecF = (VideoTS.timestamp - VideoTS.timestamp(1))*1000;
+    MissingInd = find(diffTS>15); %find indexes where there is a frame-miss event (could be one or several). 
 
     %Exclude missing frames in rec time stamps from TTLs
 
-    diffTS = diff(timestampsRecF);
-
-    MissingInd = find(diffTS>15);
-
     mFrames= [];
 
-    TTL2FrameI = 1:length(timestampsTTLS);
+    TTL2FrameI = 1:length(vidTTLs);
 
     for m = 1:length(MissingInd)
+
+         %Check what is the time period of missed frames within an event and calculate the
+         %indexes of the unexisting frames. 
 
         MissingSection = [MissingInd(m):MissingInd(m)-1+floor(diffTS(MissingInd(m))/10)-1];
 
@@ -94,27 +96,59 @@ for ex = 41%examplesSDG%[7 8 28]%1:size(data,1)
 
     end
 
+    vidTTLsR = vidTTLs;
+    vidTTLsR(mFrames) = [];
 
-    TTL2Frame = setdiff(TTL2FrameI,mFrames);
+    TTL2Frame = setdiff(TTL2FrameI,mFrames); %%TTL index number to index number of frame 
 
+    lengthVideoTS = length(VideoTS.timestamp)
 
-    timestampsTTLS(mFrames) = [];
+    lengthTTLsR = length(vidTTLsR)
+
 
     cd(NP.recordingDir)
 
-    save('videoTimeStamps','timestampsTTLS')
+    save('videoTimeStampsSynced','vidTTLsR')
     save('TTL2Frame','TTL2Frame')
 
     
-
     missedFramesVID{j} =sum(diff(VideoTS.timestamp)>0.015);
 
     missingFrames{j} = length(vidTTLsReal)-size(VideoTS,1);
 
-    missingFramesCorr{j} = length(timestampsTTLS) - (size(VideoTS,1));
+    missingFramesCorr{j} = length(vidTTLs) - (size(VideoTS,1));
 
     j=j+1;
+    
 end
+
+%% Verify with video and full field flashes: %Verified with one video PV35_2
+
+%A. Get times of full field flash
+
+
+VSordered = strsplit(data.VS_ordered{ex},',');
+OBpos = find(VSordered=="OB");
+
+[stimOn stimOff] = NPdiodeExtract(NP,0,0,"NS",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+[stimOn stimOff] = NPdiodeExtract(NP,0,0,"NS",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+
+[m indF]=min(abs(stimOn(1)-vidTTLsR));
+
+%triggers TTLs FFF
+[m2 indF2]=min(abs(Ttrigger{3}(1)-vidTTLsR));
+
+%B. Get RealTTls frame index and plot frame:
+video = VideoReader();
+
+frameNumber = MissingInd; % Example frame number
+video.CurrentTime = (indF2 - 1) / video.FrameRate;
+frame = readFrame(video);
+figure;
+imshow(frame)
+
+implay("\\sil3\data\Large_scale_mapping_NP\lizards\PV35\PV35_Experiment_18_8_24\Insertion2\pv35_Insertion2_Camera1_20240819-123015.mp4");
+
 
 %% Find video sections for moving ball
 

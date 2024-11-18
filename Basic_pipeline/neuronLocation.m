@@ -5,7 +5,7 @@ plotN = 1;
 
 plotIns =0;
 
-%function [Coor] = neuronLocation(NP,data_ex,goodU,plotN)
+function [Coor] = neuronLocation(NP,data_ex,goodU,plotN)
 
 path = convertStringsToChars(string(data_ex.Base_path)+filesep+string(data_ex.Exp_name)+filesep+"Insertion"+string(data_ex.Insertion)...
     +filesep+"catgt_"+string(data_ex.Exp_name)+"_"+string(data_ex.Insertion)+"_g0");
@@ -82,8 +82,6 @@ if plotN
 
     %%%Load coordinates from excel data
 
-    
-
     if length(cell2mat(data_ex.Matlab3Dcoor))>3 %%Check if the insertion has matlab coordinates
 
         if string(cell2mat(data_ex.Probe)) == "NP2.0"
@@ -125,7 +123,7 @@ if plotN
 
             colors = ['bo','ro'];
             j =1;
-            for u = [34,8]%1:length(goodU)
+            for u = 1:length(goodU)
 
 
                 %Main unit channel position
@@ -146,6 +144,8 @@ if plotN
 
                 scatter3(uX,uY,uZ,colors(j), 'filled')
                 view(sideview)
+
+                
 
                 j=j+1;
 
@@ -170,7 +170,7 @@ end
 
 length(cell2mat(data.Matlab3Dcoor(40)))
 
-%end
+end
 
 
 

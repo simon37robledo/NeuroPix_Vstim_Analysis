@@ -15,7 +15,7 @@ plotin3D=1;
 
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =15:18%size(data,1)
+for ex =41%size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     %ex = 25;

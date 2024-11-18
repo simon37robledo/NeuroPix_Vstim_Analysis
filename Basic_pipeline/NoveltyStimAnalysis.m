@@ -34,6 +34,8 @@ for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
         mkdir matData
     end
 
+    figure;
+    plot(1:length(squeeze(awData)),squeeze(awData)')
 
  %2. Extract moving ball statistics
     patternIndex = strfind(string(NP.recordingDir), "\catgt");
@@ -139,6 +141,8 @@ for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
 % 
 %     figure;
 %     imagesc(squeeze(LFP(100,:,:)));caxis([-200 1200])
+
+oddballtimes=directimesSorted(end-19:end)/1000;
 
 
     %5. Load data to select good units

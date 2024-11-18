@@ -2,7 +2,7 @@
 ellipsePath = "\\sil3\data\Large_scale_mapping_NP\lizards\PV35\PV35_Experiment_18_8_24\Insertion2\PV35_2_Eye_ellipse";
 
 
-Data = readtable(ellipsePath); %Check which rows are Nans with the elipse code
+Data = readtable(ellipsePath);
 %%
 video = VideoReader("\\sil3\data\Large_scale_mapping_NP\lizards\PV35\PV35_Experiment_18_8_24\Insertion2\pv35_Insertion2_Camera1_20240819-123015.mp4");
 
@@ -25,16 +25,12 @@ for x = 1:divisions
         xIndx = find((Data.center_x > rect(1)+grid(x)) & (Data.center_x < (rect(1) + grid(x) + mean(diff(grid)))));
         yIndx = find((Data.center_y > rect(2)+grid(y)) & (Data.center_y < (rect(2) + grid(y) + mean(diff(grid)))));
         EyeLoc{1,j} =  intersect(xIndx, yIndx);
-        indFrames(intersect(xIndx, yIndx)) = zeros(1,length(intersect(xIndx, yIndx)))+j;
+        indFrames(intersect(xIndx, yIndx)) = j;
         j =j+1;
     end
 end
 
-%% Ephys sync times to frames
-cd(NP.recordingDir)
-frameTimes = load('videoTimeStampsSynced.mat').vidTTLsR;
-
-%% Plot data
+%%
 % Example data
 centers = [Data.center_x, Data.center_y]; % Replace with your X, Y data
 [X, Y] = meshgrid(grid, grid);
@@ -51,7 +47,7 @@ ylim([0 max(grid)]);% Plot grid lines
 xticks(grid)
 yticks(grid)
 
-gscatter(Data.center_x-rect(1), Data.center_y-rect(2),indFrames);
+gscatter(Data.center_x-rect(1), Data.center_y-rect(2));
 title('Cluster Plot');
 xlabel('X Coordinate');
 ylabel('Y Coordinate');
