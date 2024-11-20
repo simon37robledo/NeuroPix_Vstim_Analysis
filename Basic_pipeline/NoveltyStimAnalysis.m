@@ -6,7 +6,7 @@ data = readtable(excelFile,'Format','auto');
 controlNS = 0;
 
 %%
-for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = [43]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -34,10 +34,8 @@ for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
         mkdir matData
     end
 
-    figure;
-    plot(1:length(squeeze(awData)),squeeze(awData)')
 
- %2. Extract moving ball statistics
+    %2. Extract moving ball statistics
     patternIndex = strfind(string(NP.recordingDir), "\catgt");
 
     endIndex = patternIndex(1)-1;
@@ -51,13 +49,13 @@ for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
     filenames = {file.name};
     rectFiles = filenames(contains(filenames,"rectGrid"));
 
-    
-        if isempty(rectFiles)
-            %disp()
-            w= sprintf('No rect grid files where found in %s. Skipping into next experiment.',NP.recordingName);
-            warning(w)
-            continue
-        end
+
+    if isempty(rectFiles)
+        %disp()
+        w= sprintf('No rect grid files where found in %s. Skipping into next experiment.',NP.recordingName);
+        warning(w)
+        continue
+    end
 
 
     directions = [];
@@ -75,17 +73,16 @@ for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
 
     [orderVS orderVSIndex] = sort([RGpos OBpos OBCpos]);
 
-     selecFiles = rectFiles(orderVSIndex(2));
+    selecFiles = rectFiles(orderVSIndex(2));
 
-     if controlNS
+    if controlNS
+        selecFiles = rectFiles(orderVSIndex(3));
+    end
 
-         selecFiles = rectFiles(orderVSIndex(3));
-     end
 
-   
 
     positions = [];
-  %  NSfiles = 
+    %  NSfiles =
     if size(rectFiles) ~= [0 0]
 
         for i = selecFiles %Extract stim properties
@@ -128,21 +125,22 @@ for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
     [C indexS] = sortrows(A,[2]);
 
     directimesSorted = C(:,1)';
+    positionsSorted =  C(:,2)';
 
-%     LFP = NP.getData(300,round(stimOn-stimInter/2),round(stimDur+stimInter));
-% 
-%     LFP = LFP(:,indexS',:);
-% 
-% 
-%     %size(LFP,3)/(NP.samplingFrequency/1000)
-% 
-%     figure;
-%     imagesc(squeeze(LFP));caxis([-3000 10000])
-% 
-%     figure;
-%     imagesc(squeeze(LFP(100,:,:)));caxis([-200 1200])
+    %     LFP = NP.getData(300,round(stimOn-stimInter/2),round(stimDur+stimInter));
+    %
+    %     LFP = LFP(:,indexS',:);
+    %
+    %
+    %     %size(LFP,3)/(NP.samplingFrequency/1000)
+    %
+    %     figure;
+    %     imagesc(squeeze(LFP));caxis([-3000 10000])
+    %
+    %     figure;
+    %     imagesc(squeeze(LFP(100,:,:)));caxis([-200 1200])
 
-oddballtimes=directimesSorted(end-19:end)/1000;
+    oddballtimes=directimesSorted(end-19:end)/1000;
 
 
     %5. Load data to select good units
@@ -166,15 +164,52 @@ oddballtimes=directimesSorted(end-19:end)/1000;
 
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
     [nT,nN,nB] = size(Mr);
+    
+    %%% Run eye positions analysis to get timeSnips.
+    EyePositionAnalysis(NP,11,1,0)
+
+    %find stimOns and stimOffs indexes of when the eye is in the most
+    %frequent quadrant
+    file = dir (NP.recordingDir);
+    filenames = {file.name};
+    files= filenames(contains(filenames,"timeSnipsNoMov"));
+
+    cd(NP.recordingDir)
+    timeSnips = load(files{1}).timeSnips;
+
+    timeSnipsMode = timeSnips(:,timeSnips(3,:) == mode(timeSnips(3,:)));
 
     % Preallocate normalized matrix
     nMr = zeros(nT, nN, nB);
 
     uPos = unique(positions);
 
+
     if ~controlNS
+
+        selectedTstamps=[];
+        selectedPositions =[];
+        indexSN = [];
+        for i = 1:size(timeSnipsMode,2)
+
+            %Find stimOns and offs that are between each timeSnip
+            selectedTstamps = [selectedTstamps stimOn(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))'];
+            selectedPositions = [selectedPositions positions(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
+
+        end
+
+        A2 = [selectedTstamps' selectedPositions'];
+
+        [C2 indexS] = sortrows(A2,[2]);
+
+        selectedTstampsS = C2(:,1)';
+        selectedPositionsS =  C2(:,2)';
+
+        [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((selectedTstampsS-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+        [nT,nN,nB] = size(Mr);
+
         for u = 1:nN
-            u =8;
+            %u =33;
             f = figure('Visible', 'off');
 
             imagesc(squeeze(Mr(:,u,:)));colormap(flipud(gray(64)));caxis([0 1])
@@ -182,7 +217,7 @@ oddballtimes=directimesSorted(end-19:end)/1000;
 
             xline(preBase/bin, '-g', LineWidth=1.5);
             xline(preBase/bin+stimDur/bin, '-b', LineWidth=1.5);
-            yline(nT-min([sum(positions==uPos(1)) sum(positions==uPos(2))]),'-','Odd position',LineWidth=1.5,LabelHorizontalAlignment="left")
+            yline(nT-min([sum(selectedPositions==uPos(1)) sum(selectedPositions==uPos(2))]),'-','Odd position',LineWidth=1.5,LabelHorizontalAlignment="left")
             ylabel('Trials')
             xlabel('time (ms)')
             xticks([0:round((preBase/2)/bin):size(Mr,3)])
@@ -191,10 +226,11 @@ oddballtimes=directimesSorted(end-19:end)/1000;
             cd(NP.recordingDir+"\Figs")
             f.Position =[680   224   560   754];
             print(f, sprintf('NoveltyStim-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
-            exportgraphics(f, sprintf('NoveltyStimControl-%s-Unit-%d.pdf',NP.recordingName,u), 'ContentType', 'vector');
+            %exportgraphics(f, sprintf('NoveltyStimControl-%s-Unit-%d.pdf',NP.recordingName,u), 'ContentType', 'vector');
             close
 
         end
+
     else
 
         posUnames = num2cell(string(uPos));

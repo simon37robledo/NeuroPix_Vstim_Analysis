@@ -12,7 +12,7 @@ data = readtable(excelFile,'Format','auto');
 
 %%
 
-for ex = 41%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = [43]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -39,9 +39,6 @@ for ex = 41%examplesSDG%[7 8 28]%1:size(data,1)
 
     file = dir (vidDir);
     filenames = {file.name};
-
-    file = dir (vidDir);
-    filenames = {file.name};
     vidFrames = filenames(contains(filenames,".csv"));
     vidFrames = vidFrames{contains(vidFrames, "Camera")};
 
@@ -54,7 +51,7 @@ for ex = 41%examplesSDG%[7 8 28]%1:size(data,1)
     vidTTLs = Ttrigger{7}; %Camera trigger
     indexTTLs = find(diff(vidTTLs)>1000);
 
-    vidTTLs(indexTTLs(2))
+    %vidTTLs(indexTTLs(2))
 
     cd(vidDir)
 
@@ -74,8 +71,8 @@ for ex = 41%examplesSDG%[7 8 28]%1:size(data,1)
     diffTS = diff(timestampsRecF); %Difference between zeroed frames
 
     %Plot missing frames
-%     figure;
-%     plot([1:size(VideoTS,1)-1],diffTS)
+    figure;
+    plot([1:size(VideoTS,1)-1],diffTS)
 
     MissingInd = find(diffTS>15); %find indexes where there is a frame-miss event (could be one or several). 
 
