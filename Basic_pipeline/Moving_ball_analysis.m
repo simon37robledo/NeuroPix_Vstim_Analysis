@@ -29,7 +29,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 41 %1:size(data,1)
+for ex = 44 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -141,7 +141,7 @@ for ex = 41 %1:size(data,1)
     ttlInd = find(containsMB);
 
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
     %Check diode
     % for i = 1:length(stimOn)

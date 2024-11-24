@@ -127,11 +127,8 @@ for ex = [43]%examplesSDG%[7 8 28]%1:size(data,1)
     directimesSorted = C(:,1)';
     positionsSorted =  C(:,2)';
 
-    stimType = zeros(length(C),3);
-    stimType(:,1) = A(:,1);
-    stimType(:,2) = A(:,1)+stimDur;
-    stimType(:,3) = A(:,2);
-    EyePositionAnalysis(NP,11,1,stimType,1)
+    stimTypes = zeros(l)
+    EyePositionAnalysis(NP,11,1,C)
 
     %     LFP = NP.getData(300,round(stimOn-stimInter/2),round(stimDur+stimInter));
     %
