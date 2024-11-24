@@ -25,8 +25,12 @@
 % = "single"
 
 
-run_dir1 = "\\132.66.45.127\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT";
+run_dir1 = "\\sil1\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT";
 run_dir2 = "Y:\Large_scale_mapping_NP\SpikeGLX\V4_catGT";
+
+% run_dir1 = "Y:\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT";
+% run_dir1 = "\\169.254.69.105\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT";
+% run_dir1 = "\\169.254.248.184\data\Large_scale_mapping_NP\SpikeGLX\V4_catGT";
 
 %% %% Phy commmand: phy template-gui params.py
 
@@ -74,7 +78,7 @@ expSA8 = 'SA8_Experiment_7_11_24';
 %% Basic variables
 base_dir = string(basic_pathSA8)+"\"+string(expSA8);
 %Folder that has catgt and tprime subfolders
-insertion = "3";
+insertion = "4";
 fileName = "SA8_Experiment";
 runs = "mult";
 dig_CH = "1";

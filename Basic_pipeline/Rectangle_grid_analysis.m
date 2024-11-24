@@ -13,7 +13,7 @@ ex=1;
 
 
 %%
-for ex =1:size(data,1)
+for ex =41%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
