@@ -5,7 +5,7 @@ plotN = 1;
 
 plotIns =0;
 
-function [Coor] = neuronLocation(NP,data_ex,goodU,plotN)
+%function [Coor] = neuronLocation(NP,data_ex,goodU,plotN)
 
 path = convertStringsToChars(string(data_ex.Base_path)+filesep+string(data_ex.Exp_name)+filesep+"Insertion"+string(data_ex.Insertion)...
     +filesep+"catgt_"+string(data_ex.Exp_name)+"_"+string(data_ex.Insertion)+"_g0");
@@ -170,7 +170,7 @@ end
 
 length(cell2mat(data.Matlab3Dcoor(40)))
 
-end
+%end
 
 
 
