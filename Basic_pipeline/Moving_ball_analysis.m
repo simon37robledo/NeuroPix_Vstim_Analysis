@@ -29,7 +29,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 44 %1:size(data,1)
+for ex = 45 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -168,7 +168,15 @@ for ex = 44 %1:size(data,1)
     A = [stimOn directions' offsets' sizes' speeds' orientations'];
     [C indexS] = sortrows(A,[2 3 4 5 6]);
 
-    find(-stimOn+stimOff>3000)
+    %find(-stimOn+stimOff>3000)
+
+
+    stimType = zeros(length(C),3);
+    stimType(:,1) = A(:,1);
+    stimType(:,2) = A(:,1)+stimDur;
+    stimType(:,3) = A(:,2);
+
+
 
     %4. Sort directions:
     directimesSorted = C(:,1)';

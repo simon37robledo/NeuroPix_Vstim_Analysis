@@ -159,19 +159,31 @@ xticks(grid)
 yticks(grid)
 axis equal;
 
-if stimType~= false
+if length(stimType)> 1
 
+    posXPerTrial = [];
+    posYPerTrial = [];
+    indexType =[];
     %get frameTimes that are between the beginning and end of stim
-    for i =1:
+    for i =1:length(stimType)
+        posXPerTrial = [posXPerTrial Data.center_x(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))'];
+        posYPerTrial = [posYPerTrial Data.center_y(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))'];
+        indexType = [indexType zeros(1,length(frameTimes(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))))+stimType(i,3)];
+    end
 
-    
+    gscatter(posXPerTrial-rectNew(1), posYPerTrial-rectNew(2),indexType);
+    title(sprintf('Eye Movements %s',NP.recordingName));
+    xlabel('X Coordinate');
+    ylabel('Y Coordinate');
+    axis equal;
+
+else
+    gscatter(Data.center_x-rectNew(1), Data.center_y-rectNew(2),indFrames);
+    title(sprintf('Eye Movements %s',NP.recordingName));
+    xlabel('X Coordinate');
+    ylabel('Y Coordinate');
+    axis equal;
 end
-
-gscatter(Data.center_x-rectNew(1), Data.center_y-rectNew(2),indFrames);
-title(sprintf('Eye Movements %s',NP.recordingName));
-xlabel('X Coordinate');
-ylabel('Y Coordinate');
-axis equal;
 
 scatter(meanCenter(1)-rectNew(1),meanCenter(2)-rectNew(2),25, 'filled','MarkerFaceColor','r')
 axis equal;

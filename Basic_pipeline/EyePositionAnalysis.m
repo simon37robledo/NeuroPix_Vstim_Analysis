@@ -159,7 +159,7 @@ xticks(grid)
 yticks(grid)
 axis equal;
 
-if stimType~= false
+if length(stimType)> 1
 
     posXPerTrial = [];
     posYPerTrial = [];

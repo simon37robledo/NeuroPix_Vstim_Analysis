@@ -12,7 +12,7 @@ data = readtable(excelFile,'Format','auto');
 
 %%
 
-for ex = [43]%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = [40]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
