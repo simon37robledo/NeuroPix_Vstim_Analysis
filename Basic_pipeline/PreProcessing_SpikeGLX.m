@@ -78,7 +78,7 @@ expSA8 = 'SA8_Experiment_7_11_24';
 %% Basic variables
 base_dir = string(basic_pathSA8)+"\"+string(expSA8);
 %Folder that has catgt and tprime subfolders
-insertion = "4";
+insertion = "5";
 fileName = "SA8_Experiment";
 runs = "mult";
 dig_CH = "1";

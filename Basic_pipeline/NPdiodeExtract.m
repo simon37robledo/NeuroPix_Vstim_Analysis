@@ -252,33 +252,42 @@ else
             [pkvalsDown, pklocDown] = findpeaks(fDat*-1,'MinPeakProminence',0.8*stdS,'MinPeakDistance',samplesPframe*2-samplesPframe*0.3);
 
             %%%%filter out outlier peaks If there are more peaks than max
-            
-            tic
+%             
+%             tic
             numSegments = 2;
-            segmentLength = length(fDat) / numSegments;
+
 
             % Initialize array to store change points from each segment
             change_points = cell(1, numSegments);
-
-            % Use parfor for parallel processing
-            parfor par = 1:numSegments
-                segmentData = fDat((par-1)*segmentLength + 1:par*segmentLength);
-                [change_points{par} ~]= findchangepts(single(segmentData), 'MaxNumChanges', 1, 'Statistic', 'std');
-            end
-
-            % Combine results from all segments
-            try
-                cpts = cell2mat(change_points) + repelem(0:segmentLength:(numSegments-1)*segmentLength, cellfun(@numel, change_points));
-            catch
-                if isempty(change_points{2})
-                    change_points{2} = length(fDat);
+            %
+            %             % Use parfor for parallel processing
+            dFactor =10;
+            dsFDat = downsample(fDat,dFactor);
+            segmentLength = length(dsFDat) / numSegments;
+            %
+            tic
+            for par = 1:numSegments
+                segmentData = dsFDat((par-1)*segmentLength + 1:par*segmentLength);
+                [change_point ~] = findchangepts(single(segmentData), 'MaxNumChanges', 1, 'Statistic', 'std');
+                if ~isempty(change_point)
+                    change_points{par} = change_point*dFactor*par;
                 end
-                if isempty(change_points{1})
-                    change_points{1} = 1;
-                end
-                cpts = cell2mat(change_points) + repelem(0:segmentLength:(numSegments-1)*segmentLength, cellfun(@numel, change_points));
             end
             toc
+
+            %             % Combine results from all segments
+            %             try
+            %                 cpts = cell2mat(change_points) + repelem(0:segmentLength:(numSegments-1)*segmentLength, cellfun(@numel, change_points));
+            %             catch
+            if isempty(change_points{2})
+                change_points{2} =  fDat(end);
+            end
+            if isempty(change_points{1})
+                change_points{1} = 1;
+            end
+            cpts = cell2mat(change_points);
+%             end
+            %toc
             %[cpts1, ~] = findchangepts(single(fDat), 'MaxNumChanges', 2, 'Statistic', 'std'); %Detect signifficant changes in signal statistics
             %3 main changes happen in SDG, the On signal, the start of frames, and
             %the off signal. 
@@ -401,9 +410,10 @@ plot(fDat);%hold on; plot(signal)
 %[cpts, ~] = findchangepts(signal, 'MaxNumChanges', 2, 'Statistic', 'std');
 % xline(startP(1))
 %     xline(endP(end))
-%xline(cpts);
+xline(cpts);
 xline([pklocDown'])
 xline([pklocUp'],'red')
+xline(change_points{1})%*dFactor)
 %hold on; plot(round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)),ones(size(TTL))*max(fDat),'ro', 'MarkerSize', 0.2, 'LineWidth', 2,'MarkerFaceColor','b')
 
 
