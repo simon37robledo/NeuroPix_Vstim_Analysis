@@ -6,7 +6,7 @@ data = readtable(excelFile,'Format','auto');
 controlNS = 0;
 
 %%
-for ex = [41]%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -127,11 +127,12 @@ for ex = [41]%examplesSDG%[7 8 28]%1:size(data,1)
     directimesSorted = C(:,1)';
     positionsSorted =  C(:,2)';
 
-    stimType = zeros(length(C),3);
+    %%Construct stimType matrix for eye movement plot.
+    stimType = zeros(length(C),5); %3 plus number of example neurons
     stimType(:,1) = A(:,1);
     stimType(:,2) = A(:,1)+stimDur;
     stimType(:,3) = A(:,2);
-    EyePositionAnalysis(NP,11,1,stimType,1)
+    %EyePositionAnalysis(NP,11,1,stimType,1)
 
     %     LFP = NP.getData(300,round(stimOn-stimInter/2),round(stimDur+stimInter));
     %
@@ -171,8 +172,16 @@ for ex = [41]%examplesSDG%[7 8 28]%1:size(data,1)
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
     [nT,nN,nB] = size(Mr);
     
-    %%% Run eye positions analysis to get timeSnips.
-    EyePositionAnalysis(NP,11,1,0)
+    %%% Get response strenght of specific neurons and save it in stimType
+    [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+
+    ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+400)/bin)),3);
+    ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+400)/bin)),3);
+
+    stimType(:,end-1) = ResponseStrengthU34;
+    stimType(:,end) = ResponseStrengthU8;
+    
+    %EyePositionAnalysis(NP,11,1,0)
 
     %find stimOns and stimOffs indexes of when the eye is in the most
     %frequent quadrant
@@ -181,6 +190,8 @@ for ex = [41]%examplesSDG%[7 8 28]%1:size(data,1)
     files= filenames(contains(filenames,"timeSnipsNoMov"));
 
     cd(NP.recordingDir)
+
+    %Run eyePosition Analysis to find no movement timeSnips
     timeSnips = load(files{1}).timeSnips;
 
     timeSnipsMode = timeSnips(:,timeSnips(3,:) == mode(timeSnips(3,:)));
