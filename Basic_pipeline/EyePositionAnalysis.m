@@ -163,15 +163,41 @@ if length(stimType)> 1
 
     posXPerTrial = [];
     posYPerTrial = [];
-    indexType =[];
+    indexType = [];
+    trialIndex = [];
     %get frameTimes that are between the beginning and end of stim
     for i =1:length(stimType)
         posXPerTrial = [posXPerTrial Data.center_x(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))'];
         posYPerTrial = [posYPerTrial Data.center_y(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))'];
         indexType = [indexType zeros(1,length(frameTimes(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))))+stimType(i,3)];
+        trialIndex = [trialIndex zeros(1,length(frameTimes(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))))+i];
     end
 
-    gscatter(posXPerTrial-rectNew(1), posYPerTrial-rectNew(2),indexType);
+    % Border colors for each group
+    borderColorsV = zeros(length(indexType),3);
+    borderColorsV(indexType'==max(indexType),:) = repmat([0, 0, 0.5],sum(indexType'==max(indexType)),1);
+    borderColorsV(indexType'==min(indexType),:) = repmat([0.5, 0, 0],sum(indexType'==min(indexType)),1);
+
+    colorVector =  (stimType(:,4) - min(stimType(:,4))) / (max(stimType(:,4)) - min(stimType(:,4)));
+    colorVector = colorVector(trialIndex);
+
+    % Define the lightened versions of colors
+    C_light = min(borderColorsV + 0.8, 1); % Add lightness, ensuring values stay <= 1
+
+    % Interpolate between dark and light colors using B
+    CombinedColors = borderColorsV.*colorVector + C_light.*(1 - colorVector); % Blend based on B
+    
+
+    scatter(posXPerTrial-rectNew(1), posYPerTrial-rectNew(2),25,CombinedColors,'filled') %'CData', colorVector', 'filled');
+
+    hold on;
+    for i = unique(indexType)
+        scatter(x(group==i), y(group==i), 50, 'MarkerFaceColor', colors(i,:), ...
+            'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.5);
+    end
+    hold off;
+
+    scatter(posXPerTrial-rectNew(1), posYPerTrial-rectNew(2),borderColors);
     title(sprintf('Eye Movements %s',NP.recordingName));
     xlabel('X Coordinate');
     ylabel('Y Coordinate');
