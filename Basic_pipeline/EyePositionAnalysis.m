@@ -162,6 +162,8 @@ axis equal;
 %%
 if length(stimType)> 1
 
+    if nameStim == "OB"
+
     posXPerTrial = [];
     posYPerTrial = [];
     indexType = [];
@@ -242,11 +244,31 @@ if length(stimType)> 1
         leg = leg+colorsName{t}+string(uPos(j))+",";
         j=j+1;
     end
+
     title(leg,'Color', 'k');
     cd(string(NP.recordingDir)+filesep+"Figs")
     exportgraphics(gcf, sprintf('EyeMovNoveltyControl-%s-Unit-%d.png',NP.recordingName,u));
     exportgraphics(gcf, sprintf('EyeMovNovelty-%s-UnitControl-%d.pdf',NP.recordingName,u), 'ContentType', 'vector');
     %axis equal;
+
+    hold off;
+
+    end
+
+    if namStim == "MB"
+
+        
+
+
+
+    end
+
+    scatter(posXPerTrial-rectNew(1), posYPerTrial-rectNew(2),borderColors);
+    title(sprintf('Eye Movements %s',NP.recordingName));
+    xlabel('X Coordinate');
+    ylabel('Y Coordinate');
+    axis equal;
+
 
 else
     gscatter(Data.center_x-rectNew(1), Data.center_y-rectNew(2),indFrames);
