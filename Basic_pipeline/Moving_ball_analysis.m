@@ -4,8 +4,8 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
-summPlot = 0;
-plotexamplesMB =0;
+summPlot = 1;
+plotexamplesMB =1;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
 Shuffling =0;
@@ -13,8 +13,8 @@ repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
-ReceptiveFieldConvolutions =1;
-repeatConv =1;
+ReceptiveFieldConvolutions =0;
+repeatConv =0;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
@@ -29,7 +29,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 45 %1:size(data,1)
+for ex = 45:47 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -879,7 +879,7 @@ end
 for plotOp = plotexamplesMB
     if plotexamplesMB == 1
 
-        eNeuron =34;%1:length(goodU); %8
+        eNeuron = 1:length(goodU); %8
         %eNeuron = 1;
 
         orderS = [2 3 4 5;4 2 3 5;5 2 3 4;3 2 4 5];
@@ -971,7 +971,7 @@ for plotOp = plotexamplesMB
                     'EdgeColor', 'r', 'LineWidth', 1.5,'LineStyle','-.');
                 end
                 hold off
-                prettify_plot
+                %prettify_plot
                 
                 yyaxis right
                 ylim([1,nT])
@@ -988,24 +988,28 @@ for plotOp = plotexamplesMB
                     mkdir Figs
                 end
                 cd(NP.recordingDir + "\Figs")
+                set(fig,'Color','w')
 
                 fig.Position = [353    42   734   954];
                 print(fig, sprintf('%s-MovBall-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
                 close
-
-                %%%Polar plot
-                tuningCurve = (load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve)*1000; %convert to spikes/sec
-                theta = deg2rad(uDir); %linspace(0, 2*pi, size(tuningCurve,2)+1);  % 9 points for 8 bars (because it's circular)
-                  % Remove the last value to avoid duplication of the first
-                pf = figure;
-                % Create the polar plot
-                polarplot([theta, theta(1)], [tuningCurve(eNeuron,:), tuningCurve(eNeuron,1)], '-o')
-                set(pf,"Color",'w')
-                ax = gca;
-                ax.ThetaTick = uDir;
-                title(sprintf('PolarPlot-U.%d-Unit-phy-%d',u,GoodU_or(u)));
-                print(fig, sprintf('%s-MovBall-polarPlot-U%d.png',NP.recordingName,u),'-dpng');
-                close
+                
+                
+%                 %%%Polar plot
+%                 cd(NP.recordingDir)
+%                 tuningCurve = (load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve)*1000; %convert to spikes/sec
+%                 theta = deg2rad(uDir); %linspace(0, 2*pi, size(tuningCurve,2)+1);  % 9 points for 8 bars (because it's circular)
+%                   % Remove the last value to avoid duplication of the first
+%                 pf = figure;
+%                 % Create the polar plot
+%                 polarplot([theta, theta(1)], [tuningCurve(eNeuron,:), tuningCurve(eNeuron,1)], '-o')
+%                 set(pf,"Color",'w')
+%                 ax = gca;
+%                 ax.ThetaTick = uDir;
+%                 title(sprintf('PolarPlot-U.%d-Unit-phy-%d',u,GoodU_or(u)));
+%                 cd(NP.recordingDir + "\Figs")
+%                 print(fig, sprintf('%s-MovBall-polarPlot-U%d.png',NP.recordingName,u),'-dpng');
+%                 close
 
 
             end
