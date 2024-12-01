@@ -161,7 +161,7 @@ axis equal;
 
 if length(stimType)> 1
 
-    if nameStim == "OB"
+    if 
 
     posXPerTrial = [];
     posYPerTrial = [];
@@ -198,16 +198,6 @@ if length(stimType)> 1
             'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.5);
     end
     hold off;
-
-    end
-
-    if namStim == "MB"
-
-        
-
-
-
-    end
 
     scatter(posXPerTrial-rectNew(1), posYPerTrial-rectNew(2),borderColors);
     title(sprintf('Eye Movements %s',NP.recordingName));
