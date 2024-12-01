@@ -29,7 +29,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 45:47 %1:size(data,1)
+for ex = 42 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -171,13 +171,6 @@ for ex = 45:47 %1:size(data,1)
     %find(-stimOn+stimOff>3000)
 
 
-    stimType = zeros(length(C),3);
-    stimType(:,1) = A(:,1);
-    stimType(:,2) = A(:,1)+stimDur;
-    stimType(:,3) = A(:,2);
-
-
-
     %4. Sort directions:
     directimesSorted = C(:,1)';
 
@@ -217,6 +210,21 @@ for ex = 45:47 %1:size(data,1)
     %7. Load raster matrices
     bin = 1;
     preBase = round(stimInter/2);%round(3*interStimStats/4);
+
+    %%Construct stimType matrix for eye movement plot.
+    stimType = zeros(length(C),5); %3 plus number of example neurons
+    stimType(:,1) = A(:,1);
+    stimType(:,2) = A(:,1)+stimDur;
+    stimType(:,3) = A(:,2);
+    %EyePositionAnalysis(NP,11,1,stimType,1)
+    % Get response strenght of specific neurons and save it in stimType
+    [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+    ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3);
+    ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3);
+    stimType(:,end-1) = ResponseStrengthU34;
+    stimType(:,end) = ResponseStrengthU8;
+    %%%
+
 
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-stimInter/2)/bin),round((stimDur+stimInter)/bin)); %response matrix
     [nT,nN,nB] = size(Mr);

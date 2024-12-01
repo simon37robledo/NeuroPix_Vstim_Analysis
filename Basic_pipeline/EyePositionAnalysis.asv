@@ -209,21 +209,21 @@ if length(stimType)> 1
     meanPupilD = mean(Data.width(Data.phi<0));
     %scatter(posXPerTrial-rectNew(1), posYPerTrial-rectNew(2),25,CombinedColors,'filled','MarkerFaceAlpha',0.1)
     scatter((posXPerTrial-(min(posXPerTrial)))/meanPupilD, (posYPerTrial-(min(posYPerTrial)))/meanPupilD,25,CombinedColors,'filled','MarkerFaceAlpha',0.7)
-    %set(fig,'Color','w')
-
+    set(fig,'Color','w')
    
-    xlabel('Pupil diameter fraction','Color', 'k')
-    ylabel('Pupil diameter fraction','Color', 'k')
+    xlabel('Pupil diameter fraction','Color', 'w')
+    ylabel('Pupil diameter fraction','Color', 'w')
     grid on
 
-    set(gcf, 'Color', 'w'); % Set figure background color to black
+    set(gcf, 'Color', 'k'); % Set figure background color to black
     set(gca, 'Color', 'k'); % Set axes background color to black
-    set(gca, 'XColor', 'k'); % Set x-axis color
-    set(gca, 'YColor', 'k'); % Set y-axis color
+    set(gca, 'XColor', 'w'); % Set x-axis color
+    set(gca, 'YColor', 'w'); % Set y-axis color
     set(gca, 'GridColor', 'w'); % Set grid lines color
+    set(gca,'gr')
     set(gca, 'MinorGridColor', 'w'); % Set minor grid lines color (if enabled)
 
-    set(gcf, 'Position', [913   548   386   316]);
+    fig.Position =[913   548   386   316];
 
 
     %     hold on;
@@ -237,15 +237,13 @@ if length(stimType)> 1
     uPos = unique(indexType);
     colorsName = {"g","r","y","b"};
     leg ="Eye Movements - ";
-    j=1;
     for t = uPos
-        leg = leg+colorsName{t}+string(uPos(j))+",";
-        j=j+1;
+        leg = leg+colorsName{t}+string(uPos(t))+",";
     end
-    title(leg,'Color', 'k');
+    title(leg,'Color', 'w');
     cd(string(NP.recordingDir)+filesep+"Figs")
-    exportgraphics(gcf, sprintf('EyeMovNoveltyControl-%s-Unit-%d.png',NP.recordingName,u));
-    exportgraphics(gcf, sprintf('EyeMovNovelty-%s-UnitControl-%d.pdf',NP.recordingName,u), 'ContentType', 'vector');
+    print(fig, sprintf('EyeMovNoveltyStim-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
+    exportgraphics(fig, sprintf('EyeMovNoveltyStim-%s-Unit-%d.pdf',NP.recordingName,u), 'ContentType', 'vector');
     %axis equal;
 
 else
