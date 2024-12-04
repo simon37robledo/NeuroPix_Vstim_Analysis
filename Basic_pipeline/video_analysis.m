@@ -12,7 +12,7 @@ data = readtable(excelFile,'Format','auto');
 
 %%
 
-for ex = [40]%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = [44]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -32,17 +32,18 @@ for ex = [40]%examplesSDG%[7 8 28]%1:size(data,1)
 
     [Ttrigger,chNumberT]=NP.getTrigger();
 
-
+    %2. Extract video dir
+    patternIndex = strfind(string(NP.recordingDir), "\catgt");
     endIndex = patternIndex(1)-1;
     vidDir = string(NP.recordingDir);
-    vidDir = extractBetween(vidDir,1,endIndex);
+    vidDir = extractBetween(vidDir,1,endIndex)+"\Original_Video";
 
     file = dir (vidDir);
     filenames = {file.name};
     vidFrames = filenames(contains(filenames,".csv"));
     vidFrames = vidFrames{contains(vidFrames, "Camera")};
 
-    vidName = filenames(contains(filenames,".mp4"));
+    %vidName = filenames(contains(filenames,".mp4"));
 
 
 %     figure;
@@ -109,11 +110,11 @@ for ex = [40]%examplesSDG%[7 8 28]%1:size(data,1)
     save('TTL2Frame','TTL2Frame')
 
     
-    missedFramesVID{j} =sum(diff(VideoTS.timestamp)>0.015);
-
-    missingFrames{j} = length(vidTTLsReal)-size(VideoTS,1);
-
-    missingFramesCorr{j} = length(vidTTLs) - (size(VideoTS,1));
+%     missedFramesVID{j} =sum(diff(VideoTS.timestamp)>0.015);
+% 
+%     missingFrames{j} = length(vidTTLsReal)-size(VideoTS,1);
+% 
+%     missingFramesCorr{j} = length(vidTTLs) - (size(VideoTS,1));
 
     j=j+1;
     

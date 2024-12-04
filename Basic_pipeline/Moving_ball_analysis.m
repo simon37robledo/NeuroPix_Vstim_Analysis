@@ -29,7 +29,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 42 %1:size(data,1)
+for ex = 44 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -212,10 +212,11 @@ for ex = 42 %1:size(data,1)
     preBase = round(stimInter/2);%round(3*interStimStats/4);
 
     %%Construct stimType matrix for eye movement plot.
-    stimType = zeros(length(C),5); %3 plus number of example neurons
+    stimType = zeros(length(C),6); %3 plus number of example neurons
     stimType(:,1) = A(:,1);
     stimType(:,2) = A(:,1)+stimDur;
     stimType(:,3) = A(:,2);
+    stimType(:,4) = A(:,3);
     %EyePositionAnalysis(NP,11,1,stimType,1)
     % Get response strenght of specific neurons and save it in stimType
     [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix

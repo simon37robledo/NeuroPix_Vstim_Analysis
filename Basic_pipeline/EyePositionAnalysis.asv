@@ -54,9 +54,6 @@ Data = readtable(ellipseDir+filesep+ellipseName); %Check which rows are Nans wit
 video = VideoReader(ellipseDir+filesep+videoFile);
 goodFrames = readtable(ellipseDir+filesep+goodFrames);
 
-%Run angle correction
-angleCorrect = eye_line_angle_gui_video(ellipseDir+filesep+videoFile);
-
 
 %%Calculate the mean of the center of the eye and then calculate a
 %%rectangle for cropping whose center square contains the mean center of
@@ -385,8 +382,7 @@ if length(stimType)> 1
                     xlimM = [min(filtX)-mean(filtX) max(filtX)-mean(filtX)];
                     ylimM = [min(filtY)-mean(filtY) max(filtY)-mean(filtY)];
                     
-                for i=1:size(x,1)
-                    positions = [x{i}',y{i}'];
+                for i=1:size(x{i},2)
                     hold on
                     if isempty(x{i})
                         positions = [0,0];
