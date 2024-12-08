@@ -1,6 +1,9 @@
-function angle = eye_line_angle_gui_video(video_file)
+function [angle, length, midpoint] = eye_line_angle_gui_video(video_file)
     % Input: video_file (string) - Path to the video file
-    % Output: angle (double) - Final selected angle of the line
+    % Outputs:
+    %   angle (double) - Final angle of the line
+    %   length (double) - Length of the line
+    %   midpoint (1x2 vector) - [x, y] coordinates of the line's midpoint
 
     % Check if the video file exists
     if ~isfile(video_file)
@@ -8,7 +11,7 @@ function angle = eye_line_angle_gui_video(video_file)
     end
 
     % Create the GUI figure
-    fig = figure('Name', 'Eye Angle Calculator (Video Frame)', ...
+    fig = figure('Name', 'Eye Line Calculator (Video Frame)', ...
                  'NumberTitle', 'off', ...
                  'MenuBar', 'none', ...
                  'ToolBar', 'none', ...
@@ -25,11 +28,13 @@ function angle = eye_line_angle_gui_video(video_file)
     % Display the frame in the GUI
     ax = axes('Parent', fig, 'Position', [0.1, 0.3, 0.8, 0.6]);
     imshow(frame, 'Parent', ax);
-    title(ax, 'Draw and Adjust the Line, Then Select the Angle', 'FontSize', 12);
+    title(ax, 'Draw and Adjust the Line, Then Select It', 'FontSize', 12);
 
-    % Initialize the angle variable
+    % Initialize outputs
     angle = NaN;
-    is_selected = false; % To check if the angle is finalized
+    length = NaN;
+    midpoint = [NaN, NaN];
+    is_selected = false; % To check if the line is finalized
     
     % Allow the user to draw one line
     h = imline(ax);
@@ -39,27 +44,27 @@ function angle = eye_line_angle_gui_video(video_file)
         return;
     end
 
-    % Callback to update the angle dynamically when the line moves
-    addNewPositionCallback(h, @(pos) update_angle(pos));
+    % Callback to update the angle, length, and midpoint dynamically when the line moves
+    addNewPositionCallback(h, @(pos) update_line_details(pos));
     
-    % Add a text box to display the angle
-    angle_display = uicontrol('Style', 'text', ...
-                              'String', 'Angle: N/A', ...
-                              'Position', [150, 30, 300, 30], ...
-                              'FontSize', 12, ...
-                              'HorizontalAlignment', 'left');
+    % Add a text box to display the angle, length, and midpoint
+    details_display = uicontrol('Style', 'text', ...
+                                 'String', 'Angle: N/A | Length: N/A | Midpoint: N/A', ...
+                                 'Position', [50, 30, 500, 30], ...
+                                 'FontSize', 10, ...
+                                 'HorizontalAlignment', 'left');
     
-    % Add a button to finalize the angle
+    % Add a button to finalize the line
     uicontrol('Style', 'pushbutton', ...
-              'String', 'Select Angle', ...
+              'String', 'Select Line', ...
               'Position', [480, 30, 100, 30], ...
-              'Callback', @select_angle_callback);
+              'Callback', @select_line_callback);
     
-    % Wait for the user to finalize the angle
+    % Wait for the user to finalize the line
     uiwait(fig);
 
-    % Nested function to calculate and update the angle
-    function update_angle(pos)
+    % Nested function to calculate and update line details
+    function update_line_details(pos)
         % Get the positions of the line endpoints
         x1 = pos(1, 1);
         y1 = pos(1, 2);
@@ -70,13 +75,20 @@ function angle = eye_line_angle_gui_video(video_file)
         dx = x2 - x1;
         dy = y2 - y1;
         angle = atan2d(dy, dx); % Angle in degrees
+        
+        % Calculate the length of the line
+        length = sqrt(dx^2 + dy^2);
+        
+        % Calculate the midpoint of the line
+        midpoint = [(x1 + x2) / 2, (y1 + y2) / 2];
 
-        % Update the angle display
-        angle_display.String = sprintf('Angle: %.2f°', angle);
+        % Update the details display
+        details_display.String = sprintf('Angle: %.2f° | Length: %.2f | Midpoint: [%.2f, %.2f]', ...
+                                         angle, length, midpoint(1), midpoint(2));
     end
 
-    % Callback to finalize the angle
-    function select_angle_callback(~, ~)
+    % Callback to finalize the line
+    function select_line_callback(~, ~)
         % Set the flag to true and close the GUI
         is_selected = true;
         uiresume(fig);
