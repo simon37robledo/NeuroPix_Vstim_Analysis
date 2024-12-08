@@ -67,7 +67,7 @@ for ex = [42]%examplesSDG%[7 8 28]%1:size(data,1)
 
     j =1;
 
-    %Extract numbers and sort the cell array
+    %Extract numbers (date) and sort the cell array
     numbers = cellfun(@(str) str2double(regexp(str, '(?:[^_]*_){4}(\d+)_(\d+)', 'tokens', 'once')), rectFiles, 'UniformOutput', false);
 
 

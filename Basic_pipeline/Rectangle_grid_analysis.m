@@ -7,13 +7,13 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
-plotRasters =0;
-heatMap = 1;
+plotRasters =1;
+heatMap = 0;
 ex=1;
 
 
 %%
-for ex =41%1:size(data,1)
+for ex =44%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -50,9 +50,39 @@ for ex =41%1:size(data,1)
     end
 
     j =1;
+    
+    %%%Get only rectangle grid files, no novelty. 
+    %Extract numbers (date) and sort the cell array
+    numbers = cellfun(@(str) str2double(regexp(str, '(?:[^_]*_){4}(\d+)_(\d+)', 'tokens', 'once')), rectFiles, 'UniformOutput', false);
+
+
+    % Convert to a matrix for sorting
+    numbers = cell2mat(numbers);
+    j=1;
+    combinedNumbers = zeros(1,numel(rectFiles));
+    for n = 1:2:numel(rectFiles)*2
+        combinedNumbers(j) = numbers(:, n) * 1000 + numbers(:, n+1);
+        j=j+1;
+
+    end
+
+    % Sort based on the 4th and then 5th number
+    [~, sortIdx] = sort(combinedNumbers); % Sort by 4th, then 5th number
+    rectFiles = rectFiles(sortIdx); % Sort the cell array by time in file
+
+    VSordered = strsplit(data.VS_ordered{ex},',');
+    RGpos = find(VSordered=="RG");
+    OBpos = find(VSordered=="OB");
+    OBCpos = find(VSordered=="OBC");
+
+    [orderVS orderVSIndex] = sort([RGpos OBpos OBCpos]);
+
+    selecFiles = rectFiles(orderVSIndex(1));
+
+
     if size(rectFiles) ~= [0 0]
 
-        for i = rectFiles
+        for i = selecFiles
             rect= load(stimDir+"\"+string(i));
 
            
@@ -87,10 +117,11 @@ for ex =41%1:size(data,1)
     containsRG = cellfun(@(x) contains(x,'RG'),Ordered_stims);
     ttlInd = find(containsRG);
 
-    [stimOn stimOff] = NPdiodeExtract(NP,0,"rectGrid",ttlInd,16,0);
+    [stimOn stimOff] = NPdiodeExtract(NP,newDiode,0,"RG",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+    [stimOn stimOff] = NPdiodeExtract(NP,0,0,"RG",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
-    [stimOn stimOff] = NPdiodeExtract(NP,0,"rectGrid",ttlInd,16,0);
-    missedT = find((stimOff-stimOn)<500); %Missed tri als
+
+    %missedT = find((stimOff-stimOn)<500); %Missed tri als
 
     stimDur = mean(stimOff'-stimOn');
     interStim = mean(stimOn(2:end)-stimOff(1:end-1));
@@ -120,90 +151,90 @@ for ex =41%1:size(data,1)
 
     if plotRasters == 1
         for plotRasters=1
-    cd(NP.recordingDir)
-    if ~exist(path+"\Figs",'dir')
-        mkdir Figs
-    end
-    cd(NP.recordingDir + "\Figs")
-
-    bin=20;
-    win=stimDur+stimInter;
-    preBase = round(stimInter/20)*10;
-
-    [Mr]=BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(win/bin));
-
-    [nT,nN,nB] = size(Mr);
-    %indRG --> sorted infexes
-
-    trialsPerCath = length(seqMatrix)/(length(unique(seqMatrix)));
-
-    PositionsTotal = positionsMatrix(seqMatrix(indRG),:);
-
-
-    [posS,indexX] = sortrows(PositionsTotal,1); %Sort first dimension because tile layout moves through columns
-
-    MrS = Mr(indexX,:,:);
-
-
-
-    for u =1:length(goodU)
-        t = tiledlayout(sqrt(max(seqMatrix)), sqrt(max(seqMatrix)),'TileSpacing','tight');
-
-        j=1;
-
-        if trialsPerCath>20
-            mergeTrials = 5;
-
-            Mr2 = zeros(nT/mergeTrials,nB);
-
-            for i = 1:mergeTrials:nT
-
-                meanb = mean(squeeze(MrS(i:min(i+mergeTrials-1, end),u,:)),1);
-
-                Mr2(j,:) = meanb;
-
-                j = j+1;
-
+            cd(NP.recordingDir)
+            if ~exist(path+"\Figs",'dir')
+                mkdir Figs
             end
-        else
-            Mr2=MrS(:,u,:);
-            mergeTrials =1;
-        end
+            cd(NP.recordingDir + "\Figs")
+
+            bin=20;
+            win=stimDur+interStim;
+            preBase = round(interStim/20)*10;
+
+            [Mr]=BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(win/bin));
+
+            [nT,nN,nB] = size(Mr);
+            %indRG --> sorted infexes
+
+            trialsPerCath = length(seqMatrix)/(length(unique(seqMatrix)));
+
+            PositionsTotal = positionsMatrix(seqMatrix(indRG),:);
 
 
-        [T,B] = size(Mr2);
+            [posS,indexX] = sortrows(PositionsTotal,1); %Sort first dimension because tile layout moves through columns
 
-        for i = 1:trialsPerCath/mergeTrials:T
-            %Build raster
-            M = Mr2(i:min(i+trialsPerCath/mergeTrials-1, end),:);
-            [nTrials,nTimes]=size(M);
-            nexttile
-            imagesc((1:nTimes)*bin,1:nTrials,squeeze(M));colormap(flipud(gray(64)));
-            xline(preBase, '--', LineWidth=2, Color="#77AC30");
-            xline((stimDur+preBase), '--', LineWidth=2, Color="#0072BD");
-            xticks([preBase round(round(stimDur/100))*100+preBase]);
-            if nSize >1
-                yline([trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials-1]+0.5,LineWidth=1)
+            MrS = Mr(indexX,:,:);
+
+
+
+            for u =1:length(goodU)
+                t = tiledlayout(sqrt(max(seqMatrix)), sqrt(max(seqMatrix)),'TileSpacing','tight');
+
+                j=1;
+
+                if trialsPerCath>20
+                    mergeTrials = 5;
+
+                    Mr2 = zeros(nT/mergeTrials,nB);
+
+                    for i = 1:mergeTrials:nT
+
+                        meanb = mean(squeeze(MrS(i:min(i+mergeTrials-1, end),u,:)),1);
+
+                        Mr2(j,:) = meanb;
+
+                        j = j+1;
+
+                    end
+                else
+                    Mr2=MrS(:,u,:);
+                    mergeTrials =1;
+                end
+
+
+                [T,B] = size(Mr2);
+
+                for i = 1:trialsPerCath/mergeTrials:T
+                    %Build raster
+                    M = Mr2(i:min(i+trialsPerCath/mergeTrials-1, end),:);
+                    [nTrials,nTimes]=size(M);
+                    nexttile
+                    imagesc((1:nTimes)*bin,1:nTrials,squeeze(M));colormap(flipud(gray(64)));
+                    xline(preBase, '--', LineWidth=2, Color="#77AC30");
+                    xline((stimDur+preBase), '--', LineWidth=2, Color="#0072BD");
+                    xticks([preBase round(round(stimDur/100))*100+preBase]);
+                    if nSize >1
+                        yline([trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials-1]+0.5,LineWidth=1)
+                    end
+                    caxis([0 1]);
+                    set(gca,'YTickLabel',[]);
+
+                    if i < T - (trialsPerCath/mergeTrials)*max(positionsMatrix(:))-1
+                        set(gca,'XTickLabel',[]);
+
+                    end
+                end
+                fig = gcf;
+                set(fig, 'Color', 'w');
+                colorbar
+                % Set the color of the figure and axes to black
+                title(t,sprintf('Rect-GRid-raster-U%d',u))
+                ylabel(t,sprintf('%d trials',nTrials*mergeTrials))
+                fig.Position = [227         191        1413         781];
+                %prettify_plot
+                print(fig,sprintf('%s-rect-GRid-raster-U%d.png',NP.recordingName,u),'-dpng')
+                close
             end
-            caxis([0 1]);
-            set(gca,'YTickLabel',[]);
-
-            if i < T - (trialsPerCath/mergeTrials)*max(positionsMatrix(:))-1
-                set(gca,'XTickLabel',[]);
-
-            end
-        end
-        fig = gcf;
-        set(fig, 'Color', 'w');
-        colorbar
-        % Set the color of the figure and axes to black
-        title(t,sprintf('Rect-GRid-raster-U%d',u))
-        ylabel(t,sprintf('%d trials',nTrials*mergeTrials))
-        fig.Position = [227         191        1413         781];
-        %prettify_plot
-        print(fig,sprintf('%s-rect-GRid-raster-U%d.png',NP.recordingName,u),'-dpng')
-        close
-    end
 
         end
     end
