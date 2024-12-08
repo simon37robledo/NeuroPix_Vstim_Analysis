@@ -23,13 +23,13 @@ examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 summPlot =1;
 pv27 = [8 9 10 11 12 13 14];
 
-newDiode =1;
+newDiode =0;
 
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = [45,47,48] %1:size(data,1)
+for ex = [44] %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -220,8 +220,8 @@ for ex = [45,47,48] %1:size(data,1)
     %EyePositionAnalysis(NP,11,1,stimType,1)
     % Get response strenght of specific neurons and save it in stimType
     [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
-    ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3);
-    ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3);
+    ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+    ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
     stimType(:,end-1) = ResponseStrengthU34;
     stimType(:,end) = ResponseStrengthU8;
     %%%

@@ -1,7 +1,7 @@
 
 
 %function EyePositionAnalysis(NP,divisions,varargin)%plots,newRun)
-divisions =11;
+divisions =15;
 newRun =1;
 plots=1;
 stimName = "MB";
@@ -56,7 +56,7 @@ video = VideoReader(ellipseDir+filesep+videoFile);
 goodFrames = readtable(ellipseDir+filesep+goodFrames{1});
 
 %Run angle correction
-angleCorrect = eye_line_angle_gui_video(ellipseDir+filesep+videoFile);
+%angleCorrect = eye_line_angle_gui_video(ellipseDir+filesep+videoFile);
 
 
 %%Calculate the mean of the center of the eye and then calculate a
