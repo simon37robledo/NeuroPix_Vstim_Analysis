@@ -4,6 +4,7 @@
 divisions =11;
 newRun =1;
 plots=1;
+stimName = "MB";
 % Mandatory Inputs:
 %   NP - Neuropixels class
 %   divisions - Number of divisions for the grid. 
@@ -50,9 +51,9 @@ videoFile = videoFile{2};
 
 %ellipsePath = "\\sil3\data\Large_scale_mapping_NP\lizards\PV35\PV35_Experiment_18_8_24\Insertion2\PV35_2_Eye_ellipse";
 
-Data = readtable(ellipseDir+filesep+ellipseName); %Check which rows are Nans with the elipse code
+Data = readtable(ellipseDir+filesep+ellipseName{1}); %Check which rows are Nans with the elipse code
 video = VideoReader(ellipseDir+filesep+videoFile);
-goodFrames = readtable(ellipseDir+filesep+goodFrames);
+goodFrames = readtable(ellipseDir+filesep+goodFrames{1});
 
 %Run angle correction
 angleCorrect = eye_line_angle_gui_video(ellipseDir+filesep+videoFile);
@@ -266,6 +267,7 @@ if length(stimType)> 1
         indexType1 = zeros(length(stimType),1);
         indexType2 = zeros(length(stimType),1);
         trialIndex = zeros(length(stimType),1);
+        frameTimesStim = cell(length(stimType),1);
 
         %get frameTimes that are between the beginning and end of stim
         for i =1:length(stimType)
@@ -274,12 +276,11 @@ if length(stimType)> 1
             indexType1(i,1) = stimType(i,3);
             indexType2(i,1) = stimType(i,4);
             trialIndex(i,1) = i;
+            frameTimesStim{i,1} = (frameTimes(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2)) - stimType(i,1))/(mean(stimType(:,2)-stimType(:,1)));
 %             indexType1 = [indexType1 zeros(1,length(frameTimes(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))))+stimType(i,3)];
 %             indexType2 = [indexType2 zeros(1,length(frameTimes(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))))+stimType(i,4)];
 %             trialIndex = [trialIndex zeros(1,length(frameTimes(frameTimes>=stimType(i,1) & frameTimes<stimType(i,2))))+i];
         end
-%
-        
 
         uDir = unique(indexType1);
         uOff = unique(indexType2);
@@ -296,6 +297,7 @@ if length(stimType)> 1
 
                 x = posXPerTrial(indexType1 == uDir(d) & indexType2 == uOff(o),1);
                 y = posYPerTrial(indexType1 == uDir(d) & indexType2 == uOff(o),1);
+                tFrames = frameTimesStim(indexType1 == uDir(d) & indexType2 == uOff(o),1);
                 tInd = trialIndex(indexType1 == uDir(d) & indexType2 == uOff(o));
 
                 % Plot mean direction vector
@@ -384,18 +386,30 @@ if length(stimType)> 1
 
                     xlimM = [min(filtX)-mean(filtX) max(filtX)-mean(filtX)];
                     ylimM = [min(filtY)-mean(filtY) max(filtY)-mean(filtY)];
-                    
-                for i=1:size(x,1)
-                    positions = [x{i}',y{i}'];
-                    hold on
-                    if isempty(x{i})
-                        positions = [0,0];
-                    end
 
-                    colormap jet; % Generate a colormap with 200 colors
-                    colors = jet(length(cell2mat(x(i))));
-                    scatter((positions(:,1))-(positions(1,1)),...
-                        (positions(:,2))-(positions(1,2)),15,1:size(positions,1),"filled")
+                    for i=1:size(x,1)
+                        positions = [x{i};y{i}];
+                        tColor = tFrames{i};
+                        hold on
+                        if isempty(x{i})
+                            positions = [0;0];
+                            tColor = 0;
+                        end
+
+                        % Use patch to create the color gradien
+
+                        % Prepare data for patch
+                        z = zeros(1,size(positions,2)); % Dummy z-coordinate for 2D
+                        surface([(positions(1,:))-(positions(1,1)); (positions(1,:))-(positions(1,1))],...
+                            [(positions(2,:))-(positions(2,1)); (positions(2,:))-(positions(2,1))], [z; z],...
+                            [tColor; tColor], ...
+                            'FaceColor', 'none', 'EdgeColor', 'interp', 'LineWidth', 1);
+
+                        % Set the colormap
+                        colormap(jet);
+                        %colorbar;
+                        %caxis([0 round(mean(stimType(:,2)-stimType(:,1)))]);
+                        %caxis([min(x) max(x)]);
                     %xlim([-1 1])%xlim(xlimM);
                     %ylim([-1 1]) %ylim(ylimM);
                 end
