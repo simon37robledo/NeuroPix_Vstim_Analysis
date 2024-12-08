@@ -144,7 +144,7 @@ else
 
     stimOn = stimOn';
 
-    stimDur = stimOff(1) - stimOn(1);%transform into horizontal vector.
+    stimDur = mean(stimOff- stimOn);%transform into horizontal vector.
 
 
     %%%%%MARK'S FUNCTION (NOT USED)
@@ -270,7 +270,7 @@ else
                 segmentData = dsFDat((par-1)*segmentLength + 1:par*segmentLength);
                 [change_point ~] = findchangepts(single(segmentData), 'MaxNumChanges', 1, 'Statistic', 'std');
                 if ~isempty(change_point)
-                    change_points{par} = change_point*dFactor*par;
+                    change_points{par} = (change_point+length(segmentData))*dFactor;
                 end
             end
             toc
@@ -280,7 +280,7 @@ else
             %                 cpts = cell2mat(change_points) + repelem(0:segmentLength:(numSegments-1)*segmentLength, cellfun(@numel, change_points));
             %             catch
             if isempty(change_points{2})
-                change_points{2} =  round((stimOff(i)-stimOn(i))*(NP.samplingFrequencyNI/1000));%fDat(end);
+                change_points{2} =  fDat(end);
             end
             if isempty(change_points{1})
                 change_points{1} = 1;
@@ -395,6 +395,12 @@ else
 
             onset = [onset startP(1)./(NP.samplingFrequencyNI/1000)+stimOn(i)];
 
+            if endP(end)./(NP.samplingFrequencyNI/1000)-startP(1)./(NP.samplingFrequencyNI/1000) <2000
+
+                2+2
+
+            end
+
 
 
         end
@@ -402,10 +408,12 @@ else
 
 %%% Check other digital triggers:
 
+figure()
+plot(segmentData);xline(change_point);
+
 %(endP(end)-startP(1))/NP.samplingFrequencyNI
 figure()
-plot(fDat);%hold on; plot(signal)
-
+plot(signal);hold on; plot(fDat)
 
 %[cpts, ~] = findchangepts(signal, 'MaxNumChanges', 2, 'Statistic', 'std');
 % xline(startP(1))

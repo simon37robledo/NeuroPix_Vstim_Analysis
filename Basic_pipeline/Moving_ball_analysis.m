@@ -7,7 +7,7 @@ data = readtable(excelFile);
 summPlot = 1;
 plotexamplesMB =1;
 newTIC = 0;
-ZscoresDo=1; redoResp=0;
+ZscoresDo=1; redoResp=1;
 Shuffling =0;
 repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
@@ -20,16 +20,16 @@ examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
 %examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
-summPlot =0;
+summPlot =1;
 pv27 = [8 9 10 11 12 13 14];
 
-newDiode =0;
+newDiode =1;
 
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 44 %1:size(data,1)
+for ex = [45,47,48] %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...

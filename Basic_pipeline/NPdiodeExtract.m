@@ -144,7 +144,7 @@ else
 
     stimOn = stimOn';
 
-    stimDur = stimOff(1) - stimOn(1);%transform into horizontal vector.
+    stimDur = mean(stimOff- stimOn);%transform into horizontal vector.
 
 
     %%%%%MARK'S FUNCTION (NOT USED)
@@ -266,12 +266,14 @@ else
             segmentLength = length(dsFDat) / numSegments;
             %
             tic
+            j = 0;
             for par = 1:numSegments
                 segmentData = dsFDat((par-1)*segmentLength + 1:par*segmentLength);
                 [change_point ~] = findchangepts(single(segmentData), 'MaxNumChanges', 1, 'Statistic', 'std');
                 if ~isempty(change_point)
-                    change_points{par} = change_point*dFactor*par;
+                    change_points{par} = (change_point+length(segmentData)*j*par)*dFactor;
                 end
+                j=j+1;
             end
             toc
 
@@ -395,6 +397,12 @@ else
 
             onset = [onset startP(1)./(NP.samplingFrequencyNI/1000)+stimOn(i)];
 
+            if endP(end)./(NP.samplingFrequencyNI/1000)-startP(1)./(NP.samplingFrequencyNI/1000) <2000
+
+                2+2
+
+            end
+
 
 
         end
@@ -402,18 +410,20 @@ else
 
 %%% Check other digital triggers:
 
-%(endP(end)-startP(1))/NP.samplingFrequencyNI
-figure()
-plot(fDat);%hold on; plot(signal)
-
-
-%[cpts, ~] = findchangepts(signal, 'MaxNumChanges', 2, 'Statistic', 'std');
-% xline(startP(1))
-%     xline(endP(end))
-xline(cpts);
-xline([pklocDown'])
-xline([pklocUp'],'red')
-xline(change_points{1})%*dFactor)
+% figure()
+% plot(segmentData);xline(change_point);
+% 
+% %(endP(end)-startP(1))/NP.samplingFrequencyNI
+% figure()
+% plot(signal);hold on; plot(fDat)
+% 
+% %[cpts, ~] = findchangepts(signal, 'MaxNumChanges', 2, 'Statistic', 'std');
+% % xline(startP(1))
+% %     xline(endP(end))
+% xline(cpts);
+% xline([pklocDown'])
+% xline([pklocUp'],'red')
+% xline(change_points{1})%*dFactor)
 %hold on; plot(round((TTL-stimOn(i))*(NP.samplingFrequencyNI/1000)),ones(size(TTL))*max(fDat),'ro', 'MarkerSize', 0.2, 'LineWidth', 2,'MarkerFaceColor','b')
 
 
