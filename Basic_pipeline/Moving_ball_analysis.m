@@ -4,12 +4,12 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
-summPlot = 1;
-plotexamplesMB =1;
+summPlot = 0;
+plotexamplesMB =0;
 newTIC = 0;
 ZscoresDo=1; redoResp=1;
-Shuffling =0;
-repeatShuff =0;
+Shuffling =0;Shuffling_baseline=1;
+repeatShuff =1;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
@@ -20,16 +20,16 @@ examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
 %examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
-summPlot =1;
+summPlot =0;
 pv27 = [8 9 10 11 12 13 14];
-
+noEyeMoves = 0;
 newDiode =0;
 
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = [44] %1:size(data,1)
+for ex = [20,40:48] %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -220,8 +220,8 @@ for ex = [44] %1:size(data,1)
     %EyePositionAnalysis(NP,11,1,stimType,1)
     % Get response strenght of specific neurons and save it in stimType
     [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
-    ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
-    ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+    %ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+    %ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
     stimType(:,end-1) = ResponseStrengthU34;
     stimType(:,end) = ResponseStrengthU8;
     %%%
@@ -232,8 +232,8 @@ for ex = [44] %1:size(data,1)
 
     %figure;imagesc(squeeze(Mr(:,15,:)));colormap(flipud(gray(64)));xline(preBase/bin);xline((preBase+stimDur)/bin);yline(trialDivision:trialDivision:nT-1);
 
-    [MbTotal] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-interStimStats)/bin),round((interStimStats)/bin));% baseline matrix (whole baseline)
-    baseline = squeeze(mean(squeeze(mean(MbTotal)),2));
+    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((preBase)/bin));% baseline matrix (whole baseline)
+    baseline = squeeze(mean(squeeze(mean(Mb)),2));
     MrMean = squeeze(mean(Mr));
 
     v_replicated = repmat(baseline, 1, size(MrMean, 2));
@@ -315,13 +315,14 @@ for ex = [44] %1:size(data,1)
     % Convolute in the 3rd dimension (trials)
     for ZscoreData =1
 if ZscoresDo ==1
-    Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur)/bin)); %response matrix
+    %4. Create window to scan rasters and get the maximum response
+    duration =300; %ms
+    Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
     [MrC]=ConvBurstMatrix(Mr,fspecial('gaussian',[1 5],3),'same');
 
     [nT,nN,nB] = size(MrC);
 
-    %4. Create window to scan rasters and get the maximum response
-    duration =400; %ms
+   
     window_size = [1, round(duration/bin)];
 
     %5. Initialize the maximum mean value and its position
@@ -468,20 +469,23 @@ if ZscoresDo ==1
 %     unnn(any(tuningCurve > 4, 2))
 
 
-%Keep real max window for shuffling.
-[mp mi] = max(NeuronVals(:,:,1),[],2);
 
-psT = zeros(size(mi, 1), 1);
-psB = zeros(size(mi, 1), 1);
 
-% Extract the values from A(:,:,2:3) according to the max indices
-for i = 1:size(mi, 1)
-    psT(i) = NeuronVals(i, mi(i), 2);
-    psB(i) = NeuronVals(i, mi(i), 3);
-end
     
 for Shuffle =1
     if Shuffling ==1
+
+        % %Keep real max window for shuffling.
+        % [mp mi] = max(NeuronVals(:,:,1),[],2);
+        %
+        % psT = zeros(size(mi, 1), 1);
+        % psB = zeros(size(mi, 1), 1);
+        %
+        % % Extract the values from A(:,:,2:3) according to the max indices
+        % for i = 1:size(mi, 1)
+        %     psT(i) = NeuronVals(i, mi(i), 2);
+        %     psB(i) = NeuronVals(i, mi(i), 3);
+        % end
         rands = 1000;
         [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-stimInter/2)/bin),...
             round((stimDur+stimInter)/bin)); %response matrix
@@ -491,13 +495,13 @@ for Shuffle =1
 %         sMb = single(Mb);
         if ~isfile(sprintf('randValues-It-%d.mat',rands))||repeatShuff==1
             %Select significantly responsive units with shuffling plus Z-score:
-           tic
-           numSegments = 4;
-            parfor par = 1:numSegments
-                RandValU = zeros(rands/numSegments, nN,2,'single');
-                tic
+           
+            %            numSegments = 4;
+            %             parfor par = 1:numSegments
+            RandValU = zeros(rands, nN,2,'single');
+            tic
 
-                for s = 1:rands/numSegments
+            for s = 1:rands
                     tic
 
                     %%%Shuffle trials
@@ -529,10 +533,6 @@ for Shuffle =1
 
                     %denomSti = std(MB_shufTi)+eps;
                     
-                    %%%Shuffle baseline
-%                     B = reshape(sMb(randperm(size(sMb,1)),:,randperm(size(sMb,3))), [mergeTrials, size(sMb, 1)/mergeTrials, size(sMb, 2), size(sMb,3)]);
-%                     MB_shuff =  squeeze(mean(B, 1));
-%                     MB_shuff = squeeze(mean(MB_shuff,3));
                     
                     NeuronRespProfileShTr = zeros(nN,'single');
                     NeuronRespProfileShTi = zeros(nN,'single');
@@ -545,7 +545,7 @@ for Shuffle =1
                         %                     unit matrix
 
                         k =1;
-                        for i = 1:nT %Iterate across trials
+                        for i = 1:nT/trialDivision %Iterate across trials
                             uMTr = squeeze(M_shuffTr(i,u,:))';%Create matrix per unique trial conditions
                             uMTi = squeeze(M_shuffTi(i,u,:))';%Create matrix per unique trial conditions
                             %uMB = Mbd2(i,u);
@@ -617,14 +617,13 @@ for Shuffle =1
 
                     % RandZscoreU(s,:,2) =  mean(NeuronRespProfileShTi(tDivList(tri):tDivList(tri)+trialDivision-1,:));%max(meanTshuffledTi,[],2);
                     toc
-                end
-
-                RandValUp{par} = RandValU;
-
             end
+
+
+            %             end
             toc
-            RandValU = cat(1, RandValUp{:});
-            
+            %             RandValU = cat(1, RandValUp{:});
+
             save(sprintf('randValues-It-%d',rands),"RandValU");
         else %if eand Z-score file exists then load
             RandValU = load(sprintf('randValues-It-%d.mat',rands)).RandValU;
@@ -647,6 +646,74 @@ for Shuffle =1
 
  
     end
+
+    if Shuffling_baseline
+
+        if ~isfile(sprintf('pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
+
+        baseline = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-interStimStats)/bin),round((interStimStats)/bin));
+        baseline = single(baseline);
+        [nT,nN,nB] = size(baseline);
+        
+        % Bootstrapping settings
+        N_bootstrap = 1000; % Number of bootstrap iterations
+        boot_means = zeros(N_bootstrap, nN,'single');
+        resampled_indicesTr = single(randi(nT, [nT, N_bootstrap]));% To store bootstrapped means
+        resampled_indicesTi = single(randi(nB, [nB, N_bootstrap]));
+
+        kernel = ones(trialDivision, duration) / (trialDivision * duration); % Normalize for mean
+        % Start a parallel pool (if not already started)
+        if isempty(gcp('nocreate'))
+            parpool; % Start a pool with the default number of workers
+        end
+
+        tic
+        parfor i = 1:N_bootstrap
+            % Resample trials with replacement
+            resampled_trials = baseline(resampled_indicesTr(:, i), :,resampled_indicesTi(:, i));
+            for ui = 1:nN
+                % Extract the slice for the current unit (t x b matrix)
+                slice = resampled_trials(:, ui, :);
+                slice = squeeze(slice); % Result is t x b
+
+                % Compute the mean using 2D convolution
+                means = conv2(slice, kernel, 'valid'); % 'valid' ensures the window fits within bounds
+
+                % Find the maximum mean in this slice
+                boot_means(i, ui) = max(means(:));
+            end
+        end
+        toc
+
+        [respVal,respVali]= max(NeuronVals(:,:,1),[],2);
+
+        Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
+
+        %%% Calculate p-value & Filter out neurons in which max response window is empty for more than
+        %%% 60% of trials
+
+        pvalsResponse = zeros(1,nN);
+
+        for u = 1:nN
+            posTr = NeuronVals(u,respVali(u),2);
+            posBin = NeuronVals(u,respVali(u),3);
+
+            maxWindow = squeeze(Mr(posTr*trialDivision-trialDivision+1:posTr*trialDivision,u,posBin:posBin+duration-1));
+
+            emptyRows = sum(all(maxWindow == 0, 2));
+
+            pvalsResponse(u) = mean(boot_means(:,u)>respVal(u));
+
+            if emptyRows/trialDivision > 0.6
+                pvalsResponse(u) = 1;
+            end
+
+        end
+            save(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse')
+        end
+
+    end
+
 end
 end
     
@@ -884,17 +951,51 @@ end
 %- Normalize the data (Z-score?)
 %-
 
-% Rasters plots per Neuron
+%%% Rasters plots per Neuron
 for plotOp = plotexamplesMB
     if plotexamplesMB == 1
 
-        eNeuron = 1:length(goodU); %8
+        if noEyeMoves
+            file = dir (NP.recordingDir);
+            filenames = {file.name};
+            files= filenames(contains(filenames,"timeSnipsNoMov"));
+            cd(NP.recordingDir)
+            %Run eyePosition Analysis to find no movement timeSnips
+            timeSnips = load(files{2}).timeSnips;
+            timeSnipsMode = timeSnips(:,timeSnips(3,:) == mode(timeSnips(3,:)));
+
+           
+            selectedTstamps=[];
+            selectedDir =[];
+            selectedOffsets =[];
+            selectedSizes =[];
+            selectedSpeeds =[];
+            indexSN = [];
+            for i = 1:size(timeSnipsMode,2)
+
+                %Find stimOns and offs that are between each timeSnip
+                selectedTstamps = [selectedTstamps stimOn(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))'];
+                selectedDir = [selectedDir directions(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
+                selectedOffsets = [selectedOffsets offsets(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
+                selectedSizes = [selectedSizes sizes(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
+                selectedSpeeds = [selectedSpeeds speeds(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
+            end
+
+            A = [selectedTstamps' selectedDir' selectedOffsets' selectedSizes' selectedSpeeds'];
+
+ 
+        else
+             A = [stimOn directions' offsets' sizes' speeds'];
+
+        end
+
+
+        eNeuron = 5;%1:length(goodU); %8
         %eNeuron = 1;
 
         orderS = [2 3 4 5;4 2 3 5;5 2 3 4;3 2 4 5];
         orderNames = {'dir_off_sizes_speeds';'sizes_dir_off_speeds';'speeds_dir_off_sizes';'off_dir_sizes_speeds'};
 
-        A = [stimOn directions' offsets' sizes' speeds'];
 
         cd(NP.recordingDir)
         NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
@@ -909,8 +1010,8 @@ for plotOp = plotexamplesMB
         %             NeuronRespProfile(k,3) = max_position_Trial(k,2);
 
         uDir = unique(directions);
-        bin0 = bin;
-        bin =50;
+        bin = 1;
+        bin2 =50;
         trialsPerAngle = trialDivision*offsetN*speedN*sizeN*orientN;
         for k = 1
 
@@ -920,7 +1021,7 @@ for plotOp = plotexamplesMB
 
             directimesSorted = C(:,1)';
 
-            [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((stimDur+preBase*2)/bin));
+            [Mr] = BuildBurstMatrix(goodU,round(p.t/bin2),round((directimesSorted-preBase)/bin2),round((stimDur+preBase*2)/bin2));
 
             Mr2 = [];
 
@@ -951,35 +1052,57 @@ for plotOp = plotexamplesMB
 
                 imagesc(squeeze(Mr2));colormap(flipud(gray(64)));
                 %Plot stim start:
-                xline(preBase/bin,'k', LineWidth=1.5)
+                xline(preBase/bin2,'k', LineWidth=1.5)
                 %Plot stim end:
-                xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
+                xline(stimDur/bin2+preBase/bin2,'k',LineWidth=1.5)
                 ylabel('Trials');xlabel('Time (ms)');
                 title(sprintf('U.%d-Unit-phy-%d',u,GoodU_or(u)));
 
                 %xticks([0.5 (preBase/bin):10:nB])
                 %xticklabels([-preBase 0:10*bin:nB*bin])
                 yticklabels([yticks]*mergeTrials)
-                %Directions
-                v = nT/direcN:nT/direcN:nT-1;
-                yline(v+0.5,'r', LineWidth=3);
-                %Offsets
-                v = nT/(direcN*offsetN):nT/(direcN*offsetN):nT-1;
-                yline(v+0.5,'b', LineWidth=2);
-                %sizes
-                v = nT/(direcN*offsetN*sizeN):nT/(direcN*offsetN*sizeN):nT-1;
-                yline(v+0.5, LineWidth=0.5);
+                dirStart = C(1,2);
+                offStart = C(1,3);
+                for t = 1:nT
+                    if dirStart ~= C(t,2)
+                        yline(t,'r',string(C(t,2)),'LabelHorizontalAlignment', 'left','LabelVerticalAlignment', 'bottom',LineWidth=3);
+                        dirStart = C(t,2);
+                    end
+                    if offStart ~= C(t,3)
+                        yline(t,'b',string(C(t,3)),'LabelHorizontalAlignment', 'left','LabelVerticalAlignment', 'bottom',LineWidth=2);
+                        offStart = C(t,3);
+                    end
+                               
+                end
+%                 %Directions
+%                 v = nT/direcN:nT/direcN:nT-1;
+%                 yline(v+0.5,'r', LineWidth=3);
+%                 %Offsets
+%                 v = nT/(direcN*offsetN):nT/(direcN*offsetN):nT-1;
+%                 yline(v+0.5,'b', LineWidth=2);
+%                 %sizes
+%                 v = nT/(direcN*offsetN*sizeN):nT/(direcN*offsetN*sizeN):nT-1;
+%                 yline(v+0.5, LineWidth=0.5);
+
+                
 
                 %                             hcb = colorbar();
                 %                             title(hcb,'Spikes/sec');
                 %caxis([0 max(0.2,max(max_mean_value(u)))])
                 hold on
-                %Plot rectangle:
+                %Plot rectangle: *max window per unique trial.
+                [respVal respVali]= max(NeuronVals(:,:,1),[],2);
                 for d = 1:size(NeuronVals,2)
-                rectangle('Position', [posX(u,d)/(bin/bin0)+round(preBase/bin), (posY(u,d)*trialsPerAngle-trialsPerAngle)/mergeTrials, window_size(2)/(bin/bin0), trialDivision],...
-                    'EdgeColor', 'r', 'LineWidth', 1.5,'LineStyle','-.');
+
+                    if posX(u,d) == NeuronVals(u,respVali(u),3) & posY(u,d) == NeuronVals(u,respVali(u),2) 
+                    rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision)/mergeTrials, window_size(2)/(bin2), trialDivision],...
+                        'EdgeColor', 'r', 'LineWidth', 1.5,'LineStyle','-.');
+                    else
+                        rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision)/mergeTrials, window_size(2)/(bin2), trialDivision],...
+                        'EdgeColor', 'b', 'LineWidth', 1,'LineStyle','-.');
+                    end
+
                 end
-                hold off
                 %prettify_plot
                 
                 yyaxis right
@@ -1000,7 +1123,12 @@ for plotOp = plotexamplesMB
                 set(fig,'Color','w')
 
                 fig.Position = [353    42   734   954];
-                print(fig, sprintf('%s-MovBall-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
+                if noEyeMoves
+                    print(fig, sprintf('%s-MovBall-NoEyeMoves-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
+
+                else
+                    print(fig, sprintf('%s-MovBall-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
+                end
                 close
                 
                 
@@ -1028,7 +1156,7 @@ for plotOp = plotexamplesMB
 
 
 end
-%%%%%%%%%%%%%%%%%%%%%%%% Position heatmap
+% %%%%%%%%%%%%%%%%%%%%%%%% Position heatmap
 
 for receptiveField=1 %%ReceptiveFieldMethod1
 

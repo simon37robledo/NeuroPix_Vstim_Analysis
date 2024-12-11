@@ -163,7 +163,7 @@ if plotN
 
                 uX = x(shankIds == chanMap.kcoords(ch));
 
-                uYvert = y(shankIds == chanMap.kcoords(ch));
+                uYvert = y(chanMap.kcoords(ch));
 
                 uZvert = max(z) - data_ex.coor_Z/100 - chanMap.ycoords(ch)/100; %I take the max Z because depth is counted from the insertion of first shank
 

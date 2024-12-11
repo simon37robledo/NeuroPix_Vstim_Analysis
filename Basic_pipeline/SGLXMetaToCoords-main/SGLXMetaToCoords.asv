@@ -22,7 +22,7 @@
 %
 % Jennifer Colonell, Janelia Research Campus
  
-function [g] = SGLXMetaToCoords(varargin)
+function [] = SGLXMetaToCoords(varargin)
 
 % Output selection:
 outType = 1;
@@ -56,7 +56,7 @@ elseif isfield(meta,'snsShankMap')
 end
 
 if bPlot
-   g = plotSaved(xCoord, yCoord, shankInd, meta);
+    plotSaved(xCoord, yCoord, shankInd, meta);
 end
 
 % Build output name and write out file
@@ -197,7 +197,7 @@ end % ChannelCountsIM
 % =========================================================
 % Plot x z positions of all electrodes and saved channels
 %
-function [g] = plotSaved(xCoord, yCoord, shankInd, meta)
+function plotSaved(xCoord, yCoord, shankInd, meta)
     % get geometry
     g = getGeomParams(meta);
 
