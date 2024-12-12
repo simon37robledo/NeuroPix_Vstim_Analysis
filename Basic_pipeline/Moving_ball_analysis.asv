@@ -8,11 +8,11 @@ summPlot = 0;
 plotexamplesMB =0;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
-Shuffling =0;Shuffling_baseline=0;
-repeatShuff =0;
+Shuffling =0;Shuffling_baseline=1;
+repeatShuff =1;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
-depthPlot =1;
+depthPlot =0;
 ReceptiveFieldConvolutions =0;
 repeatConv =0;
 x=1;
@@ -29,7 +29,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = [44] %1:size(data,1)
+for ex = [1:20,28:32,40:48] %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -37,17 +37,22 @@ for ex = [44] %1:size(data,1)
     try %%In case it is not run in Vstim computer, which has drives mapped differently
         cd(path)
     catch
-        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-        if strcmp(originP,'sil3\data')
-            path = replaceBetween(path,"","\Large_scale","W:");
-        else
-            path = replaceBetween(path,"","\Large_scale","Y:");
+        try
+            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","W:");
+            else
+                path = replaceBetween(path,"","\Large_scale","Y:");
+            end
+            cd(path)
+        catch
+            
         end
-        cd(path)
     end
     NP = NPAPRecording(path);
 
     %Create Figs and matData folders if they don't exist
+
 
     if ~exist(path+"\Figs",'dir')
         mkdir Figs
@@ -203,9 +208,10 @@ for ex = [44] %1:size(data,1)
     goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
 
 
+    colors = repmat([1 1 1],size(goodU,2),1);
 
     %6. Get depths of units correcting for angle and micromanipulator depth:
-    %verticalDepth = sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - goodUdepth);
+    [Coor] = neuronLocation(NP,data(ex,:),goodU,1,1,colors, newCoor);
 
     %7. Load raster matrices
     bin = 1;
@@ -424,7 +430,6 @@ if ZscoresDo ==1
 
                 if mean_valueB >  max_mean_value_TrialB(k)
                     max_mean_value_TrialB(k) = mean_valueB;
-                    max_position_Trial(k,:) = [i j];
                 end
 
             end
@@ -441,7 +446,7 @@ if ZscoresDo ==1
             %4%. Resp - Baseline
             % NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - (spkRateBM(u)+max_mean_value_Trial(i))/2)/denom(u); %Zscore
             %NeuronRespProfile(k,4) = (max_mean_value_Trial(k) - spkRateBM(u))/denom(u); %Zscore
-            NeuronRespProfile(k,4) = max_mean_value_Trial(k)-spkRateBM(u);
+            NeuronRespProfile(k,4) = max_mean_value_Trial(k)-max_mean_value_TrialB(k);
             %Assign visual stats to last columns of NeuronRespProfile. Select
             %according  to trial (d) the appropiate parameter > directions'offsets' sizes' speeds' freq'
             NeuronRespProfile(k,5) = C(i*mergeTrials,2);
@@ -662,7 +667,7 @@ for Shuffle =1
 
         if ~isfile(sprintf('pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
 
-        baseline = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-interStimStats)/bin),round((interStimStats)/bin));
+        baseline = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((preBase)/bin));
         baseline = single(baseline);
         [nT,nN,nB] = size(baseline);
         

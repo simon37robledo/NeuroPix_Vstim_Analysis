@@ -7,9 +7,9 @@ data = readtable(excelFile);
 summPlot = 0;
 plotexamplesMB =0;
 newTIC = 0;
-ZscoresDo=1; redoResp=1;
-Shuffling =0;Shuffling_baseline=0;
-repeatShuff =0;
+ZscoresDo=1; redoResp=0;
+Shuffling =0;Shuffling_baseline=1;
+repeatShuff =1;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
@@ -37,13 +37,23 @@ for ex = [1:20,28:32,40:48] %1:size(data,1)
     try %%In case it is not run in Vstim computer, which has drives mapped differently
         cd(path)
     catch
-        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-        if strcmp(originP,'sil3\data')
-            path = replaceBetween(path,"","\Large_scale","W:");
-        else
-            path = replaceBetween(path,"","\Large_scale","Y:");
+        try
+            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","W:");
+            else
+                path = replaceBetween(path,"","\Large_scale","Y:");
+            end
+            cd(path)
+        catch
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
+            else
+                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
+            end
+            cd(path)
+
         end
-        cd(path)
     end
     NP = NPAPRecording(path);
 
@@ -204,9 +214,10 @@ for ex = [1:20,28:32,40:48] %1:size(data,1)
     goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
 
 
+    colors = repmat([1 1 1],size(goodU,2),1);
 
     %6. Get depths of units correcting for angle and micromanipulator depth:
-    %verticalDepth = sin(deg2rad(data.Angle(ex)))*(data.Depth(ex) - goodUdepth);
+    [Coor] = neuronLocation(NP,data(ex,:),goodU,1,1,colors, 1);
 
     %7. Load raster matrices
     bin = 1;

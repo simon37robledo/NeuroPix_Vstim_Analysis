@@ -28,13 +28,23 @@ for ex = GoodRecordings
     try %%In case it is not run in Vstim computer, which has drives mapped differently
         cd(path)
     catch
-        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-        if strcmp(originP,'sil3\data')
-            path = replaceBetween(path,"","\Large_scale","W:");
-        else
-            path = replaceBetween(path,"","\Large_scale","Y:");
+        try
+            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","W:");
+            else
+                path = replaceBetween(path,"","\Large_scale","Y:");
+            end
+            cd(path)
+        catch
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
+            else
+                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
+            end
+            cd(path)
+
         end
-        cd(path)
     end
     NP = NPAPRecording(path);
 
@@ -42,13 +52,15 @@ for ex = GoodRecordings
     if contains(data.VS_ordered(ex),"MB")
         NeuronValsMB = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
 
-        respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
-        goodNeuronsMB{i} = find(respNeuronsMB<0.005);
-        tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
-        uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
-        [preferDir dirInd] = max(tuningCurve,[],2);
-        PreferAngle{i} = preferDir(respNeuronsMB<0.005);
-        RespMB{i} = max(NeuronValsMB(respNeuronsMB<0.005,:,4),[],2)';
+        %         respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+        %         goodNeuronsMB{i} = find(respNeuronsMB<0.005);
+        %         tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
+        %         uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
+        %         [preferDir dirInd] = max(tuningCurve,[],2);
+        %         PreferAngle{i} = preferDir(respNeuronsMB<0.005);
+        %         RespMB{i} = max(NeuronValsMB(respNeuronsMB<0.005,:,4),[],2)';
+        RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
+
 
     else
         goodNeuronsMB{i} =0;
@@ -63,9 +75,11 @@ for ex = GoodRecordings
           NeuronValsRG= load(sprintf('RectGrid-NeuronRespCat-%s',NP.recordingName)).NeuronVals;
           %EnoughTrials = NeuronValsRG(respNeuronsMB<0.005,:,[4 7]);
 
-          maxRG = (max(NeuronValsRG(respNeuronsMB<0.005,:,[4 7]),[],2));
+          %maxRG = (max(NeuronValsRG(respNeuronsMB<0.005,:,[4 7]),[],2));
+
+          RespRG{i} = (max(NeuronValsRG(:,:,4),[],2))';
           
-          RespRG{i} = maxRG(logical(maxRG(:,:,2)),1,1)';
+          %RespRG{i} = maxRG(logical(maxRG(:,:,2)),1,1)';
     else
         RespRG{i} = 0;
        
@@ -96,8 +110,9 @@ for ex = GoodRecordings
 end
 %%
 %% Swarm plots 
+MB = cell2mat(RespMB)
 
-values = ([RespMB{:} RespRG{:}])*(1000/duration);
+values = ([RespMB{:} RespRG{:} RespMB{:}-RespRG{:}])*(1000/300);
 
 [uniqueStrings,~,indexAnimal] = unique([animalID{:}]);
 color1 =[];
@@ -127,6 +142,18 @@ T = table(cats',values',color','VariableNames',{'cats','values','color'});
 figure;
 
 swarmchart(T.cats, T.values, 10, T.color,'filled');
+
+%%randomly select 10 neurons
+
+randomNeur = 1 + round((length(cats) - 1) * rand(1, 10));
+
+hold on
+swarmchart(T.cats(randomNeur), T.values(randomNeur), 30, T.color(randomNeur),'filled');
+
+
+
+
+
 
 myColormap = [
     1, 0, 0;    % Red
@@ -166,4 +193,9 @@ grid on
 set(gcf,'Color','w');%
 xticklabels({'Moving Ball','Rectangle Grid'})
 ylabel('Spikes/sec - baseline spkRate')
-ylim()
+ylim([-0.01 0.1])
+
+%% Randomly select 10 neurons from the entire range and plot the rasters. 
+
+length(randRespMB{:})
+

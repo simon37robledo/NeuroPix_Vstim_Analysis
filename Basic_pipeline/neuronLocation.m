@@ -5,7 +5,7 @@
 % 
 % plotIns =1;
 
-function [Coor] = neuronLocation(NP,data_ex,goodU,plotN,plotIns,colors)
+function [Coor] = neuronLocation(NP,data_ex,goodU,plotN,plotIns,colors, newCoor)
 
 
 if ~exist(string(NP.recordingDir)+filesep+string(NP.recordingName)+"_g0_tcat.imec0.ap_kilosortChanMap.mat")
@@ -73,6 +73,7 @@ end
 
 %%%Load coordinates from excel data
 
+if ~isfile(sprintf('Insertion_coordinates-%s.mat',NP.recordingName)) || newCoor
 
     if string(cell2mat(data_ex.Probe)) == "NP2.0"
 
@@ -220,13 +221,13 @@ end
 
         goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
 
-        verticalDepth = data.Depth(ex)-goodUdepth; %depth of unit along vertical axis
+        verticalDepth = data_ex.Depth -goodUdepth; %depth of unit along vertical axis
 
-        uY(2,:) = (str2double(parts{2})*100) + cos(deg2rad(data.Angle(ex))).*(verticalDepth); %uM
-        uY(1,:) = str2double(parts{2}) + cos(deg2rad(data.Angle(ex))).*(verticalDepth/100); %STL
+        uY(2,:) = (str2double(parts{2})*100) + cos(deg2rad(data_ex.Angle)).*(verticalDepth); %uM
+        uY(1,:) = str2double(parts{2}) + cos(deg2rad(data_ex.Angle)).*(verticalDepth/100); %STL
 
-        uZ(2,:) = sin(deg2rad(data.Angle(ex))).*(verticalDepth); %uM
-        uZ(1,:) =Zstl-sin(deg2rad(data.Angle(ex))).*(verticalDepth/100); %STL
+        uZ(2,:) = sin(deg2rad(data_ex.Angle)).*(verticalDepth); %uM
+        uZ(1,:) =Zstl-sin(deg2rad(data_ex.Angle)).*(verticalDepth/100); %STL
 
         uX(2,:) = str2double(parts{1})*100; %uM
         uX(1,:) = str2double(parts{1}); %STL
@@ -236,11 +237,18 @@ end
             [str2double(parts{2});str2double(parts{2})+cos(deg2rad(data_ex.Angle))*(data_ex.Depth/100)],... %Y shank coordinates
             [Zstl;Zstl - sin(deg2rad(data_ex.Angle))*(data_ex.Depth/100)]}; %Z shank coordinates
 
+
+        if plotIns
+
+            plot3(Coor{2,1},Coor{2,2},Coor{2,3},'LineWidth',2)
+
+        end
+        
         if plotN
 
             for u = 1:length(goodU)
 
-                scatter3(uX(1,u),uY(1,u),uZ(1,u),colors(u,:),'filled') 
+                scatter3(uX(1,u),uY(1,u),uZ(1,u),25,colors(u,:),'filled') 
 
             end
 
@@ -248,7 +256,17 @@ end
         end
 
 
+
+
     end
+
+    save(sprintf('Insertion_coordinates-%s',NP.recordingName),'Coor')
+
+else
+
+    Coor = load(sprintf('Insertion_coordinates-%s.mat',NP.recordingName)).Coor;
+
+end
 
 end
 
