@@ -144,7 +144,7 @@ else
 
     stimOn = stimOn';
 
-    stimDur = mean(stimOff- stimOn);%transform into horizontal vector.
+    stimDur = mean(stimOff- stimOn');%transform into horizontal vector.
 
 
     %%%%%MARK'S FUNCTION (NOT USED)

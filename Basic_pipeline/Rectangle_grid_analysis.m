@@ -7,20 +7,38 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
-plotRasters =1;
+plotRasters =0;
 heatMap = 0;
 ex=1;
+responseDo = 1;
+redoResp =0;
+
+newDiode =0;
+
+Shuffling_baseline=1;
+repeatShuff =1;
+
 
 
 %%
-for ex =44%1:size(data,1)
+for ex = [1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
+     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
-    cd(path)
+    try %%In case it is not run in Vstim computer, which has drives mapped differently
+        cd(path)
+    catch
+        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+        if strcmp(originP,'sil3\data')
+            path = replaceBetween(path,"","\Large_scale","W:");
+        else
+            path = replaceBetween(path,"","\Large_scale","Y:");
+        end
+        cd(path)
+    end
     NP = NPAPRecording(path);
-
 
     %%%Moving ball inputs, NP, stimOn, stimOff, plots, neuron, ttlIndex
 
@@ -42,14 +60,13 @@ for ex =44%1:size(data,1)
     seqMatrix = [];
 
 
-    if isempty(rectFiles)
+    if ~contains(data.VS_ordered(ex),"RG")
         %disp()
         w= sprintf('No rectangle grid files where found in %s. Skipping into next experiment.',NP.recordingName);
         warning(w)
         continue
     end
 
-    j =1;
     
     %%%Get only rectangle grid files, no novelty. 
     %Extract numbers (date) and sort the cell array
@@ -77,7 +94,7 @@ for ex =44%1:size(data,1)
 
     [orderVS orderVSIndex] = sort([RGpos OBpos OBCpos]);
 
-    selecFiles = rectFiles(orderVSIndex(1));
+    selecFiles = rectFiles(orderVSIndex(1)); %Select Rectangle grid files
 
 
     if size(rectFiles) ~= [0 0]
@@ -111,6 +128,9 @@ for ex =44%1:size(data,1)
     end
 
     nSize = length(unique(sizes));
+    nPos = length(unique(seqMatrix));
+
+    trialDivision = length(seqMatrix)/nSize/nPos;
     % Triggers:
 
     Ordered_stims= strsplit(data.VS_ordered{ex},',');
@@ -121,10 +141,12 @@ for ex =44%1:size(data,1)
     [stimOn stimOff] = NPdiodeExtract(NP,0,0,"RG",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
 
-    %missedT = find((stimOff-stimOn)<500); %Missed tri als
+    %missedT = find((stimOff-stimOn)<500); %Missed trials
 
     stimDur = mean(stimOff'-stimOn');
-    interStim = mean(stimOn(2:end)-stimOff(1:end-1));
+    stimInter = mean(stimOn(2:end)-stimOff(1:end-1));
+
+    preBase = round(stimInter/2);
 
     A = [stimOn seqMatrix' sizes'];
 
@@ -133,6 +155,8 @@ for ex =44%1:size(data,1)
     %Sort directions:
 
     directimesSorted = C(:,1)';
+
+    stims = stimOn';
 
     cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
 
@@ -147,6 +171,222 @@ for ex =44%1:size(data,1)
 
     goodU = p.ic(:,label == 'good');
 
+    bin =1;
+
+    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
+
+    Mb = mean(Mb,3); %mean across time bins
+
+    spkRateBM = mean(Mb);
+
+    if responseDo ==1
+        %4. Create window to scan rasters and get the maximum response
+        duration =300; %window in ms, same as in MB
+        Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
+        [MrC]=ConvBurstMatrix(Mr,fspecial('gaussian',[1 5],3),'same');
+
+        [nT,nN,nB] = size(MrC);
+
+
+        window_size = [1, round(duration/bin)];
+
+        %5. Initialize the maximum mean value and its position
+
+
+        max_position = zeros(nN,2);
+        max_mean_value = zeros(1,nN);
+        max_mean_valueB = zeros(1,nN);
+
+
+        NeuronVals = zeros(nN,nT/trialDivision,7); %Each neuron, which has a matrix where the first column is maxVal of bins, 2nd and 3rd position of window in matrix...
+        % 4th Z-score.
+        % responsive compared to the baseline.
+
+        %[1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 20, 22, 23, 24, 28, 32, 34, 36]
+
+        if ~isfile(sprintf(sprintf('RectGrid-NeuronRespCat-%s.mat',NP.recordingName))) || redoResp
+
+            mergeTrials = trialDivision;
+
+            %Baseline = size window
+
+            [Mbd] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
+
+            %Merge trials:
+
+           
+            Bd = reshape(Mbd, [mergeTrials, size(Mbd, 1)/mergeTrials, size(Mbd, 2), size(Mbd,3)]);
+
+            Mbd2 = squeeze(mean(Bd, 1));
+
+            %Merge trials:
+
+            mergeTrials = trialDivision;
+
+            B = reshape(MrC, [mergeTrials, size(Mr, 1)/mergeTrials, size(Mr, 2), size(Mr,3)]);
+
+            % Take the mean across the first dimension (rows)
+            Mr2 = squeeze(mean(B, 1));
+
+            [nT,nN,nB] = size(Mr2);
+            cd(NP.recordingDir)
+            
+            
+
+            %Real data:
+            %A = [stimOn seqMatrix' sizes'];
+            %
+            %[C indRG]= sortrows(A,[2 3]);
+
+            for u =1:nN
+                % Slide the window over the matrix
+                %unit matrix
+                max_mean_value(u) = -Inf; %General max? not needed
+                max_mean_valueB(u)=-Inf;
+                NeuronRespProfile = zeros(nT,7); %4 columns plus: ofsett, dir, size, speed, frec.
+
+                k =1;
+                max_position_Trial = zeros(nT,2); %Create 2 matrices, for mean inside max window, and for position of window, for each trial category
+                max_mean_value_Trial = zeros(1,nT);
+                max_mean_value_TrialB = zeros(1,nT);
+
+                for i = 1:nT %Iterate across trials
+                    uM = squeeze(Mr2(i,u,:))';%Create matrix per unique trial conditions
+                    uMB = squeeze(Mbd2(i,u,:))';%Create matrix per unique trial conditions
+
+                    max_mean_value_Trial(k) = -Inf;
+                    max_mean_value_TrialB(k) = -Inf;
+
+                    for j = 1:2:size(uM, 2) - window_size(2) + 1 %Iterate across bins
+                        % Extract the sub-matrix
+                        sub_matrix = uM(j:min(j+window_size(2)-1,end)); %Create matrix of size window per bin
+                        sub_matrixB = uMB(j:min(j+window_size(2)-1,end));
+
+                        % Compute the mean value
+                        mean_value = mean(sub_matrix(:)); %Compute mean of each window
+                        mean_valueB = mean(sub_matrixB(:)); %Compute mean of each window
+
+                        % Update the maximum mean value and its position (a
+                        % window is selected across each trial division
+                        if mean_value >  max_mean_value_Trial(k)
+                            max_mean_value_Trial(k) = mean_value;
+                            max_position_Trial(k,:) = [i j];
+                        end
+
+                        if mean_valueB >  max_mean_value_TrialB(k)
+                            max_mean_value_TrialB(k) = mean_valueB;
+                        end
+
+                    end
+                    %Save across each trial (in a row) the max bin window
+                    %1%. Response
+                    NeuronRespProfile(k,1) = max_mean_value_Trial(k);
+
+                    %2%. WindowTrial
+                    NeuronRespProfile(k,2) = max_position_Trial(k,1);
+
+                    %3%. WindowBin
+                    NeuronRespProfile(k,3) = max_position_Trial(k,2);
+
+                    %4%. Resp - Baseline
+                    % NeuronRespProfile(i,4) = (max_mean_value_Trial(i) - (spkRateBM(u)+max_mean_value_Trial(i))/2)/denom(u); %Zscore
+                    %NeuronRespProfile(k,4) = (max_mean_value_Trial(k) - spkRateBM(u))/denom(u); %Zscore
+                    NeuronRespProfile(k,4) = max_mean_value_Trial(k)-max_mean_value_TrialB(k);
+                    maxWindow = squeeze(Mr(k*trialDivision-trialDivision+1:k*trialDivision,u,max_position_Trial(k,2):max_position_Trial(k,2)+duration-1));
+                    emptyRows = sum(all(maxWindow == 0, 2));
+                    if emptyRows/trialDivision > 0.6
+                        NeuronRespProfile(k,7) = 0;
+                    else
+                        NeuronRespProfile(k,7) = 1; %%enough trials with spiking
+                    end
+                    %Assign visual stats to last columns of NeuronRespProfile. Select
+                    %according  to trial (d) the appropiate parameter > directions'offsets' sizes' speeds' freq'
+                    NeuronRespProfile(k,5) = C(i*mergeTrials,2);
+                    NeuronRespProfile(k,6) = C(i*mergeTrials,3);
+
+                    k = k+1;
+
+                end
+
+                %figure;imagesc(uM);xline(max_position_Trial(i,2));xline(max_position_Trial(i,2)+window_size(2))
+
+                NeuronVals(u,:,:) = NeuronRespProfile;
+            end
+            save(sprintf('RectGrid-NeuronRespCat-%s',NP.recordingName),"NeuronVals")
+        else
+            NeuronVals = load(sprintf('RectGrid-NeuronRespCat-%s',NP.recordingName)).NeuronVals;
+        end
+
+        if Shuffling_baseline
+
+            if ~isfile(sprintf('RectGrid-pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
+
+                baseline = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((preBase)/bin));
+                baseline = single(baseline);
+                [nT,nN,nB] = size(baseline);
+
+                % Bootstrapping settings
+                N_bootstrap = 1000; % Number of bootstrap iterations
+                boot_means = zeros(N_bootstrap, nN,'single');
+                resampled_indicesTr = single(randi(nT, [nT, N_bootstrap]));% To store bootstrapped means
+                resampled_indicesTi = single(randi(nB, [nB, N_bootstrap]));
+
+                kernel = ones(trialDivision, duration) / (trialDivision * duration); % Normalize for mean
+                % Start a parallel pool (if not already started)
+                if isempty(gcp('nocreate'))
+                    parpool; % Start a pool with the default number of workers
+                end
+
+                tic
+                parfor i = 1:N_bootstrap
+                    % Resample trials with replacement
+                    resampled_trials = baseline(resampled_indicesTr(:, i), :,resampled_indicesTi(:, i));
+                    for ui = 1:nN
+                        % Extract the slice for the current unit (t x b matrix)
+                        slice = resampled_trials(:, ui, :);
+                        slice = squeeze(slice); % Result is t x b
+
+                        % Compute the mean using 2D convolution
+                        means = conv2(slice, kernel, 'valid'); % 'valid' ensures the window fits within bounds
+
+                        % Find the maximum mean in this slice
+                        boot_means(i, ui) = max(means(:));
+                    end
+                end
+                toc
+
+                [respVal,respVali]= max(NeuronVals(:,:,1),[],2);
+
+                Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
+
+                %%% Calculate p-value & Filter out neurons in which max response window is empty for more than
+                %%% 60% of trials
+
+                pvalsResponse = zeros(1,nN);
+
+                for u = 1:nN
+                    posTr = NeuronVals(u,respVali(u),2);
+                    posBin = NeuronVals(u,respVali(u),3);
+
+                    maxWindow = squeeze(Mr(posTr*trialDivision-trialDivision+1:posTr*trialDivision,u,posBin:posBin+duration-1));
+
+                    emptyRows = sum(all(maxWindow == 0, 2));
+
+                    pvalsResponse(u) = mean(boot_means(:,u)>respVal(u));
+
+                    if emptyRows/trialDivision > 0.6
+                        pvalsResponse(u) = 1;
+                    end
+
+                end
+                save(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse')
+            end
+
+        end
+
+
+    end
+
     % Build raster plots per unit
 
     if plotRasters == 1
@@ -157,9 +397,9 @@ for ex =44%1:size(data,1)
             end
             cd(NP.recordingDir + "\Figs")
 
-            bin=20;
-            win=stimDur+interStim;
-            preBase = round(interStim/20)*10;
+            bin=50;
+            win=stimDur+stimInter;
+            preBase = round(stimInter/20)*10;
 
             [Mr]=BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(win/bin));
 
@@ -254,7 +494,7 @@ for ex =44%1:size(data,1)
 
     bin =1;
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round(stimDur)/bin);
-    [Mro] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+stimDur)/bin),round(interStim)/bin);
+    [Mro] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+stimDur)/bin),round(stimInter)/bin);
 
     [nT,nN,NB] = size(Mr);
     [nTo,nNo,NBo] = size(Mro);

@@ -124,7 +124,7 @@ for i =1:2
 
     groupMean = mean(T.values(T.cats==categorical(i))); 
 
-     plot([i-0.3, i+0.3], [groupMean, groupMean], 'k-', 'LineWidth', 2);  % Short horizontal line for the mean
+     plot([i-0.3, i+0.3], [groupMean, groupMean], 'g-', 'LineWidth', 2);  % Short horizontal line for the mean
 
 end
 % 

@@ -7,12 +7,12 @@ data = readtable(excelFile);
 summPlot = 0;
 plotexamplesMB =0;
 newTIC = 0;
-ZscoresDo=1; redoResp=1;
-Shuffling =0;Shuffling_baseline=1;
-repeatShuff =1;
+ZscoresDo=1; redoResp=0;
+Shuffling =0;Shuffling_baseline=0;
+repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
-depthPlot =0;
+depthPlot =1;
 ReceptiveFieldConvolutions =0;
 repeatConv =0;
 x=1;
@@ -29,7 +29,7 @@ newDiode =0;
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = [1:20,40:48] %1:size(data,1)
+for ex = [44] %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -210,20 +210,20 @@ for ex = [1:20,40:48] %1:size(data,1)
     %7. Load raster matrices
     bin = 1;
     preBase = round(stimInter/2);%round(3*interStimStats/4);
-
-    %%Construct stimType matrix for eye movement plot.
-    stimType = zeros(length(C),6); %3 plus number of example neurons
-    stimType(:,1) = A(:,1);
-    stimType(:,2) = A(:,1)+stimDur;
-    stimType(:,3) = A(:,2);
-    stimType(:,4) = A(:,3);
-    %EyePositionAnalysis(NP,11,1,stimType,1)
-    % Get response strenght of specific neurons and save it in stimType
-    [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
-    ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
-    ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
-    stimType(:,end-1) = ResponseStrengthU34;
-    stimType(:,end) = ResponseStrengthU8;
+% 
+%     %%Construct stimType matrix for eye movement plot.
+%     stimType = zeros(length(C),6); %3 plus number of example neurons
+%     stimType(:,1) = A(:,1);
+%     stimType(:,2) = A(:,1)+stimDur;
+%     stimType(:,3) = A(:,2);
+%     stimType(:,4) = A(:,3);
+%     %EyePositionAnalysis(NP,11,1,stimType,1)
+%     % Get response strenght of specific neurons and save it in stimType
+%     [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+%     %ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+%     %ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+%     stimType(:,end-1) = ResponseStrengthU34;
+%     stimType(:,end) = ResponseStrengthU8;
     %%%
 
 
@@ -275,7 +275,7 @@ for ex = [1:20,40:48] %1:size(data,1)
     stims = stimOn';
 
     %%%%%%%%%%%%%% Select baseline
-    NP.recordingDuration_ms/1000/60
+    %NP.recordingDuration_ms/1000/60
 
     [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
 
@@ -329,6 +329,7 @@ if ZscoresDo ==1
 
     max_position = zeros(nN,2);
     max_mean_value = zeros(1,nN);
+    max_mean_valueB = zeros(1,nN);
 
     %     for u =1:nN %Initial window
     %         % Slide the window over the matrix
@@ -366,15 +367,15 @@ if ZscoresDo ==1
     
     %Baseline = size window
 
-    [Mbd] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-duration)/bin),round(duration/bin)); %Baseline matrix plus
+    [Mbd] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
 
     %Merge trials:
 
     mergeTrials = trialDivision;
-% 
-%     Bd = reshape(Mbd, [mergeTrials, size(Mbd, 1)/mergeTrials, size(Mbd, 2), size(Mbd,3)]);
-% 
-%     Mbd2 = mean(squeeze(mean(Bd, 1)),3);
+
+    Bd = reshape(Mbd, [mergeTrials, size(Mbd, 1)/mergeTrials, size(Mbd, 2), size(Mbd,3)]);
+
+    Mbd2 = squeeze(mean(Bd, 1));
 
 
     B = reshape(MrC, [mergeTrials, size(Mr, 1)/mergeTrials, size(Mr, 2), size(Mr,3)]);
@@ -391,28 +392,38 @@ if ZscoresDo ==1
         % Slide the window over the matrix
         %unit matrix
         max_mean_value(u) = -Inf; %General max? not needed
+        max_mean_valueB(u)=-Inf;
         NeuronRespProfile = zeros(nT,9); %4 columns plus: ofsett, dir, size, speed, frec.
 
         k =1;
         max_position_Trial = zeros(nT,2); %Create 2 matrices, for mean inside max window, and for position of window, for each trial category
         max_mean_value_Trial = zeros(1,nT);
+        max_mean_value_TrialB = zeros(1,nT);
         for i = 1:nT %Iterate across trials
             uM = squeeze(Mr2(i,u,:))';%Create matrix per unique trial conditions
+
+            uMB = squeeze(Mbd2(i,u,:))';%Create matrix per unique trial conditions
             %uMb = Mbd2(i,u);
-           
+
             max_mean_value_Trial(k) = -Inf;
+            max_mean_value_TrialB(k) = -Inf;
 
             for j = 1:2:size(uM, 2) - window_size(2) + 1 %Iterate across bins
                 % Extract the sub-matrix
                 sub_matrix = uM(j:min(j+window_size(2)-1,end)); %Create matrix of size window per bin
-
+                sub_matrixB = uMB(j:min(j+window_size(2)-1,end));
                 % Compute the mean value
                 mean_value = mean(sub_matrix(:)); %Compute mean of each window
-
+                mean_valueB = mean(sub_matrixB(:)); %Compute mean of each window
                 % Update the maximum mean value and its position (a
                 % window is selected across each trial division
                 if mean_value >  max_mean_value_Trial(k)
                     max_mean_value_Trial(k) = mean_value;
+                    max_position_Trial(k,:) = [i j];
+                end
+
+                if mean_valueB >  max_mean_value_TrialB(k)
+                    max_mean_value_TrialB(k) = mean_valueB;
                     max_position_Trial(k,:) = [i j];
                 end
 
@@ -1359,19 +1370,33 @@ if depthPlot == 1
         FigSig = figure;
     end
 
-    verticalDepth = sin(deg2rad(data.Angle(ex))).*(data.Depth(ex)); %depth of unit along vertical axis
 
-    YDist = cos(deg2rad(data.Angle(ex))).*(data.Depth(ex)); %X distance of unit from insertion
+    pvals = load(sprintf('pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName)).pvalsResponse;
 
-    verticalDepthU= verticalDepth- goodUdepth;
+    goodUR = goodU(:,pvals<0.005);
+
+    respSpR = max(NeuronVals(pvals<0.005,:,1),[],2)*(1000/duration); %spikes per duration in window ms converted to spikes per second
+
+    % Normalize responses to range from 0 (black) to 1 (white)
+    colors = repmat((respSpR - min(respSpR)) / (max(respSpR) - min(respSpR)),[1,3]);
+
+    [Coor] = neuronLocation(NP,data(ex,:),goodUR,0,0,0);
+
+    figure
+    scatter(respSpR,Coor{1,3}(2,:))
+    set(gca, 'YDir', 'reverse');
+
+
 
     NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName));
     tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
+% 
+%     Theta = load(sprintf('Angle-prefer-%s',NP.recordingName)).Theta;
+%     TI= load(sprintf('Tuning-Index-%s',NP.recordingName)).L;
 
-    Theta = load(sprintf('Angle-prefer-%s',NP.recordingName)).Theta;
-    TI= load(sprintf('Tuning-Index-%s',NP.recordingName)).L;
+    Lo
 
-    %figure;polarplot(deg2rad(Theta()),L,'.','MarkerSize',20);set(gcf, 'Color', 'w')
+   
 
     respU = string(data.ResponseU(ex));
 
@@ -1397,7 +1422,6 @@ if depthPlot == 1
         thetaR(thetaR == 0) = 0.001;
 
         divFactor = max(unique(thetaR));
-
         
 
         hold on;

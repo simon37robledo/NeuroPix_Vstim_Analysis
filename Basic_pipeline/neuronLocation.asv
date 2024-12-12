@@ -1,27 +1,12 @@
-ex=42;
-data_ex = data(ex,:);
+% ex=14;
+% data_ex = data(ex,:);
+% 
+% plotN = 1;
+% 
+% plotIns =1;
 
-plotN = 1;
+function [Coor] = neuronLocation(NP,data_ex,goodU,plotN,plotIns,colors)
 
-plotIns =1;
-
-%function [Coor] = neuronLocation(NP,data_ex,goodU,plotN)
-
-path = convertStringsToChars(string(data_ex.Base_path)+filesep+string(data_ex.Exp_name)+filesep+"Insertion"+string(data_ex.Insertion)...
-    +filesep+"catgt_"+string(data_ex.Exp_name)+"_"+string(data_ex.Insertion)+"_g0");
-try %%In case it is not run in Vstim computer, which has drives mapped differently
-    cd(path)
-catch
-    originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-    if strcmp(originP,'sil3\data')
-        path = replaceBetween(path,"","\Large_scale","W:");
-    else
-        path = replaceBetween(path,"","\Large_scale","Y:");
-    end
-    cd(path)
-end
-
- NP = NPAPRecording(path);
 
 if ~exist(string(NP.recordingDir)+filesep+string(NP.recordingName)+"_g0_tcat.imec0.ap_kilosortChanMap.mat")
 
@@ -30,8 +15,9 @@ if ~exist(string(NP.recordingDir)+filesep+string(NP.recordingName)+"_g0_tcat.ime
 end
 
 chanMap = load(string(NP.recordingName)+"_g0_tcat.imec0.ap_kilosortChanMap.mat");
-%%
-if plotN
+
+if plotN || plotIns
+    close all
     path_Brain = '\\sil1\data\Large_scale_mapping_NP\Model_brain\PV_103_imaged_inclined_45TA.stl';
 
     brain = stlread(path_Brain);
@@ -81,13 +67,16 @@ if plotN
     offsetTextY = 0;
     offsetTextZ = 1;
 
+end
 
-    %%%Load coordinates from excel data
 
-    if length(cell2mat(data_ex.Matlab3Dcoor))>3 %%Check if the insertion has matlab coordinates
+%%%Load coordinates from excel data
 
-        if string(cell2mat(data_ex.Probe)) == "NP2.0"
-            
+
+    if string(cell2mat(data_ex.Probe)) == "NP2.0"
+
+        if length(cell2mat(data_ex.Matlab3Dcoor))>3 %%Check if the insertion has matlab coordinates
+
             parts = split(cell2mat(data_ex.Matlab3Dcoor), ';');
 
             Xs = split(parts{1},',');
@@ -98,113 +87,174 @@ if plotN
             y1 = str2double(Ys{1});
             y2 = str2double(Ys{2});
 
-            % Vectors for AB and AC
-            AB = [0, y2 - y1];
-            AC = [x2 - x1, y2 - y1];
-
-            % Calculate the dot product and magnitudes of AB and AC
-            dotProduct = dot(AB, AC);
-            magAB = norm(AB);
-            magAC = norm(AC);
-
-            % Calculate the angle in radians and convert to degrees
-            angleRad = acos(dotProduct / (magAB * magAC));
-
-            j=1;
-
-            coors = zeros(length(unique(chanMap.kcoords)),3);
-            for i = unique(chanMap.kcoords)'
-
-                if i==1
-                    coors(j,:) = [x1,y1,surfaceZ(x1,y1, brain)];
-                end
-
-                if i==2
-                    coors(j,:)= [x1 - 750/3/100 * cos(angleRad), y1 - 750/3/100 * sin(angleRad), surfaceZ(x1 - 750/3/100 * cos(angleRad), y1 - 750/3/100 * sin(angleRad),brain)];
-                end
-
-                if i==3
-                    coors(j,:) = [x1 - 750/(3/2)/100 * cos(angleRad), y1 - 750/(3/2)/100 * sin(angleRad), surfaceZ(x1 - 750/(3/2)/100 * cos(angleRad), y1 - 750/(3/2)/100 * sin(angleRad),brain)];
-
-                end
-
-                if i==4
-
-                    coors(j,:) = [x1 - 750/100 * cos(angleRad), y1 - 750/100 * sin(angleRad), surfaceZ(x1 - 750/100 * cos(angleRad), y1 - 750/100 * sin(angleRad),brain)]; 
-
-                end
-
-                j=j+1;
-
-%                 coorS1 = [x1,y1,surfaceZ(x1,y1, brain)];
-%                 coorS4 = [x1 - 750/100 * cos(angleRad), y1 - 750/100 * sin(angleRad), surfaceZ(x1 - 750/100 * cos(angleRad), y1 - 750/100 * sin(angleRad),brain)];
-%                 coorS2 = [x1 - 750/3/100 * cos(angleRad), y1 - 750/3/100 * sin(angleRad), surfaceZ(x1 - 750/3/100 * cos(angleRad), y1 - 750/3/100 * sin(angleRad),brain)];
-%                 coorS3 = [x1 - 750/(3/2)/100 * cos(angleRad), y1 - 750/(3/2)/100 * sin(angleRad), surfaceZ(x1 - 750/(3/2)/100 * cos(angleRad), y1 - 750/(3/2)/100 * sin(angleRad),brain)];
-            end
-            x = coors(:,1)';
-            y =  coors(:,2)';
-            z = coors(:,3)';
-
-            if plotIns
-                scatter3(x,y,z,'bo', 'filled')
-            end
-
-            colors = ['bo','ro'];
-            j =1;
-            shankIds = unique(chanMap.kcoords);
-            for u = 1:length(goodU)
-
-
-                %Main unit channel position
-
-                %change channel 0 to 1
-
-                ch = goodU(1,u);
-
-                uX = x(shankIds == chanMap.kcoords(ch));
-
-                uYvert = y(chanMap.kcoords(ch));
-
-                uZvert = max(z) - data_ex.coor_Z/100 - chanMap.ycoords(ch)/100; %I take the max Z because depth is counted from the insertion of first shank
-
-                uZ = sin(deg2rad(data_ex.Angle))*uZvert; %depth of unit along vertical axis
-
-                uY = uYvert-cos(deg2rad(data_ex.Angle))*uZvert;
-
-                scatter3(uX,uY,uZ, 'filled')
-                view(sideview)
-
-                
-
-                j=j+1;
-
-
-            end
-            
-
         else
+            x1 = data_ex.coor_X/100;
+            x2 = data_ex.coor_X/100;
+
+            y1 = data_ex.coor_Y/100;
+            y2 = data_ex.coor_Y/100;
+        end
+
+        % Vectors for AB and AC
+        AB = [0, y2 - y1];
+        AC = [x2 - x1, y2 - y1];
+
+        % Calculate the dot product and magnitudes of AB and AC
+        dotProduct = dot(AB, AC);
+        magAB = norm(AB);
+        magAC = norm(AC);
+
+        % Calculate the angle in radians and convert to degrees
+        angleRad = acos(dotProduct / (magAB * magAC));
+
+        j=1;
+
+        coors = zeros(length(unique(chanMap.kcoords)),3);
+        for i = unique(chanMap.kcoords)'
+
+            %If shank id is:
+            if i==1
+                coors(j,:) = [x1,y1,surfaceZ(x1,y1, brain)];
+            end
+
+            if i==2
+                coors(j,:)= [x1 - 750/3/100 * cos(angleRad), y1 - 750/3/100 * sin(angleRad), surfaceZ(x1 - 750/3/100 * cos(angleRad), y1 - 750/3/100 * sin(angleRad),brain)];
+            end
+
+            if i==3
+                coors(j,:) = [x1 - 750/(3/2)/100 * cos(angleRad), y1 - 750/(3/2)/100 * sin(angleRad), surfaceZ(x1 - 750/(3/2)/100 * cos(angleRad), y1 - 750/(3/2)/100 * sin(angleRad),brain)];
+
+            end
+
+            if i==4
+
+                coors(j,:) = [x1 - 750/100 * cos(angleRad), y1 - 750/100 * sin(angleRad), surfaceZ(x1 - 750/100 * cos(angleRad), y1 - 750/100 * sin(angleRad),brain)];
+
+            end
+
+            j=j+1;
+
+            %                 coorS1 = [x1,y1,surfaceZ(x1,y1, brain)];
+            %                 coorS4 = [x1 - 750/100 * cos(angleRad), y1 - 750/100 * sin(angleRad), surfaceZ(x1 - 750/100 * cos(angleRad), y1 - 750/100 * sin(angleRad),brain)];
+            %                 coorS2 = [x1 - 750/3/100 * cos(angleRad), y1 - 750/3/100 * sin(angleRad), surfaceZ(x1 - 750/3/100 * cos(angleRad), y1 - 750/3/100 * sin(angleRad),brain)];
+            %                 coorS3 = [x1 - 750/(3/2)/100 * cos(angleRad), y1 - 750/(3/2)/100 * sin(angleRad), surfaceZ(x1 - 750/(3/2)/100 * cos(angleRad), y1 - 750/(3/2)/100 * sin(angleRad),brain)];
+        end
+        x = coors(:,1)';
+        y =  coors(:,2)';
+        z = coors(:,3)';
+
+        j =1;
+        shankIds = unique(chanMap.kcoords);
+
+        uX = zeros(2,size(goodU,2));
+        uY = zeros(2,size(goodU,2));
+        uZ = zeros(2,size(goodU,2));
+
+        for u = 1:length(goodU)
+
+
+            %Main unit channel position
+
+            %change channel 0 to 1
+
+            ch = goodU(1,u);
+
+            uX(1,u) = x(shankIds == chanMap.kcoords(ch)); %STL coor
+            uX(2,u) = x(shankIds == chanMap.kcoords(ch))*100; %Standard coor in uM
+
+            uYvert = y(shankIds == chanMap.kcoords(ch));
+            uZvert = data_ex.coor_Z - chanMap.ycoords(ch); %Vertical depth in uM
+
+            uZ(1,u) = max(z)-sin(deg2rad(data_ex.Angle))*(uZvert/100); %depth of unit along vertical axis in STL coor
+            uZ(2,u) = sin(deg2rad(data_ex.Angle))*(uZvert); %depth of unit along vertical axis zeroed in uM
+
+            uY(1,u) = uYvert+cos(deg2rad(data_ex.Angle))*(uZvert/100); %Y  of unit along in STL coor
+            uY(2,u) = (uYvert*100)+cos(deg2rad(data_ex.Angle))*(uZvert); %Y  of unit along in standard coor in uM
+
+            if plotN
+                scatter3(uX(1,u),uY(1,u),uZ(1,u),colors(u,:),'filled')
+                view(sideview)
+            end
+
+            j=j+1;
+
 
         end
 
+        Coor = {uX,uY,uZ;... %unit coordinates
+            [x;x],... %X shank coordinates STL
+            [y;y+cos(deg2rad(data_ex.Angle))*(data_ex.coor_Z/100)],... %Y shank coordinates
+            [repmat(max(z),[1 2]);repmat(max(z),[1 2])-sin(deg2rad(data_ex.Angle))*repmat(uZvert/100,[1 2])]}; %Z shank coordinates
+
+        if plotIns
+
+            plot3(Coor{2,1},Coor{2,2},Coor{2,3})
+
+        end
+
+
+    else %%NP1.0
+
+        uX = zeros(2,size(goodU,2));
+        uY = zeros(2,size(goodU,2));
+        uZ = zeros(2,size(goodU,2));
+
+        if length(cell2mat(data_ex.Matlab3Dcoor))>3
+
+            parts = split(cell2mat(data_ex.Matlab3Dcoor), ',');
+
+            Zstl = surfaceZ(str2double(parts{1}),str2double(parts{2}), brain);
+
+        else
+
+            parts{1} = data_ex.coor_X/100;
+            parts{2} = data_ex.coor_X/100;
+            Zstl = surfaceZ(str2double(parts{1}),str2double(parts{2}), brain);
+
+        end
+
+        goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
+
+        verticalDepth = data.Depth(ex)-goodUdepth; %depth of unit along vertical axis
+
+        uY(2,:) = (str2double(parts{2})*100) + cos(deg2rad(data.Angle(ex))).*(verticalDepth); %uM
+        uY(1,:) = str2double(parts{2}) + cos(deg2rad(data.Angle(ex))).*(verticalDepth/100); %STL
+
+        uZ(2,:) = sin(deg2rad(data.Angle(ex))).*(verticalDepth); %uM
+        uZ(1,:) =Zstl-sin(deg2rad(data.Angle(ex))).*(verticalDepth/100); %STL
+
+        uX(2,:) = str2double(parts{1})*100; %uM
+        uX(1,:) = str2double(parts{1}); %STL
+
+        Coor = {uX,uY,uZ;... %unit coordinates
+            [str2double(parts{1});str2double(parts{1})],... %X shank coordinates STL
+            [str2double(parts{2});str2double(parts{2})+cos(deg2rad(data_ex.Angle))*(data_ex.Depth/100)],... %Y shank coordinates
+            [Zstl;Zstl - sin(deg2rad(data_ex.Angle))*(data_ex.Depth/100)]}; %Z shank coordinates
+
+        if plotN
+
+            for u = 1:length(goodU)
+
+                scatter3(uX(1,u),uY(1,u),uZ(1,u),colors(u,:),'filled') 
+
+            end
+
+              view(sideview)
+        end
+
+
     end
-
-
-%     figure;
-%     plot()
-
-%      scatter3(animals{a}(:,1),animals{a}(:,2),animals{a}(:,3), 'bo', 'filled', 'MarkerEdgeColor','w', 'MarkerFaceColor',colorA{a}, 'LineWidth',2, 'SizeData',sizeDot);
-%         text(animals{a}(:,1)+offsetTextY,animals{a}(:,2)-offsetTextX,animals{a}(:,3)+offsetTextZ, string((1:length(animals{a}))+in),...
-%             'Color', 'k','FontSize',sizeText);
 
 end
 
-length(cell2mat(data.Matlab3Dcoor(40)))
-
-%end
 
 
 
-%%% Function to get surface point given x and y on 3d model. 
+
+
+
+
+%%% Function to get surface point given x and y on 3d model.
 function [closest_z]= surfaceZ(x_target,y_target,brain)
 
 vertices = brain.Points;

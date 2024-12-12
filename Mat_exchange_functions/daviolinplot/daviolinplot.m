@@ -340,7 +340,7 @@ for g = 1:num_groups
         
         % estimate probability density of the data
         if strcmp(confs.smoothing,'default')
-            [f,xi] = ksdensity(data_vals]);
+            [f,xi] = ksdensity([data_vals]);
         else
             [f,xi] = ksdensity(data_vals,'Bandwidth',confs.smoothing);
         end
