@@ -30,13 +30,25 @@ for ex = [9]%[1:20,28:32,40:48]%1:size(data,1)
     try %%In case it is not run in Vstim computer, which has drives mapped differently
         cd(path)
     catch
-        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-        if strcmp(originP,'sil3\data')
-            path = replaceBetween(path,"","\Large_scale","W:");
-        else
-            path = replaceBetween(path,"","\Large_scale","Y:");
+        try
+            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","W:");
+            else
+                path = replaceBetween(path,"","\Large_scale","Y:");
+            end
+
+            cd(path)
+        catch
+
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
+            else
+                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
+            end
+            cd(path)
+
         end
-        cd(path)
     end
     NP = NPAPRecording(path);
 
