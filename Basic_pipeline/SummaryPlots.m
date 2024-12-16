@@ -18,6 +18,12 @@ DepthUnit = cell(1,length(GoodRecordings));
 RespMB = cell(1,length(GoodRecordings));
 RespRG = cell(1,length(GoodRecordings));
 goodNeuronsMB =  cell(1,length(GoodRecordings));
+NeuronN = cell(1,length(GoodRecordings));
+tablePos = cell(1,length(GoodRecordings));
+
+pvalsMB = cell(1,length(GoodRecordings));
+
+pvalsRG = cell(1,length(GoodRecordings));
 
 N_bootstrap = 1000;
 
@@ -52,20 +58,25 @@ for ex = GoodRecordings
     if contains(data.VS_ordered(ex),"MB")
         NeuronValsMB = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
 
-        %         respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
-        %         goodNeuronsMB{i} = find(respNeuronsMB<0.005);
-        %         tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
-        %         uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
-        %         [preferDir dirInd] = max(tuningCurve,[],2);
-        %         PreferAngle{i} = preferDir(respNeuronsMB<0.005);
-        %         RespMB{i} = max(NeuronValsMB(respNeuronsMB<0.005,:,4),[],2)';
-        RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
+        respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+        respNeuronsRG = load(sprintf('RectGrid-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+        goodNeuronsMB{i} = find(respNeuronsMB<0.005);
+        tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
+        uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
+        [preferDir dirInd] = max(tuningCurve,[],2);
+        PreferAngle{i} = preferDir(respNeuronsMB<0.005);
+        RespMB{i} = max(NeuronValsMB(respNeuronsMB<0.005,:,4),[],2)';
+        NeuronN{i} = find(respNeuronsMB<0.005); 
+        %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
+        pvalsMB{i} = respNeuronsMB(respNeuronsMB<0.005);
 
 
     else
         goodNeuronsMB{i} =0;
         PreferAngle{i} = 0;
         RespMB{i} = 0;
+        NeuronN{i} =0;
+        pvalsMB{i} =0;
 
     end
 
@@ -75,13 +86,18 @@ for ex = GoodRecordings
           NeuronValsRG= load(sprintf('RectGrid-NeuronRespCat-%s',NP.recordingName)).NeuronVals;
           %EnoughTrials = NeuronValsRG(respNeuronsMB<0.005,:,[4 7]);
 
-          %maxRG = (max(NeuronValsRG(respNeuronsMB<0.005,:,[4 7]),[],2));
+          maxRG = (max(NeuronValsRG(respNeuronsMB<0.005,:,[4 7]),[],2));
 
-          RespRG{i} = (max(NeuronValsRG(:,:,4),[],2))';
+          %RespRG{i} = (max(NeuronValsRG(:,:,4),[],2))';
           
           %RespRG{i} = maxRG(logical(maxRG(:,:,2)),1,1)';
+
+          RespRG{i} = (max(NeuronValsRG(respNeuronsMB<0.005,:,4),[],2))';
+          pvalsRG{i} = respNeuronsRG(respNeuronsMB<0.005);
+
     else
         RespRG{i} = 0;
+        pvalsRG{i} = 0;
        
     end
 
@@ -104,12 +120,14 @@ for ex = GoodRecordings
 
 
     animalID{i} = data.Animal_ID(ex);
+
+    tablePos{i} = ex;
     %DepthUnit{i} = Coor;
     i=i+1;
 
 end
 %%
-%% Swarm plots 
+%% Prepare data for summary plots
 MB = cell2mat(RespMB);
 RG = cell2mat(RespRG);
 
@@ -122,38 +140,66 @@ color2 =[];
 j=1;
 
 indexAnimal = sort(indexAnimal);
+tablePosN = [];
 
 for i = 1:length(animalID) %each color is an animal.
     
     color1 = [color1 zeros(1,length(RespMB{i}))+indexAnimal(i)];
     color2 = [color2 zeros(1,length(RespRG{i}))+indexAnimal(i)];
+    tablePosN = [tablePosN repmat(tablePos{i},1,length(RespMB{i}))];
+   
     j = j+1;
+
 
 end
 
 color = [color1 color2 color1];
+tablePosN = [tablePosN tablePosN tablePosN];
+NeuronID = [cell2mat(NeuronN) cell2mat(NeuronN) cell2mat(NeuronN)];
+
 
 cats = categorical([ones(1,length(cell2mat(RespMB))) ones(1,length(cell2mat(RespRG)))+1 ones(1,length(cell2mat(RespMB)))+2]);
 
-xticklabels({'MB','RG'})
 
+
+%%randomly select 10 neurons
+MBh = length(MB)+length(RG)+find(MB-RG>0);
+
+RGh = length(MB)+length(RG)+find(MB-RG<0);
+
+randN = 5;
+rng(42);
+rMB = 1 + round((length(MBh) - 1) * rand(1, randN));
+rng(42);
+rRG = 1 + round((length(RGh) - 1) * rand(1, randN));
+
+%selected neurons:
+
+selecN = {[tablePosN((MBh(rMB)-length(MB)*2));NeuronID((MBh(rMB)-length(MB)*2))];...
+    [tablePosN(RGh(rRG)-length(MB));NeuronID(RGh(rRG)-length(MB))]};
+
+selecN{1}(2,1) = 218;
+%% Plot responses
+
+%randomNeur = 1 + round((length(cats) - 1) * rand(1, 10));
 
 T = table(cats',values',color','VariableNames',{'cats','values','color'});
 
 figure;
 
-swarmchart(T.cats, T.values, 10, T.color,'filled');
-
-%%randomly select 10 neurons
-
-randomNeur = 1 + round((length(cats) - 1) * rand(1, 10));
+s = swarmchart(T.cats, T.values, 10, T.color,'filled','MarkerFaceAlpha',0.5);
 
 hold on
-swarmchart(T.cats(randomNeur), T.values(randomNeur), 30, T.color(randomNeur),'filled');
+swarmchart(T.cats([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB) MBh(rMB(2))]), ...
+    T.values([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB) MBh(rMB(2))]), 50,...
+    T.color([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB) MBh(rMB(2))]),...
+    'filled','MarkerEdgeColor','r','LineWidth',2);
 
-
-
-
+hold on
+swarmchart(T.cats([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB) RGh(rRG(5))]),...
+    T.values([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB) RGh(rRG(5))]), 50, ...
+    T.color([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB) RGh(rRG(5))]),...
+    'filled','MarkerEdgeColor','g','LineWidth',2);
 
 
 myColormap = [
@@ -181,7 +227,7 @@ colormap(gca,myColormap)
 % 
 % 
 hold on
-for i =1:2
+for i =1:3
 
     groupMean = mean(T.values(T.cats==categorical(i))); 
 
@@ -192,11 +238,83 @@ end
 % legend({'PV35', 'PV103', 'SA5'}, 'Location', 'best');
 grid on
 set(gcf,'Color','w');%
-xticklabels({'Moving Ball','Rectangle Grid'})
-ylabel('Spikes/sec - baseline spkRate')
-ylim([-0.01 0.1])
+xticklabels({'Moving','Static','Mov. - Stat.'})
+ylabel('Response - Baseline (spikes/sec)')
+ylim([-0.025 0.1])
+cd('\\sil3\data\Large_scale_mapping_NP\lizards\SummaryFigs')
+print(gcf,'ResponseMB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)','-dpng')
 
-%% Randomly select 10 neurons from the entire range and plot the rasters. 
 
-length(randRespMB{:})
+%% Plot both signifficant responsive. 
+
+MB = cell2mat(pvalsMB);
+RG = cell2mat(pvalsRG);
+values = [1-MB 1-RG];
+color = [color1 color2];
+
+cats = categorical([ones(1,length(cell2mat(RespMB))) ones(1,length(cell2mat(RespRG)))+1]);
+
+
+T = table(cats',values',color','VariableNames',{'cats','values','color'});
+
+figure;
+
+s = swarmchart(T.cats, T.values, 10, T.color,'filled','MarkerFaceAlpha',0.5);
+
+hold on
+swarmchart(...
+    T.cats([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB)]),...
+    T.values([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB)]), 50,...
+    T.color([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB)]),'filled','MarkerEdgeColor','r','LineWidth',2);
+
+hold on
+swarmchart(...
+    T.cats([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB)]),...
+    T.values([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB)]), 50, ...
+    T.color([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB)]),...
+    'filled','MarkerEdgeColor','g','LineWidth',2);
+
+
+myColormap = [
+    1, 0, 0;    % Red
+    0, 1, 0;    % Green
+    0, 0, 1;    % Blue
+    1, 1, 0;    % Yellow
+    1, 0, 1;    % Magenta
+    0, 1, 1;    % Cyan
+    0, 0, 0;    % Black
+]*0.7;
+colormap(gca,myColormap)
+
+
+% hold on;
+% uniqueGroups = unique(T.color);  % Get unique group values
+%  % Get the same colormap used in the plot
+% 
+% for i = [1 3]
+%     % Plot invisible points for legend creation
+%     scatter(nan, nan, 100, colors(i,:), 'filled');
+%     
+% end
+% 
+% 
+% 
+hold on
+for i =1:3
+
+    groupMean = mean(T.values(T.cats==categorical(i))); 
+
+     plot([i-0.5, i+0.5], [groupMean, groupMean], 'r-', 'LineWidth', 2);  % Short horizontal line for the mean
+
+end
+% 
+% legend({'PV35', 'PV103', 'SA5'}, 'Location', 'best');
+grid on
+set(gcf,'Color','w');%
+xticklabels({'Moving','Static'})
+ylabel('1-(p-value)')
+ylim([0.8 1.2])
+cd('\\sil3\data\Large_scale_mapping_NP\lizards\SummaryFigs')
+print(gcf,'ResponseMB-RG(red-High-MB)-(green-High-RG)-Color-Animal)','-dpng')
+
 

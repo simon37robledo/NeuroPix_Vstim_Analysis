@@ -5,11 +5,11 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 0;
-plotexamplesMB =0;
+plotexamplesMB =1;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
-Shuffling =0;Shuffling_baseline=1;
-repeatShuff =1;
+Shuffling =0;Shuffling_baseline=0;
+repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
@@ -25,11 +25,13 @@ pv27 = [8 9 10 11 12 13 14];
 noEyeMoves = 0;
 newDiode =0;
 
+%Plot specific neurons
+selecN 
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = [1:20,28:32,40:48] %1:size(data,1)
+for ex = [9] %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -44,8 +46,10 @@ for ex = [1:20,28:32,40:48] %1:size(data,1)
             else
                 path = replaceBetween(path,"","\Large_scale","Y:");
             end
+
             cd(path)
         catch
+
             if strcmp(originP,'sil3\data')
                 path = replaceBetween(path,"","\Large_scale","\\sil3\data");
             else
@@ -217,7 +221,7 @@ for ex = [1:20,28:32,40:48] %1:size(data,1)
     colors = repmat([1 1 1],size(goodU,2),1);
 
     %6. Get depths of units correcting for angle and micromanipulator depth:
-    [Coor] = neuronLocation(NP,data(ex,:),goodU,1,1,colors, 1);
+%    [Coor] = neuronLocation(NP,data(ex,:),goodU,1,1,colors, 1);
 
     %7. Load raster matrices
     bin = 1;
@@ -973,7 +977,7 @@ end
 %- Normalize the data (Z-score?)
 %-
 
-%%% Rasters plots per Neuron
+% Rasters plots per Neuron
 for plotOp = plotexamplesMB
     if plotexamplesMB == 1
 
@@ -1012,8 +1016,8 @@ for plotOp = plotexamplesMB
         end
 
 
-        eNeuron = 5;%1:length(goodU); %8
-        %eNeuron = 1;
+        eNeuron = 1:length(goodU); %8
+        eNeuron = [166];
 
         orderS = [2 3 4 5;4 2 3 5;5 2 3 4;3 2 4 5];
         orderNames = {'dir_off_sizes_speeds';'sizes_dir_off_speeds';'speeds_dir_off_sizes';'off_dir_sizes_speeds'};
@@ -1117,10 +1121,10 @@ for plotOp = plotexamplesMB
                 for d = 1:size(NeuronVals,2)
 
                     if posX(u,d) == NeuronVals(u,respVali(u),3) & posY(u,d) == NeuronVals(u,respVali(u),2) 
-                    rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision)/mergeTrials, window_size(2)/(bin2), trialDivision],...
+                    rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision+1)/mergeTrials, window_size(2)/(bin2), trialDivision],...
                         'EdgeColor', 'r', 'LineWidth', 1.5,'LineStyle','-.');
                     else
-                        rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision)/mergeTrials, window_size(2)/(bin2), trialDivision],...
+                        rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision+1)/mergeTrials, window_size(2)/(bin2), trialDivision],...
                         'EdgeColor', 'b', 'LineWidth', 1,'LineStyle','-.');
                     end
 
@@ -1136,6 +1140,9 @@ for plotOp = plotexamplesMB
                 ylabel('Angles')
                 lims =xlim;
                 xt = xticks;
+                xticks([1 preBase/bin2:300/bin2:(stimDur+preBase*2)/bin2])
+                xticklabels([-(preBase) 0:300:(stimDur+preBase*2)])
+
 
                 cd(NP.recordingDir)
                 if ~exist(path+"\Figs",'dir')
