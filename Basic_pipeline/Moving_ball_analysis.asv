@@ -5,7 +5,7 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 0;
-plotexamplesMB =1;
+plotexamplesMB =0;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
 Shuffling =0;Shuffling_baseline=0;
@@ -31,7 +31,7 @@ selecN
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = [14] %1:size(data,1)
+for ex = 44 %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -347,32 +347,6 @@ if ZscoresDo ==1
     max_mean_value = zeros(1,nN);
     max_mean_valueB = zeros(1,nN);
 
-    %     for u =1:nN %Initial window
-    %         % Slide the window over the matrix
-    %         %unit matrix
-    %         max_mean_value(u) = -Inf;
-    %         for d = 1:length(unique(offsets))*trialDivision:nT
-    %             uM = squeeze(MrC(d:d+length(unique(offsets))*trialDivision-1,u,:));
-    %             for i = 1:size(uM, 1) - window_size(1) + 1
-    %                 for j = 1:size(uM, 2) - window_size(2) + 1
-    %                     % Extract the sub-matrix
-    %                     sub_matrix = uM(i:min(i+window_size(1)-1, end), j:min(j+window_size(2)-1,end));
-    %
-    %                     % Compute the mean value
-    %                     mean_value = mean(sub_matrix(:));
-    %
-    %                     % Update the maximum mean value and its position
-    %                     if mean_value > max_mean_value(u)
-    %                         max_mean_value(u) = mean_value;
-    %                         max_position(u,:) = [i+d-1, j];
-    %
-    %                     end
-    %
-    %                 end
-    %             end
-    %         end
-    %     end
-
     NeuronVals = zeros(nN,nT/trialDivision,9); %Each neuron, which has a matrix where the first column is maxVal of bins, 2nd and 3rd position of window in matrix...
     % 4th Z-score.
     % responsive compared to the baseline.
@@ -481,6 +455,9 @@ if ZscoresDo ==1
     %Create tunning curve, based on direction tunning curve 
     tuningCurve = zeros(nN,direcN);
 
+   
+
+
     udir = unique(directions);
 
     for u = 1:nN
@@ -491,8 +468,16 @@ if ZscoresDo ==1
     end
 
     save(sprintf('tuningC-%s',NP.recordingName),"tuningCurve")
-%     unnn = 1:67;
-%     unnn(any(tuningCurve > 4, 2))
+
+     %%%Spatial tuning:
+
+     [PreferDir ind]= max(NeuronVals(:,:,4),[],2);
+
+     responses = NeuronVals(:,:,4);
+
+     NeuronVals(:,:,4)
+
+    DSI = 1- responses(:,setdiff(1:size(responses,2), ind(u)))./PreferDir;
 
 
 
@@ -1017,7 +1002,7 @@ for plotOp = plotexamplesMB
 
 
         eNeuron = 1:length(goodU); %8
-        eNeuron = [149];
+        eNeuron = [52];
 
         orderS = [2 3 4 5;4 2 3 5;5 2 3 4;3 2 4 5];
         orderNames = {'dir_off_sizes_speeds';'sizes_dir_off_speeds';'speeds_dir_off_sizes';'off_dir_sizes_speeds'};

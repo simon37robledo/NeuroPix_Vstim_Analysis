@@ -24,6 +24,8 @@ tablePos = cell(1,length(GoodRecordings));
 pvalsMB = cell(1,length(GoodRecordings));
 
 pvalsRG = cell(1,length(GoodRecordings));
+MBsig =0; 
+RGsig =1;
 
 N_bootstrap = 1000;
 
@@ -57,19 +59,34 @@ for ex = GoodRecordings
 
     if contains(data.VS_ordered(ex),"MB")
         NeuronValsMB = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
-
         respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
         respNeuronsRG = load(sprintf('RectGrid-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
-        goodNeuronsMB{i} = find(respNeuronsMB<0.005);
-        tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
-        uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
-        [preferDir dirInd] = max(tuningCurve,[],2);
-        PreferAngle{i} = preferDir(respNeuronsMB<0.005);
-        RespMB{i} = max(NeuronValsMB(respNeuronsMB<0.005,:,4),[],2)';
-        NeuronN{i} = find(respNeuronsMB<0.005); 
-        %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
-        pvalsMB{i} = respNeuronsMB(respNeuronsMB<0.005);
+        
+        if MBsig
+            goodNeuronsMB{i} = find(respNeuronsMB<0.005);
+            tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
+            uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
+            [preferDir dirInd] = max(tuningCurve,[],2);
+            PreferAngle{i} = preferDir(respNeuronsMB<0.005);
+            RespMB{i} = max(NeuronValsMB(respNeuronsMB<0.005,:,4),[],2)';
+            NeuronN{i} = find(respNeuronsMB<0.005);
+            %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
+            pvalsMB{i} = respNeuronsMB(respNeuronsMB<0.005);
 
+        end
+
+         if RGsig
+            goodNeuronsMB{i} = find(respNeuronsRG<0.005);
+            tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
+            uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
+            [preferDir dirInd] = max(tuningCurve,[],2);
+            PreferAngle{i} = preferDir(respNeuronsRG<0.005);
+            RespMB{i} = max(NeuronValsMB(respNeuronsRG<0.005,:,4),[],2)';
+            NeuronN{i} = find(respNeuronsRG<0.005);
+            %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
+            pvalsMB{i} = respNeuronsRG(respNeuronsRG<0.005);
+
+         end
 
     else
         goodNeuronsMB{i} =0;
@@ -84,16 +101,29 @@ for ex = GoodRecordings
     if contains(data.VS_ordered(ex),"RG") &&  contains(data.VS_ordered(ex),"MB")
 
           NeuronValsRG= load(sprintf('RectGrid-NeuronRespCat-%s',NP.recordingName)).NeuronVals;
-          %EnoughTrials = NeuronValsRG(respNeuronsMB<0.005,:,[4 7]);
 
-          maxRG = (max(NeuronValsRG(respNeuronsMB<0.005,:,[4 7]),[],2));
+          if MBsig
+              maxRG = (max(NeuronValsRG(respNeuronsMB<0.005,:,[4 7]),[],2));
 
-          %RespRG{i} = (max(NeuronValsRG(:,:,4),[],2))';
-          
-          %RespRG{i} = maxRG(logical(maxRG(:,:,2)),1,1)';
+              %RespRG{i} = (max(NeuronValsRG(:,:,4),[],2))';
 
-          RespRG{i} = (max(NeuronValsRG(respNeuronsMB<0.005,:,4),[],2))';
-          pvalsRG{i} = respNeuronsRG(respNeuronsMB<0.005);
+              %RespRG{i} = maxRG(logical(maxRG(:,:,2)),1,1)';
+
+              RespRG{i} = (max(NeuronValsRG(respNeuronsMB<0.005,:,4),[],2))';
+              pvalsRG{i} = respNeuronsRG(respNeuronsMB<0.005);
+          end
+
+
+          if RGsig
+              maxRG = (max(NeuronValsRG(respNeuronsRG<0.005,:,[4 7]),[],2));
+
+              %RespRG{i} = (max(NeuronValsRG(:,:,4),[],2))';
+
+              %RespRG{i} = maxRG(logical(maxRG(:,:,2)),1,1)';
+
+              RespRG{i} = (max(NeuronValsRG(respNeuronsRG<0.005,:,4),[],2))';
+              pvalsRG{i} = respNeuronsRG(respNeuronsRG<0.005);
+          end
 
     else
         RespRG{i} = 0;
@@ -167,7 +197,7 @@ MBh = length(MB)+length(RG)+find(MB-RG>0);
 
 RGh = length(MB)+length(RG)+find(MB-RG<0);
 
-randN = 5;
+randN = 1;
 rng(42);
 rMB = 1 + round((length(MBh) - 1) * rand(1, randN));
 rng(42);
@@ -189,16 +219,18 @@ figure;
 
 s = swarmchart(T.cats, T.values, 10, T.color,'filled','MarkerFaceAlpha',0.5);
 
-hold on
-swarmchart(T.cats([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB) MBh(rMB(2))]), ...
-    T.values([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB) MBh(rMB(2))]), 50,...
-    T.color([MBh(rMB(2))-length(MB)*2 MBh(rMB(2))-length(MB) MBh(rMB(2))]),...
+hold on %%Chose before, 2 and 5;
+chooseNb = 1;
+swarmchart(T.cats([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), ...
+    T.values([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), 50,...
+    T.color([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]),...
     'filled','MarkerEdgeColor','r','LineWidth',2);
 
 hold on
-swarmchart(T.cats([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB) RGh(rRG(5))]),...
-    T.values([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB) RGh(rRG(5))]), 50, ...
-    T.color([RGh(rRG(5))-length(MB)*2 RGh(rRG(5))-length(MB) RGh(rRG(5))]),...
+chooseNr = 1;
+swarmchart(T.cats([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]),...
+    T.values([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]), 50, ...
+    T.color([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]),...
     'filled','MarkerEdgeColor','g','LineWidth',2);
 
 
@@ -242,10 +274,10 @@ xticklabels({'Moving','Static','Mov. - Stat.'})
 ylabel('Response - Baseline (spikes/sec)')
 ylim([-0.025 0.1])
 cd('\\sil3\data\Large_scale_mapping_NP\lizards\SummaryFigs')
-print(gcf,'ResponseMB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)','-dpng')
+print(gcf,'SIg(RG)-ResponseMB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)','-dpng')
 
 
-%% Plot pvalues. 
+%% Plot both signifficant responsive. 
 
 MB = cell2mat(pvalsMB);
 RG = cell2mat(pvalsRG);

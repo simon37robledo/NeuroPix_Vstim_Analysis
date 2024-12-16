@@ -11,7 +11,7 @@ plotRasters =1;
 heatMap = 0;
 ex=1;
 responseDo = 1;
-redoResp =1;
+redoResp =0;
 
 newDiode =0;
 
@@ -21,7 +21,7 @@ repeatShuff =0;
 
 
 %%
-for ex = [9]%[1:20,28:32,40:48]%1:size(data,1)
+for ex = [20]%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -427,7 +427,7 @@ for ex = [9]%[1:20,28:32,40:48]%1:size(data,1)
             posY = squeeze(NeuronVals(:,:,2));
 
             eNeuron = 1:length(goodU);
-            eNeuron =[166];
+            eNeuron =[24];
 
             [respVal respVali]= max(NeuronVals(:,:,1),[],2);
 
