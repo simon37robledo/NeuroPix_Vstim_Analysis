@@ -723,6 +723,7 @@ for Shuffle =1
         end
         save(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse')
         save(sprintf('MovBall-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreU')
+        save(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')
         
         end
         

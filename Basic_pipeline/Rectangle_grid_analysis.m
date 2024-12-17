@@ -410,6 +410,7 @@ for ex = selecN{2}(1)%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
                 end
                 save(sprintf('RectGrid-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse')
                 save(sprintf('RectGrid-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreU')
+                save(sprintf('RectGrid-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')
             end
 
         end
