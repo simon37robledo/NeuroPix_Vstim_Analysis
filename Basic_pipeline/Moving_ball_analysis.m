@@ -5,7 +5,7 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 0;
-plotexamplesMB =0;
+plotexamplesMB =1;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
 Shuffling =0;Shuffling_baseline=0;
@@ -24,14 +24,14 @@ summPlot =0;
 pv27 = [8 9 10 11 12 13 14];
 noEyeMoves = 0;
 newDiode =0;
-
+GoodRecordingsPV =[1:20,40:43];
 %Plot specific neurons
 selecN 
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = 44 %1:size(data,1)
+for ex = selecN{2}(1)%GoodRecordingsPV %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -455,8 +455,6 @@ if ZscoresDo ==1
     %Create tunning curve, based on direction tunning curve 
     tuningCurve = zeros(nN,direcN);
 
-   
-
 
     udir = unique(directions);
 
@@ -469,19 +467,19 @@ if ZscoresDo ==1
 
     save(sprintf('tuningC-%s',NP.recordingName),"tuningCurve")
 
-     %%%Spatial tuning:
+    %%%Spatial tuning:
 
-     [PreferDir ind]= max(NeuronVals(:,:,4),[],2);
+    [PreferDir ind]= max(abs(NeuronVals(:,:,1)),[],2);
 
-     SpaTuning = zeros(1,size(goodU,2));
+    SpaTuning = zeros(1,size(goodU,2));
 
-     for u =1:size(goodU,2)
-         responses = NeuronVals(u,:,4);
+    for u =1:size(goodU,2)
+        responses = abs(NeuronVals(u,:,1));
 
-         SpaTuning(u) = 1- mean(responses(:,setdiff(1:size(responses,2), ind(u))))./PreferDir(u);
-     end
+        SpaTuning(u) = 1- mean(responses(:,setdiff(1:size(responses,2), ind(u))))./abs(PreferDir(u));
+    end
 
-     save(sprintf('Spatial-Tuning_index-MB-%s',NP.recordingName),"SpaTuning")
+    save(sprintf('Spatial-Tuning_index-MB-%s',NP.recordingName),"SpaTuning")
 
     
 for Shuffle =1
@@ -705,6 +703,7 @@ for Shuffle =1
         %%% 60% of trials
 
         pvalsResponse = zeros(1,nN);
+        ZScoreU = zeros(1,nN);
 
         for u = 1:nN
             posTr = NeuronVals(u,respVali(u),2);
@@ -715,14 +714,18 @@ for Shuffle =1
             emptyRows = sum(all(maxWindow == 0, 2));
 
             pvalsResponse(u) = mean(boot_means(:,u)>respVal(u));
+            ZScoreU(u) = (respVal(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
 
             if emptyRows/trialDivision > 0.6
                 pvalsResponse(u) = 1;
             end
 
         end
-            save(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse')
+        save(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse')
+        save(sprintf('MovBall-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreU')
+        
         end
+        
 
     end
 
@@ -1003,7 +1006,7 @@ for plotOp = plotexamplesMB
 
 
         eNeuron = 1:length(goodU); %8
-        eNeuron = [52];
+        eNeuron = selecN{2}(2);
 
         orderS = [2 3 4 5;4 2 3 5;5 2 3 4;3 2 4 5];
         orderNames = {'dir_off_sizes_speeds';'sizes_dir_off_speeds';'speeds_dir_off_sizes';'off_dir_sizes_speeds'};

@@ -18,10 +18,10 @@ newDiode =0;
 Shuffling_baseline=0;
 repeatShuff =0;
 
-
+GoodRecordingsPV =[1:20,40:43];
 
 %%
-for ex = [20]%[1:20,28:32,40:48]%1:size(data,1)
+for ex = selecN{2}(1)%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -329,6 +329,21 @@ for ex = [20]%[1:20,28:32,40:48]%1:size(data,1)
             NeuronVals = load(sprintf('RectGrid-NeuronRespCat-%s',NP.recordingName)).NeuronVals;
         end
 
+
+        %%%Spatial tuning:
+
+        [PreferDir ind]= max(abs(NeuronVals(:,:,1)),[],2);
+
+        SpaTuning = zeros(1,size(goodU,2));
+
+        for u =1:size(goodU,2)
+            responses = abs(NeuronVals(u,:,1));
+
+            SpaTuning(u) = 1- mean(responses(:,setdiff(1:size(responses,2), ind(u))))./abs(PreferDir(u));
+        end
+
+        save(sprintf('Spatial-Tuning_index-RG-%s',NP.recordingName),"SpaTuning")
+
         if Shuffling_baseline
 
             if ~isfile(sprintf('RectGrid-pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
@@ -375,6 +390,7 @@ for ex = [20]%[1:20,28:32,40:48]%1:size(data,1)
                 %%% 60% of trials
 
                 pvalsResponse = zeros(1,nN);
+                ZScoreU = zeros(1,nN);
 
                 for u = 1:nN
                     posTr = NeuronVals(u,respVali(u),2);
@@ -385,6 +401,7 @@ for ex = [20]%[1:20,28:32,40:48]%1:size(data,1)
                     emptyRows = sum(all(maxWindow == 0, 2));
 
                     pvalsResponse(u) = mean(boot_means(:,u)>respVal(u));
+                    ZScoreU(u) = (respVal(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
 
                     if emptyRows/trialDivision > 0.6
                         pvalsResponse(u) = 1;
@@ -392,6 +409,7 @@ for ex = [20]%[1:20,28:32,40:48]%1:size(data,1)
 
                 end
                 save(sprintf('RectGrid-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse')
+                save(sprintf('RectGrid-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreU')
             end
 
         end
@@ -427,7 +445,7 @@ for ex = [20]%[1:20,28:32,40:48]%1:size(data,1)
             posY = squeeze(NeuronVals(:,:,2));
 
             eNeuron = 1:length(goodU);
-            eNeuron =[24];
+            eNeuron =selecN{1}(2);
 
             [respVal respVali]= max(NeuronVals(:,:,1),[],2);
 
@@ -473,7 +491,7 @@ for ex = [20]%[1:20,28:32,40:48]%1:size(data,1)
                     if nSize >1
                         yline([trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials-1]+0.5,LineWidth=1)
                     end
-                    %caxis([0 1]);
+                    caxis([0 max(Mr2,[],'all')]);
                     set(gca,'YTickLabel',[]);
 
                     if i < T - (trialsPerCath/mergeTrials)*max(positionsMatrix(:))-1
