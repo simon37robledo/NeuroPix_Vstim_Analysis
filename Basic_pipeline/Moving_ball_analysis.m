@@ -5,7 +5,7 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 0;
-plotexamplesMB =1;
+plotexamplesMB =0;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
 Shuffling =0;Shuffling_baseline=0;
@@ -13,8 +13,8 @@ repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
-ReceptiveFieldConvolutions =0;
-repeatConv =0;
+ReceptiveFieldConvolutions =1;
+repeatConv =1;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
@@ -25,13 +25,14 @@ pv27 = [8 9 10 11 12 13 14];
 noEyeMoves = 0;
 newDiode =0;
 GoodRecordingsPV =[1:20,40:43];
+GoodRecordingsRF = [1:20,40:48];
 %Plot specific neurons
-selecN 
+ 
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = selecN{2}(1)%GoodRecordingsPV %1:size(data,1)
+for ex = GoodRecordingsPVRF %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -1142,12 +1143,15 @@ for plotOp = plotexamplesMB
                 set(fig,'Color','w')
 
                 fig.Position = [353    42   734   954];
+                colorbar('northoutside');
                 if noEyeMoves
                     print(fig, sprintf('%s-MovBall-NoEyeMoves-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
 
                 else
                     print(fig, sprintf('%s-MovBall-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
                 end
+                
+            
                 close
                 
                 
@@ -1450,7 +1454,7 @@ if depthPlot == 1
 end
 end
 
-%%%%% Convolution
+% %%% Convolution
 for convNeuron = 1
     if ReceptiveFieldConvolutions ==1
 
@@ -1497,25 +1501,19 @@ for convNeuron = 1
 
             coorRect = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
 
-            [x, y] = meshgrid(1:coorRect(3)/10,1:coorRect(4)/10);
+            reduceFactor = min(sizeV); %has to be bigger than the smallest ball size
+
+            redCoorX = round(coorRect(3)/reduceFactor);
+            redCoorY = round(coorRect(4)/reduceFactor);
+
+            [x, y] = meshgrid(1:redCoorX,1:redCoorY);
 
             sizesU = unique(sizeV);
 
             %%%%%%%%%%Load responsive neurons
-            pvalTi= load(sprintf('pvalTime-%s',NP.recordingName)).pvalTi;
+            pvalTi= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
 
-            respUi = find(pvalTi <0.02);
-            respU = [];
-
-            for u = respUi
-
-                percentT = sum(any(squeeze(Mr(:,u,:)>0),2))/size(Mr,1);
-
-                if percentT >0.03 %Eliminate neurons that don't spike often.
-                    respU = [respU u];
-                end
-
-            end
+            respU = find(pvalTi <0.05);
 
 
             spikeSum = zeros(size(Mr,1),length(respU),sizeX(4),'single');
@@ -1561,46 +1559,47 @@ for convNeuron = 1
             %respU =1;
 
             %%%%Initialize 5D matrices
-            RFu = zeros(coorRect(4)/10,coorRect(3)/10,sizeX(4),length(respU),"single");
+            RFu = zeros(redCoorY,redCoorX,sizeX(4),length(respU),"single");
 
-            RFuSpeed = zeros(speedN,coorRect(4)/10,coorRect(3)/10,sizeX(4),length(respU),"single");
-            RFuDir = zeros(direcN,coorRect(4)/10,coorRect(3)/10,sizeX(4),length(respU),"single");
-            RFuSize = zeros(sizeN,coorRect(4)/10,coorRect(3)/10,sizeX(4),length(respU),"single");
+            RFuSpeed = zeros(speedN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
+            RFuDir = zeros(direcN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
+            RFuSize = zeros(sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
 
 
             Uspeed = unique(speeds);
             Udir = unique(directions);
             Usize = unique(sizes);
-            NormVideo = zeros(coorRect(4)/10,coorRect(3)/10,sizeX(4),'single');
+            NormVideo = zeros(redCoorY,redCoorX,sizeX(4),'single');
 
             %%A. CONVOLUTION. Runs the spike train across the stimulus videos, to
             %%extract noisy receptive field (because spike responses are noise).
             tic
             for i = 1:trialDivision:trials
 
-                videoTrials = zeros(coorRect(4)/10,coorRect(3)/10,sizeX(4),'single');
+                videoTrials = zeros(redCoorY,redCoorX,sizeX(4),'single');
                 for j = 1:sizeX(4) %%Calculate video of unique trials
 
 
-                    xyScreen = zeros(coorRect(4)/10,coorRect(3)/10,"single");
+                    xyScreen = zeros(redCoorY,redCoorX,"single");
                     %matrixResp = zeros(coorRect(4),coorRect(3),nN,"single");
 
-                    centerX = ChangePosX(i,j)/10;
-                    centerY = ChangePosY(i,j)/10;
+                    centerX = ChangePosX(i,j)/reduceFactor;
+                    centerY = ChangePosY(i,j)/reduceFactor;
                     radius = sizeV(i)/2;
 
                     % Calculate the distance of each point from the center
                     distances = sqrt((x - centerX).^2 + (y - centerY).^2);
 
                     % Set the values inside the circle to 1 (or any other value you prefer)
-                    xyScreen(distances <= radius/10) = 1;
+                    xyScreen(distances <= radius/reduceFactor) = 1;
 
                     videoTrials(:,:,j) = xyScreen;
                     %figure;imagesc(xyScreen);
                 end
 
-                spikeMean = mean(spikeSum(i:i+trialDivision-1,:,:)-spkRateBM); %Get the mean across same trials and substract the baseline
-                Co = zeros(coorRect(4)/10,coorRect(3)/10,sizeX(4),length(respU),'single');
+                %spikeMean = mean(spikeSum(i:i+trialDivision-1,:,:)-spkRateBM);
+                spikeMean = mean(spikeSum(i:i+trialDivision-1,:,:));%Get the mean across same trials and substract the baseline
+                Co = zeros(redCoorY,redCoorX,sizeX(4),length(respU),'single');
 
 
                 for u = 1:length(respU)
@@ -1619,11 +1618,23 @@ for convNeuron = 1
             end
             toc
 
+            L = size(spikeSum,3);
+            time_zero_index = ceil(L / 2);
+
+
             save(sprintf('RFuC-%s',NP.recordingName),'RFu','-v7.3')
             save(sprintf('RFuDirC-%s',NP.recordingName),'RFuDir','-v7.3')
             save(sprintf('RFuSizeC-%s',NP.recordingName),'RFuSize','-v7.3')
             save(sprintf('RFuSpeedC-%s',NP.recordingName),'RFuSpeed','-v7.3')
             save(sprintf('NormVideo-%s',NP.recordingName),'NormVideo','-v7.3')
+% 
+%             testRFU = squeeze(RFuSize(1,:,:,:,4));
+% 
+%             max(testRFU,[],'all')
+% 
+%             figure;imagesc(squeeze(spikeSum(:,1,:)));
+% 
+%             implay(testRFU);
 
         else
 
