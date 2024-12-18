@@ -25,14 +25,15 @@ pv27 = [8 9 10 11 12 13 14];
 noEyeMoves = 0;
 newDiode =0;
 GoodRecordingsPV =[1:20,40:43];
-GoodRecordingsRF = [1:20,40:48];
+GoodRecordingsRF = [16:20,40:48];
+
 %Plot specific neurons
  
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex = GoodRecordingsPVRF %1:size(data,1)
+for ex = GoodRecordingsRF %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -1458,8 +1459,19 @@ end
 for convNeuron = 1
     if ReceptiveFieldConvolutions ==1
 
+        pvalTi= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
+
+        respU = find(pvalTi <0.05);
+
+        if ~isempty(respU)
+
+
         if ~isfile(sprintf('RFuC-%s.mat',NP.recordingName)) || repeatConv%exist
             %%A. CONVOLUTION SETUP
+            %%%%%%%%%%Load responsive neurons
+
+
+
             %%%%%%%%%%Load X and Y ball positions
             Xpos = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballTrajectoriesX'))));
 
@@ -1510,10 +1522,7 @@ for convNeuron = 1
 
             sizesU = unique(sizeV);
 
-            %%%%%%%%%%Load responsive neurons
-            pvalTi= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
-
-            respU = find(pvalTi <0.05);
+            
 
 
             spikeSum = zeros(size(Mr,1),length(respU),sizeX(4),'single');
@@ -1642,6 +1651,8 @@ for convNeuron = 1
             RFuDir = load(sprintf('RFuDirC-%s',NP.recordingName),'RFuDir').RFuDir;
             RFuSize =  load(sprintf('RFuSizeC-%s',NP.recordingName),'RFuSize').RFuSize;
             RFuSpeed = load(sprintf('RFuSpeedC-%s',NP.recordingName),'RFuSpeed').RFuSpeed;
+
+        end
 
         end
 

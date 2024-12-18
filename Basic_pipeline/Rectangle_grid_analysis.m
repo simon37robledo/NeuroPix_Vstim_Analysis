@@ -7,7 +7,7 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
-plotRasters =1;
+plotRasters =0;
 heatMap = 0;
 ex=1;
 responseDo = 1;
@@ -21,7 +21,7 @@ repeatShuff =0;
 GoodRecordingsPV =[1:20,40:43];
 
 %%
-for ex = selecN{2}(1)%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
+for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -330,16 +330,28 @@ for ex = selecN{2}(1)%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
         end
 
 
-        %%%Spatial tuning:
+        %%% %Spatial tuning:
 
-        [PreferDir ind]= max(abs(NeuronVals(:,:,1)),[],2);
+        boot_means = load(sprintf('RectGrid-Base-Boot-1000-%s',NP.recordingName)).boot_means; 
+        ZScoreU = zeros(length(unique(seqMatrix)),size(goodU,2));
+
+        N_bootstrap = 1000;
+ 
+        for u = 1:size(goodU,2)
+
+            response = mean(reshape(squeeze(NeuronVals(u,:,1)),[nSize size(NeuronVals,2)/nSize])); %Take the mean across all sizes: 
+
+            ZScoreU(:,u) = (response-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
+
+        end
+
+        [PreferPos ind]= max(abs(ZScoreU),[],1);
 
         SpaTuning = zeros(1,size(goodU,2));
 
         for u =1:size(goodU,2)
-            responses = abs(NeuronVals(u,:,1));
 
-            SpaTuning(u) = 1- mean(responses(:,setdiff(1:size(responses,2), ind(u))))./abs(PreferDir(u));
+            SpaTuning(u) = 1- mean(abs(ZScoreU(setdiff(1:size(ZScoreU,1), ind(u)),u)))./abs(PreferPos(u));
         end
 
         save(sprintf('Spatial-Tuning_index-RG-%s',NP.recordingName),"SpaTuning")
