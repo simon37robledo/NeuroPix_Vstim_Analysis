@@ -673,17 +673,17 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
             X1 = round(rect.VSMetaData.allPropVal{prop,1}.X1(C(i,2)));
             X3 = round(rect.VSMetaData.allPropVal{prop,1}.X3(C(i,2)));
             X4 = round(rect.VSMetaData.allPropVal{prop,1}.X4(C(i,2)));
-            X = [X1,X2,X3,X4];
+            X = [X1,X2,X3,X4]./reduF;
 
             Y4 = round(rect.VSMetaData.allPropVal{prop,1}.Y4(C(i,2)));
             Y1 = round(rect.VSMetaData.allPropVal{prop,1}.Y1(C(i,2)));
             Y3 = round(rect.VSMetaData.allPropVal{prop,1}.Y3(C(i,2)));
             Y2 = round(rect.VSMetaData.allPropVal{prop,1}.Y2(C(i,2)));
-            Y = [Y1,Y2,Y3,Y4];
+            Y = [Y1,Y2,Y3,Y4]./reduF;
 
-            mask = poly2mask(X, Y, screenSide, screenSide);
+            mask = poly2mask(X, Y, screenRed, screenRed);
             xyScreen(mask) =1;
-            %figure;imagesc(xyScreen)
+            figure;imagesc(xyScreen)
 
             VideoScreen(:,:,j) = xyScreen;
 
