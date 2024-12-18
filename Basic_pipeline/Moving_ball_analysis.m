@@ -146,6 +146,7 @@ for ex = GoodRecordingsRF %1:size(data,1)
     direcN = length(unique(directions));
     speedN = length(unique(speeds));
     sizeN = length(unique(sizes));
+    uSize = unique(sizes);
     orientN = length(unique(orientations));
     nT = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'nTotTrials'))));
     trialDivision = nT/(offsetN*direcN*speedN*sizeN*orientN); %Number of trials per unique conditions
@@ -468,20 +469,6 @@ if ZscoresDo ==1
     end
 
     save(sprintf('tuningC-%s',NP.recordingName),"tuningCurve")
-
-    %%%Spatial tuning:
-
-    [PreferDir ind]= max(abs(NeuronVals(:,:,1)),[],2);
-
-    SpaTuning = zeros(1,size(goodU,2));
-
-    for u =1:size(goodU,2)
-        responses = abs(NeuronVals(u,:,1));
-
-        SpaTuning(u) = 1- mean(responses(:,setdiff(1:size(responses,2), ind(u))))./abs(PreferDir(u));
-    end
-
-    save(sprintf('Spatial-Tuning_index-MB-%s',NP.recordingName),"SpaTuning")
 
     
 for Shuffle =1
@@ -1657,7 +1644,45 @@ for convNeuron = 1
         end
 
         end
+end
+
+
+%%%%%%%%%%%%%%Spatial tuning
+for spatun =1
+    if spatialTuning ==1
+
+        boot_means = load(sprintf('MovBall-Base-Boot-1000-%s',NP.recordingName)).boot_means;
+        RFuSize =  load(sprintf('RFuSizeC-%s',NP.recordingName),'RFuSize').RFuSize;
+
+        uSize
+
+        ZScoreU = zeros(length(unique(seqMatrix)),size(goodU,2));
+
+
+        N_bootstrap = 1000;
+
+        for u = 1:size(goodU,2)
+
+            response = mean(reshape(squeeze(NeuronVals(u,:,1)),[nSize size(NeuronVals,2)/nSize])); %Take the mean across all sizes:
+
+            ZScoreU(:,u) = (response-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
+
+        end
+
+        [PreferPos ind]= max(abs(ZScoreU),[],1);
+
+        SpaTuning = zeros(1,size(goodU,2));
+
+        for u =1:size(goodU,2)
+
+            SpaTuning(u) = 1- mean(abs(ZScoreU(setdiff(1:size(ZScoreU,1), ind(u)),u)))./abs(PreferPos(u));
+        end
+
+        save(sprintf('Spatial-Tuning_index-RG-%s',NP.recordingName),"SpaTuning")
+
     end
+
+end
 end
 
 

@@ -8,7 +8,7 @@ data = readtable(excelFile);
 
 %Optionall
 plotRasters =0;
-heatMap = 0;
+heatMap = 1;
 ex=1;
 responseDo = 1;
 redoResp =0;
