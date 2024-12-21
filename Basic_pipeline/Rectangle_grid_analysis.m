@@ -9,7 +9,8 @@ data = readtable(excelFile);
 %Optionall
 plotRasters =0;
 heatMap = 1;
-plotHeatMap =1;
+plotHeatMap =0;
+calculateEntropy =1;
 ex=1;
 responseDo = 1;
 redoResp =1;
@@ -19,11 +20,11 @@ newDiode =0;
 Shuffling_baseline=0;
 repeatShuff =0;
 
-GoodRecordingsPV =[1:20,40:43];
+GoodRecordingsPV =[15:20,40:43];
 SpatialTuning = 0;
 
 %%
-for ex = 20%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
+for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -689,18 +690,32 @@ for ex = 20%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
             VideoScreen(:,:,j) = xyScreen';
             
         elseif nSize ==1 %%Add the possibility of several sizes but square.
+            try %New format
+                X2 = round(rect.VSMetaData.allPropVal{prop,1}.X2{1}(C(i,2)));
+                X1 = round(rect.VSMetaData.allPropVal{prop,1}.X1{1}(C(i,2)));
+                X3 = round(rect.VSMetaData.allPropVal{prop,1}.X3{1}(C(i,2)));
+                X4 = round(rect.VSMetaData.allPropVal{prop,1}.X4{1}(C(i,2)));
+                X = [X1,X2,X3,X4]./reduF;
 
-            X2 = round(rect.VSMetaData.allPropVal{prop,1}.X2{1}(C(i,2)));
-            X1 = round(rect.VSMetaData.allPropVal{prop,1}.X1{1}(C(i,2)));
-            X3 = round(rect.VSMetaData.allPropVal{prop,1}.X3{1}(C(i,2)));
-            X4 = round(rect.VSMetaData.allPropVal{prop,1}.X4{1}(C(i,2)));
-            X = [X1,X2,X3,X4]./reduF;
+                Y4 = round(rect.VSMetaData.allPropVal{prop,1}.Y4{1}(C(i,2)));
+                Y1 = round(rect.VSMetaData.allPropVal{prop,1}.Y1{1}(C(i,2)));
+                Y3 = round(rect.VSMetaData.allPropVal{prop,1}.Y3{1}(C(i,2)));
+                Y2 = round(rect.VSMetaData.allPropVal{prop,1}.Y2{1}(C(i,2)));
+                Y = [Y1,Y2,Y3,Y4]./reduF;
+            catch %old format
+                X2 = round(rect.VSMetaData.allPropVal{prop,1}.X2(C(i,2)));
+                X1 = round(rect.VSMetaData.allPropVal{prop,1}.X1(C(i,2)));
+                X3 = round(rect.VSMetaData.allPropVal{prop,1}.X3(C(i,2)));
+                X4 = round(rect.VSMetaData.allPropVal{prop,1}.X4(C(i,2)));
+                X = [X1,X2,X3,X4]./reduF;
 
-            Y4 = round(rect.VSMetaData.allPropVal{prop,1}.Y4{1}(C(i,2)));
-            Y1 = round(rect.VSMetaData.allPropVal{prop,1}.Y1{1}(C(i,2)));
-            Y3 = round(rect.VSMetaData.allPropVal{prop,1}.Y3{1}(C(i,2)));
-            Y2 = round(rect.VSMetaData.allPropVal{prop,1}.Y2{1}(C(i,2)));
-            Y = [Y1,Y2,Y3,Y4]./reduF;
+                Y4 = round(rect.VSMetaData.allPropVal{prop,1}.Y4(C(i,2)));
+                Y1 = round(rect.VSMetaData.allPropVal{prop,1}.Y1(C(i,2)));
+                Y3 = round(rect.VSMetaData.allPropVal{prop,1}.Y3(C(i,2)));
+                Y2 = round(rect.VSMetaData.allPropVal{prop,1}.Y2(C(i,2)));
+                Y = [Y1,Y2,Y3,Y4]./reduF;
+
+            end
 
             mask = poly2mask(X, Y, screenRed, screenRed)';
             xyScreen(mask) =1;
@@ -757,7 +772,7 @@ for ex = 20%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %figure;imagesc(normRFu(:,:,21))
 
     save(sprintf('RFuStatic-%s',NP.recordingName),"normRFu")
-%%
+
     if plotHeatMap
          eNeuron =[13 25];%selecN{1}(2,selecN{1}(1,:)==ex);
          cd(NP.recordingDir)
@@ -786,6 +801,35 @@ for ex = 20%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
 
 
          end
+
+    end
+%
+    if calculateEntropy ==1
+
+         entropies = zeros(1,nN);
+
+            for u = 1:nN
+
+                
+                M = squeeze(normRFu(:,:,u));
+
+              
+                % Normalize to create a probability distribution
+                M = M / sum(M(:));
+
+                % Convert to an image-like format and calculate entropy
+                % (scale to [0, 1] for compatibility with `entropy`)
+                P_scaled = mat2gray(M);
+%                 P_scaled = zeros(size(M));
+%                 P_scaled(1,1) = 1;
+                entropies(u) = entropy(P_scaled);
+            end
+
+            cd(NP.recordingDir)
+            %sign = 0.005;
+            save(sprintf('Entropies-RG-RF-respU-%s.mat',NP.recordingName),'entropies')
+
+
 
     end
 
