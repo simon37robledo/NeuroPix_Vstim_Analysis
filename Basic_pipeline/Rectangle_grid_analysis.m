@@ -9,9 +9,10 @@ data = readtable(excelFile);
 %Optionall
 plotRasters =0;
 heatMap = 1;
+plotHeatMap =1;
 ex=1;
 responseDo = 1;
-redoResp =0;
+redoResp =1;
 
 newDiode =0;
 
@@ -19,9 +20,10 @@ Shuffling_baseline=0;
 repeatShuff =0;
 
 GoodRecordingsPV =[1:20,40:43];
+SpatialTuning = 0;
 
 %%
-for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
+for ex = 20%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -332,6 +334,8 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
 
         %%% %Spatial tuning:
 
+        if SpatialTuning ==1
+
         boot_means = load(sprintf('RectGrid-Base-Boot-1000-%s',NP.recordingName)).boot_means; 
         ZScoreU = zeros(length(unique(seqMatrix)),size(goodU,2));
 
@@ -355,6 +359,8 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
         end
 
         save(sprintf('Spatial-Tuning_index-RG-%s',NP.recordingName),"SpaTuning")
+
+        end
 
         if Shuffling_baseline
 
@@ -451,14 +457,11 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
 
             trialsPerCath = length(seqMatrix)/(length(unique(seqMatrix)));
 
-
- 
-
             posX = squeeze(NeuronVals(:,:,3));
             posY = squeeze(NeuronVals(:,:,2));
 
             eNeuron = 1:length(goodU);
-            eNeuron =selecN{1}(2);
+            eNeuron =[13 25];;%selecN{1}(2,selecN{1}(1,:)==ex);
 
             [respVal respVali]= max(NeuronVals(:,:,1),[],2);
 
@@ -494,17 +497,18 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
                 j=1;
                 for i = 1:trialsPerCath/mergeTrials:T
                     %Build raster
-                    M = Mr2(i:min(i+trialsPerCath/mergeTrials-1, end),:);
+                    M = Mr2(i:min(i+trialsPerCath/mergeTrials-1, end),:).*(1000/bin);
                     [nTrials,nTimes]=size(M);
                     nexttile
                     imagesc((1:nTimes),1:nTrials,squeeze(M));colormap(flipud(gray(64)));
                     xline(preBase/bin, '--', LineWidth=2, Color="#77AC30");
                     xline((stimDur+preBase)/bin, '--', LineWidth=2, Color="#0072BD");
                     xticks([preBase/bin (round(stimDur/100)*100+preBase)/bin]);
+                    xticklabels(xticks*bin)
                     if nSize >1
                         yline([trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials-1]+0.5,LineWidth=1)
                     end
-                    caxis([0 max(Mr2,[],'all')]);
+                    caxis([0 max(Mr2,[],'all').*(1000/bin)]);
                     set(gca,'YTickLabel',[]);
 
                     if i < T - (trialsPerCath/mergeTrials)*max(positionsMatrix(:))-1
@@ -512,20 +516,34 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
 
                     end
 
+                    %
+                    %                     if posX(u,j) == NeuronVals(u,respVali(u),3) & posY(u,j) == NeuronVals(u,respVali(u),2)
+                    %                         rectangle('Position', [round(posX(u,j)/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
+                    %                             'EdgeColor', 'r', 'LineWidth', 1.5,'LineStyle','-.');
+                    %                     else
+                    %                         rectangle('Position', [round(posX(u,j)/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
+                    %                             'EdgeColor', 'b', 'LineWidth', 1,'LineStyle','-.');
+                    %                     end
 
+                    offsetR = 300;
                     if posX(u,j) == NeuronVals(u,respVali(u),3) & posY(u,j) == NeuronVals(u,respVali(u),2)
-                        rectangle('Position', [round(posX(u,j)/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
+                        rectangle('Position', [round(offsetR/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
                             'EdgeColor', 'r', 'LineWidth', 1.5,'LineStyle','-.');
                     else
-                        rectangle('Position', [round(posX(u,j)/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
-                            'EdgeColor', 'b', 'LineWidth', 1,'LineStyle','-.');
+%                         rectangle('Position', [round(offsetR/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
+%                             'EdgeColor', 'b', 'LineWidth', 1,'LineStyle','-.');
                     end
+
 
                     j = j+1;
                 end
                 fig = gcf;
                 set(fig, 'Color', 'w');
-                colorbar
+                c = colorbar;
+
+                ylabel(c, 'spikes/sec','FontSize',10);
+                %c.Ticks = [0 round((max(Mr2,[],'all')/2)) round(max(Mr2,[],'all'))];
+                %c.TickLabels = [0 round((max(Mr2,[],'all')/2)*1000/bin) round(max(Mr2,[],'all')*1000/bin)];
 
                 %%Testing max window selec
 % 
@@ -546,7 +564,8 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
                 % Set the color of the figure and axes to black
                 title(t,sprintf('Rect-GRid-raster-U%d',u))
                 ylabel(t,sprintf('%d trials',nTrials*mergeTrials))
-                fig.Position =  [147    58   994   658];
+                xlabel(t,'Time (ms)')
+                fig.Position =  [147   270   662   446];%[147    58   994   658];
                 %prettify_plot
                 print(fig,sprintf('%s-rect-GRid-raster-U%d.png',NP.recordingName,u),'-dpng')
                 close
@@ -555,7 +574,7 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
 
         end
     end
-
+%
     if heatMap ==1
     % Build heat map
 
@@ -567,11 +586,12 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
 
     trialDiv  = length(seqMatrix)/length(unique(seqMatrix))/nSize;
 
-    offsetR=400; %ms for offset response
+    offsetR=300;
+    duration = 300;%ms for offset response
 
     bin =1;
-    [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round(stimDur)/bin);
-    [Mro] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+stimDur)/bin),round(stimInter)/bin);
+    [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+offsetR)/bin),round(duration)/bin);
+    [Mro] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+stimDur)/bin),round(duration)/bin);
 
     [nT,nN,NB] = size(Mr);
     [nTo,nNo,NBo] = size(Mro);
@@ -604,7 +624,7 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
 
     Nbase = mean(Mb,[1 3]);
 
-    MrMean = mean(MrC,3)-Nbase;
+    MrMean = mean(MrC,3);%-Nbase;
 
     cd(NP.recordingDir + "\Figs")
 %     respU = [138,134,127,124,123,121,118,112]; %PV67-1 %check Offset response also.
@@ -637,7 +657,7 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
 
         xyScreen = zeros(screenRed,screenRed)'; %%Make calculations if sizes>1 and if experiment is new and the shape is a circle.
 
-        if nSize>1 && string(rect.VSMetaData.allPropVal{7}) == "circle"
+        if string(rect.VSMetaData.allPropVal{find(strcmp(rect.VSMetaData.allPropName,'shape'))}) == "circle"  %%%Check
             
             Xc = round((rect.VSMetaData.allPropVal{prop,1}.X2{1,C(i,3)}(C(i,2))-rect.VSMetaData.allPropVal{prop,1}.X1{1,C(i,3)}(C(i,2)))/2)+rect.VSMetaData.allPropVal{prop,1}.X1{1,C(i,3)}(C(i,2));%...
             %-min(rect.VSMetaData.allPropVal{21,1}.Y2{1,4},[],'all'))+conversion;
@@ -665,25 +685,26 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
             %                 hold on; plot(rect.VSMetaData.allPropVal{21,1}.X4{1,C(i,3)}(C(i,2)),rect.VSMetaData.allPropVal{21,1}.Y4{1,C(i,3)}(C(i,2)),points{C(i,3)},MarkerSize=10)%,...
             %                 hold on; plot(Xc,Yc,points{C(i,3)},MarkerSize=10);
 
-            VideoScreen(:,:,j) = xyScreen;
-
+            %figure;imagesc(xyScreen')
+            VideoScreen(:,:,j) = xyScreen';
+            
         elseif nSize ==1 %%Add the possibility of several sizes but square.
 
-            X2 = round(rect.VSMetaData.allPropVal{prop,1}.X2(C(i,2)));
-            X1 = round(rect.VSMetaData.allPropVal{prop,1}.X1(C(i,2)));
-            X3 = round(rect.VSMetaData.allPropVal{prop,1}.X3(C(i,2)));
-            X4 = round(rect.VSMetaData.allPropVal{prop,1}.X4(C(i,2)));
+            X2 = round(rect.VSMetaData.allPropVal{prop,1}.X2{1}(C(i,2)));
+            X1 = round(rect.VSMetaData.allPropVal{prop,1}.X1{1}(C(i,2)));
+            X3 = round(rect.VSMetaData.allPropVal{prop,1}.X3{1}(C(i,2)));
+            X4 = round(rect.VSMetaData.allPropVal{prop,1}.X4{1}(C(i,2)));
             X = [X1,X2,X3,X4]./reduF;
 
-            Y4 = round(rect.VSMetaData.allPropVal{prop,1}.Y4(C(i,2)));
-            Y1 = round(rect.VSMetaData.allPropVal{prop,1}.Y1(C(i,2)));
-            Y3 = round(rect.VSMetaData.allPropVal{prop,1}.Y3(C(i,2)));
-            Y2 = round(rect.VSMetaData.allPropVal{prop,1}.Y2(C(i,2)));
+            Y4 = round(rect.VSMetaData.allPropVal{prop,1}.Y4{1}(C(i,2)));
+            Y1 = round(rect.VSMetaData.allPropVal{prop,1}.Y1{1}(C(i,2)));
+            Y3 = round(rect.VSMetaData.allPropVal{prop,1}.Y3{1}(C(i,2)));
+            Y2 = round(rect.VSMetaData.allPropVal{prop,1}.Y2{1}(C(i,2)));
             Y = [Y1,Y2,Y3,Y4]./reduF;
 
-            mask = poly2mask(X, Y, screenRed, screenRed);
+            mask = poly2mask(X, Y, screenRed, screenRed)';
             xyScreen(mask) =1;
-            figure;imagesc(xyScreen)
+            %figure;imagesc(xyScreen)
 
             VideoScreen(:,:,j) = xyScreen;
 
@@ -718,39 +739,58 @@ for ex = 20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     Res = reshape(MrMean,[1,1,size(MrMean,1),nN]);
 
     RFu = squeeze(sum(VD.*Res,3));
+ 
 
-    figure;imagesc(normRFu(:,:,51))
+    %%%Calculate Z-score of responses 
+    N_bootstrap = 1000;
+    cd(NP.recordingDir)
 
-    normMatrix = repmat(pxyScreen,[1,1,nN]).*reshape(Nbase,[1,1,nN]);
+    boot_means = load(sprintf('RectGrid-Base-Boot-1000-%s',NP.recordingName)).boot_means;
+    normMatrixMean = repmat(pxyScreen,[1,1,nN]).*reshape(Nbase,[1,1,nN]);
+    normMatrixSTD = repmat(pxyScreen,[1,1,nN]).*((reshape(std(Nb2),[1,1,nN]))+eps);%&+1/(nT));
 
-    normRFu = RFu./normMatrix;
+    %normRFu = (RFu-repmat(pxyScreen,[1,1,nN]).*mean)./normMatrix;
+
+    normRFu = (RFu-normMatrixMean)./normMatrixSTD;
+    %normRFu = (RFu)./repmat(pxyScreen,[1,1,nN]);
+
+    %figure;imagesc(normRFu(:,:,21))
 
     save(sprintf('RFuStatic-%s',NP.recordingName),"normRFu")
+%%
+    if plotHeatMap
+         eNeuron =[13 25];%selecN{1}(2,selecN{1}(1,:)==ex);
+         cd(NP.recordingDir)
+         %Parameters
+         eye_to_monitor_distance = 21.5; % Distance from eye to monitor in cm
+         pixel_size = 33/(1080/reduF); % Size of one pixel in cm (e.g., 25 micrometers)
+         monitor_resolution = [screenRed, screenRed]; % Width and height in pixels
+         [theta_x theta_y] = pixels2eyeDegrees(eye_to_monitor_distance,pixel_size,monitor_resolution);
+         
+         for u = eNeuron
+             fig = figure;imagesc(normRFu(:,:,u))
+             cd(NP.recordingDir)
+             colorbarMBlims = load(sprintf('%s-Unit-%d-MovBall-RFlims-Dirs.mat',NP.recordingName,u)).colorbarlims;
+             c = colorbar;title(c,'Z-score');caxis([0 6.2])
+             set(gcf,'Color','w')
+             colormap('jet')
+             xt = xticks;
+             xticklabels(round(theta_x(1,xt)))
+             yt = yticks;
+             yticklabels(round(theta_y(yt,1)))
+             xlabel('X degrees')
+             ylabel('Y degrees')
+             fig.Position = [ 527   511   455   360];
+             cd(NP.recordingDir+"\Figs")
+             print(gcf,sprintf('%s-Unit-%d-rectGrid-RF.png',NP.recordingName,u),'-dpng')
+
+
+         end
+
+    end
 
 
 
-
-
-%     epsilon = 0.01;
-% 
-%     denom = mad(Nb2(u),0)+epsilon; %mean(Mb,0)+epsilon; %
-% 
-%     % mSpk = mean(spkRateR);
-% 
-% %     M = ( MrMean(:,u)' - (Nbase(u) + MrMean(:,u)')./2)./denom;
-% 
-%     RFu = mean(bsxfun(@times, VideoScreen, reshape(M, 1, 1, [])),3);
-%     %figure;imagesc(RFu)
-%     fig = figure;imagesc(RFu./pxyScreen)
-%     caxis([0 0.02]);
-%     colorbar; max(RFu./pxyScreen,[],'all')
-%     xlabel('X pixels')
-%     ylabel('Y pixels')
-%     title(sprintf('RFu-%d-Static',u))
-%     prettify_plot
-% 
-%     print(fig,sprintf('%s-RFu-%d-Static.png',NP.recordingName,u),'-dpng')
-%     close
 
     end
 end

@@ -1,10 +1,10 @@
 
 
-%function EyePositionAnalysis(NP,divisions,varargin)%plots,newRun)
-divisions =15;
-newRun =1;
-plots=1;
-stimName = "MB";
+function EyePositionAnalysis(NP,divisions,varargin)%plots,newRun)
+% divisions =15;
+% newRun =1;
+% plots=1;
+% stimName = "MB";
 % Mandatory Inputs:
 %   NP - Neuropixels class
 %   divisions - Number of divisions for the grid. 
@@ -149,7 +149,7 @@ if plots ==1
 % Example data
 centers = [Data.center_x, Data.center_y]; % Replace with your X, Y data
 [X, Y] = meshgrid(grids, grids);
-%%
+
 figure;
 imagesc(croppedFrameC)
 % xlim([0 max(grid)])
@@ -164,7 +164,7 @@ xticks(grids)
 yticks(grids)
 axis equal;
 
-%%
+
 if length(stimType)> 1
 
     if nameStim == "OB"
@@ -450,7 +450,7 @@ else
     ylabel('Y Coordinate');
     axis equal;
 end
-%%
+
 scatter(meanCenter(1)-rectNew(1),meanCenter(2)-rectNew(2),25, 'filled','MarkerFaceColor','r')
 axis equal;
 %scatter(Data.center_x(indEC)-rectNew(1),Data.center_y(indEC)-rectNew(2),25, 'filled','MarkerFaceColor','w')
