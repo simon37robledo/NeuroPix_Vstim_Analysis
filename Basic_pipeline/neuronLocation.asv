@@ -10,7 +10,7 @@ function [Coor] = neuronLocation(NP,data_ex,goodU,plotN,plotIns,colors,Fig,newCo
 %%%goodU = TIC matrix
 %%%PlotN = plot neurons (logical)
 %%%PlotIns = plot insertions (logical)
-%%%samFig = 0 (plot new figure), 1 (
+%%%sameFig = 0 (plot new figure), 1 (
 
 
 if ~exist(string(NP.recordingDir)+filesep+string(NP.recordingName)+"_g0_tcat.imec0.ap_kilosortChanMap.mat")
@@ -72,6 +72,10 @@ if (plotN || plotIns) && isempty(Fig)
     offsetTextX = -1.3;
     offsetTextY = 0;
     offsetTextZ = 1;
+
+else
+
+    figure(Fig)
 
 end
 
@@ -179,7 +183,7 @@ if ~isfile(sprintf('Insertion_coordinates-%s.mat',NP.recordingName)) || newCoor
             uY(2,u) = (uYvert*100)+cos(deg2rad(data_ex.Angle))*(uZvert); %Y  of unit along in standard coor in uM
 
             if plotN
-                if sameFig
+                if ~isempty(Fig) 
                     hold on
                 end
                 try

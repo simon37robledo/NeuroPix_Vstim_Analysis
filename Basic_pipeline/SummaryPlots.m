@@ -34,14 +34,19 @@ zscoreMB= cell(1,length(GoodRecordings));%14
 MBsig =1; 
 RGsig =0;
 bothSig = 0;
-
 allN = 0;
-
+noEyeMoves = 0;
 AllParams = cell(3,14);
+
+close all
+
+sign = 0.05;
 
 N_bootstrap = 1000;
 
-for ex = GoodRecordings
+j = 1;
+
+for ex = 40:43%GoodRecordings
 
      path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
@@ -84,38 +89,64 @@ for ex = GoodRecordings
         if MBsig
 
 
-            sign = '0.005';
-            zscoreMB{i} = ZscoreNeuronsMB(respNeuronsMB<0.005);
+            %sign = '0.005';
+            zscoreMB{i} = ZscoreNeuronsMB(respNeuronsMB<sign);
             uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
             [preferDir dirInd] = max(tuningCurve,[],2);
-            PreferAngle{i} = preferDir(respNeuronsMB<0.005);
-            RespMB{i} = max(NeuronValsMB(respNeuronsMB<0.005,:,4),[],2)';
-            NeuronNMB{i} = find(respNeuronsMB<0.005);
+            PreferAngle{i} = preferDir(respNeuronsMB<sign);
+            RespMB{i} = max(NeuronValsMB(respNeuronsMB<sign,:,4),[],2)';
+            NeuronNMB{i} = find(respNeuronsMB<sign);
             %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
-            pvalsMB{i} = respNeuronsMB(respNeuronsMB<0.005);
-            SpatialMB{i} = spaTuningMB(respNeuronsMB<0.005);
-            try
-            EntropMB{i} = load(sprintf('NEM-Entropies-MB-RF-respU-%s-%s.mat',sign,NP.recordingName)).entropies;
-            catch
-            EntropMB{i} = [];
+            pvalsMB{i} = respNeuronsMB(respNeuronsMB<sign);
+            SpatialMB{i} = spaTuningMB(respNeuronsMB<sign);
+            
+            if noEyeMoves
+                try
+                    EntropMB{i} = load(sprintf('NEM-Entropies-MB-RF-respU-%s-%s.mat',sign,NP.recordingName)).entropies;
+                catch
+                    EntropMB{i} = [];
+                end
+            else
+                try
+                    EntropMB{i} = load(sprintf('Entropies-MB-RF-respU-%s-%s.mat',sign,NP.recordingName)).entropies;
+                catch
+                    EntropMB{i} = [];
+                end
+
             end
-            %DepthUnit{i} = 
+
+            %DepthUnit{i} =
             colors = repmat([0 0 0],size(goodU,2),1);
-            [Coor] = neuronLocation(NP,data(ex,:),goodU(:,respNeuronsMB<0.005),1,0,colors, 0, 1);
+            if sum(respNeuronsMB<0.005) >0
+                if j ==1
+                    [Coor, Fig] = neuronLocation(NP,data(ex,:),goodU(:,respNeuronsMB<sign),1,0,colors, [], 1);
+
+                else
+
+                    [Coor,~] = neuronLocation(NP,data(ex,:),goodU(:,respNeuronsMB<sign),1,0,colors, Fig, 1);
+
+                end
+                j =j+1;
+
+            end
+
+
+
+      
 
         end
 
         if RGsig
 
-            zscoreMB{i} = ZscoreNeuronsMB(respNeuronsRG<0.005);
+            zscoreMB{i} = ZscoreNeuronsMB(respNeuronsRG<sign);
             uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
             [preferDir dirInd] = max(tuningCurve,[],2);
             PreferAngle{i} = preferDir;
-            RespMB{i} = max(NeuronValsMB(respNeuronsRG<0.005,:,4),[],2)';
-            NeuronNMB{i} = find(respNeuronsRG<0.005);
+            RespMB{i} = max(NeuronValsMB(respNeuronsRG<sign,:,4),[],2)';
+            NeuronNMB{i} = find(respNeuronsRG<sign);
             %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
-            pvalsMB{i} = respNeuronsRG(respNeuronsRG<0.005);
-            SpatialMB{i} = spaTuningMB(respNeuronsRG<0.005);
+            pvalsMB{i} = respNeuronsRG(respNeuronsRG<sign);
+            SpatialMB{i} = spaTuningMB(respNeuronsRG<sign);
 
         end
         if allN
@@ -134,15 +165,15 @@ for ex = GoodRecordings
 
         if bothSig
 
-            zscoreMB{i} = ZscoreNeuronsMB(respNeuronsRG<0.005 & respNeuronsMB<0.005);
+            zscoreMB{i} = ZscoreNeuronsMB(respNeuronsRG<sign & respNeuronsMB<sign);
             uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
             [preferDir dirInd] = max(tuningCurve,[],2);
             PreferAngle{i} = preferDir;
-            RespMB{i} = max(NeuronValsMB(respNeuronsRG<0.005 & respNeuronsMB<0.005,:,4),[],2)';
+            RespMB{i} = max(NeuronValsMB(respNeuronsRG<sign & respNeuronsMB<sign,:,4),[],2)';
             NeuronNMB{i} = find(respNeuronsRG<0.005 & respNeuronsMB<0.005);
             %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
-            pvalsMB{i} = respNeuronsRG(respNeuronsRG<0.005 & respNeuronsMB<0.005);
-            SpatialMB{i} = spaTuningMB(respNeuronsRG<0.005 & respNeuronsMB<0.005);
+            pvalsMB{i} = respNeuronsRG(respNeuronsRG<sign & respNeuronsMB<sign);
+            SpatialMB{i} = spaTuningMB(respNeuronsRG<sign & respNeuronsMB<sign);
 
 
         end
@@ -170,23 +201,37 @@ for ex = GoodRecordings
         
         if MBsig
             
-            RespRG{i} = (max(NeuronValsRG(respNeuronsMB<0.005,:,4),[],2))';
-            pvalsRG{i} = respNeuronsRG(respNeuronsMB<0.005);
-            SpatialRG{i} = spaTuningRG(respNeuronsMB<0.005);
-            NeuronNRG{i} = find(respNeuronsMB<0.005);
-            zscoreRG{i} = ZscoreNeuronsRG(respNeuronsMB<0.005);
-            entropiesRG = load(sprintf('NEM-Entropies-RG-RF-respU-%s.mat',NP.recordingName)).entropies;
+            RespRG{i} = (max(NeuronValsRG(respNeuronsMB<sign,:,4),[],2))';
+            pvalsRG{i} = respNeuronsRG(respNeuronsMB<sign);
+            SpatialRG{i} = spaTuningRG(respNeuronsMB<sign);
+            NeuronNRG{i} = find(respNeuronsMB<sign);
+            zscoreRG{i} = ZscoreNeuronsRG(respNeuronsMB<sign);
 
-            EntropRG{i} = entropiesRG(respNeuronsMB<0.005);
+            if noEyeMoves
+                try
+                    EntropRG{i} = load(sprintf('NEM-Entropies-RG-RF-respU-%s.mat',NP.recordingName)).entropies;
+                catch
+                    EntropRG{i} = [];
+                end
+            else
+                try
+                    EntropRG{i} = load(sprintf('Entropies-RG-RF-respU-%s-%s.mat',NP.recordingName)).entropies;
+                catch
+                    EntropRG{i} = [];
+                end
+                
+            end
+
+            EntropRG{i} = entropiesRG(respNeuronsMB<sign);
         end
 
 
         if RGsig
-            RespRG{i} = (max(NeuronValsRG(respNeuronsRG<0.005,:,4),[],2))';
-            pvalsRG{i} = respNeuronsRG(respNeuronsRG<0.005);
-            SpatialRG{i} = spaTuningRG(respNeuronsRG<0.005);
-            NeuronNRG{i} = find(respNeuronsRG<0.005);
-            zscoreRG{i} = ZscoreNeuronsRG(respNeuronsRG<0.005);
+            RespRG{i} = (max(NeuronValsRG(respNeuronsRG<sign,:,4),[],2))';
+            pvalsRG{i} = respNeuronsRG(respNeuronsRG<sign);
+            SpatialRG{i} = spaTuningRG(respNeuronsRG<sign);
+            NeuronNRG{i} = find(respNeuronsRG<sign);
+            zscoreRG{i} = ZscoreNeuronsRG(respNeuronsRG<sign);
         end
 
 
@@ -199,12 +244,12 @@ for ex = GoodRecordings
         end
 
         if bothSig
-            RespRG{i} = (max(NeuronValsRG(respNeuronsRG<0.005 & respNeuronsMB<0.005,:,4),[],2))';
-            pvalsRG{i} = respNeuronsRG(respNeuronsRG <0.005 & respNeuronsMB<0.005);
-            SpatialRG{i} = spaTuningRG(respNeuronsRG<0.005 & respNeuronsMB<0.005);
-            NeuronNRG{i} = find(respNeuronsRG<0.005 & respNeuronsMB<0.005);
-            zscoreRG{i} = ZscoreNeuronsRG(respNeuronsRG<0.005 & respNeuronsMB<0.005);
-             EntropRG{i} = entropiesRG(respNeuronsRG<0.005 & respNeuronsMB<0.005);
+            RespRG{i} = (max(NeuronValsRG(respNeuronsRG<sign & respNeuronsMB<sign,:,4),[],2))';
+            pvalsRG{i} = respNeuronsRG(respNeuronsRG <sign & respNeuronsMB<sign);
+            SpatialRG{i} = spaTuningRG(respNeuronsRG<sign & respNeuronsMB<sign);
+            NeuronNRG{i} = find(respNeuronsRG<sign & respNeuronsMB<sign);
+            zscoreRG{i} = ZscoreNeuronsRG(respNeuronsRG<sign & respNeuronsMB<sign);
+             EntropRG{i} = entropiesRG(respNeuronsRG<sign & respNeuronsMB<sign);
         end
 
     else

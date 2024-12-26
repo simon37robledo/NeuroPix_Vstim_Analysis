@@ -5,12 +5,12 @@
 % 
 % plotIns =1;
 
-function [Coor] = neuronLocation(NP,data_ex,goodU,plotN,plotIns,colors,Fig,newCoor)
+function [Coor, Fig] = neuronLocation(NP,data_ex,goodU,plotN,plotIns,colors,Fig,newCoor)
 %%%NP = neuropixels class
 %%%goodU = TIC matrix
 %%%PlotN = plot neurons (logical)
 %%%PlotIns = plot insertions (logical)
-%%%samFig = 0 (plot new figure), 1 (
+%%%Fig = figure of 3D brain on top of whcih to plot neurons or insertions.
 
 
 if ~exist(string(NP.recordingDir)+filesep+string(NP.recordingName)+"_g0_tcat.imec0.ap_kilosortChanMap.mat")
@@ -28,7 +28,7 @@ brain = stlread(path_Brain);
 if (plotN || plotIns) && isempty(Fig) 
     close all
 
-    figure;
+    Fig = figure;
     axes('Parent', gcf);
     hold on;
 
@@ -76,6 +76,9 @@ if (plotN || plotIns) && isempty(Fig)
 else
 
     figure(Fig)
+    sideview = [90 0];
+    topview = [-90 90];
+    frontview = [0 0];
 
 end
 
@@ -161,7 +164,7 @@ if ~isfile(sprintf('Insertion_coordinates-%s.mat',NP.recordingName)) || newCoor
         uY = zeros(2,size(goodU,2));
         uZ = zeros(2,size(goodU,2));
 
-        for u = 1:length(goodU)
+        for u = 1:size(goodU,2)
 
 
             %Main unit channel position
@@ -183,7 +186,7 @@ if ~isfile(sprintf('Insertion_coordinates-%s.mat',NP.recordingName)) || newCoor
             uY(2,u) = (uYvert*100)+cos(deg2rad(data_ex.Angle))*(uZvert); %Y  of unit along in standard coor in uM
 
             if plotN
-                if sameFig
+                if ~isempty(Fig) 
                     hold on
                 end
                 try
@@ -205,7 +208,7 @@ if ~isfile(sprintf('Insertion_coordinates-%s.mat',NP.recordingName)) || newCoor
             [repmat(max(z),[1 2]);repmat(max(z),[1 2])-sin(deg2rad(data_ex.Angle))*repmat(uZvert/100,[1 2])]}; %Z shank coordinates
 
         if plotIns
-            if sameFig
+            if ~isempty(Fig)
                 hold on
             end
 
@@ -254,7 +257,7 @@ if ~isfile(sprintf('Insertion_coordinates-%s.mat',NP.recordingName)) || newCoor
 
 
         if plotIns
-            if sameFig
+            if ~isempty(Fig)
                 hold on
             end
 
@@ -263,11 +266,11 @@ if ~isfile(sprintf('Insertion_coordinates-%s.mat',NP.recordingName)) || newCoor
         end
         
         if plotN
-            if sameFig
+            if ~isempty(Fig)
                 hold on
             end
 
-            for u = 1:length(goodU)
+            for u = 1:size(goodU,2)
 
                 scatter3(uX(1,u),uY(1,u),uZ(1,u),25,colors(u,:),'filled') 
 
