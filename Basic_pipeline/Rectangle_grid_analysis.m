@@ -13,8 +13,8 @@ plotHeatMap =0;
 calculateEntropy =1;
 ex=1;
 responseDo = 1;
-redoResp =1;
-
+redoResp =0;
+noEyeMoves = 1;
 newDiode =0;
 
 Shuffling_baseline=0;
@@ -23,8 +23,10 @@ repeatShuff =0;
 GoodRecordingsPV =[15:20,40:43];
 SpatialTuning = 0;
 
+Awake = [44:48];
+
 %%
-for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
+for ex = 44%GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -447,7 +449,7 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
             end
             cd(NP.recordingDir + "\Figs")
             
-            bin=50;
+            bin=30;
             win=stimDur+stimInter;
             preBase = round(stimInter/20)*10;
 
@@ -462,13 +464,13 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
             posY = squeeze(NeuronVals(:,:,2));
 
             eNeuron = 1:length(goodU);
-            eNeuron =[13 25];;%selecN{1}(2,selecN{1}(1,:)==ex);
+            eNeuron =[25];%selecN{1}(2,selecN{1}(1,:)==ex);
 
             [respVal respVali]= max(NeuronVals(:,:,1),[],2);
 
 
             for u =eNeuron%1:length(goodU)
-                t = tiledlayout(sqrt(max(seqMatrix)), sqrt(max(seqMatrix)),'TileSpacing','tight');
+                t = tiledlayout(sqrt(max(seqMatrix)), sqrt(max(seqMatrix)),'TileSpacing','compact');
 
 
              
@@ -509,7 +511,8 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
                     if nSize >1
                         yline([trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials-1]+0.5,LineWidth=1)
                     end
-                    caxis([0 max(Mr2,[],'all').*(1000/bin)]);
+                    %caxis([0 max(Mr2,[],'all').*(1000/bin)]);
+                    caxis([0 1]);
                     set(gca,'YTickLabel',[]);
 
                     if i < T - (trialsPerCath/mergeTrials)*max(positionsMatrix(:))-1
@@ -540,9 +543,9 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
                 end
                 fig = gcf;
                 set(fig, 'Color', 'w');
-                c = colorbar;
-
-                ylabel(c, 'spikes/sec','FontSize',10);
+%                 c = colorbar;
+% 
+%                 ylabel(c, 'spikes/sec','FontSize',10);
                 %c.Ticks = [0 round((max(Mr2,[],'all')/2)) round(max(Mr2,[],'all'))];
                 %c.TickLabels = [0 round((max(Mr2,[],'all')/2)*1000/bin) round(max(Mr2,[],'all')*1000/bin)];
 
@@ -596,27 +599,6 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
     [nT,nN,NB] = size(Mr);
     [nTo,nNo,NBo] = size(Mro);
-
-
-    MrC = zeros(round(nT/trialDiv),nN, NB+NBo);
-
-    %%Create summary of identical trials
-
-    for u = 1:length(goodU)
-        j=1;
-
-        for i = 1:trialDiv:nT
-
-            meanRon = mean(squeeze(Mr(i:i+trialDiv-1,u,:)));
-
-            meanRoff =  mean(squeeze(Mro(i:i+trialDiv-1,u,:)));
-
-            MrC(j,u,:) = [meanRon meanRoff]; %Combine on and off response
-
-            j = j+1;
-
-        end
-    end
    
 
     [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin));
@@ -625,7 +607,92 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
     Nbase = mean(Mb,[1 3]);
 
-    MrMean = mean(MrC,3);%-Nbase;
+    if noEyeMoves
+        % EyePositionAnalysis
+        % Create spike Sums with NaNs when the eye is not present.
+
+
+        file = dir (NP.recordingDir);
+        filenames = {file.name};
+        files= filenames(contains(filenames,"timeSnipsNoMov"));
+        cd(NP.recordingDir)
+        %Run eyePosition Analysis to find no movement timeSnips
+        timeSnips = load(files{2}).timeSnips;
+        timeSnipsMode = timeSnips(:,timeSnips(3,:) == mode(timeSnips(3,:)));
+
+        selecInd = [];
+        for i = 1:size(timeSnipsMode,2)
+
+            %Find stimOns and offs that are between each timeSnip
+            selecInd = [selecInd find(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
+        end
+
+        MrC = nan(round(nT/trialDiv),nN, NB+NBo);
+
+
+
+        %%Create summary of identical trials
+
+        MrMean = nan(round(nT/trialDiv),nN);
+
+        for u = 1:length(goodU)
+            j=1;
+
+            for i = 1:trialDiv:nT
+
+                indexVal = selecInd(selecInd>=i & selecInd<=i+trialDiv-1);
+
+                if ~isempty(indexVal)
+
+
+                    meanRon =  reshape(mean(Mr(indexVal,u,:),1),[1,size(Mr,3)]); 
+
+                    meanRoff =  reshape(mean(Mro(indexVal,u,:),1),[1,size(Mro,3)]);
+
+
+                    MrC(j,u,:) = [meanRon meanRoff]; %Combine on and off response
+
+                    MrMean(j,u) = mean(MrC(j,u,:),3);%-Nbase;
+
+                else
+                    2+2
+                end
+
+            
+                j = j+1;
+
+            end
+        end
+
+        2+2
+
+
+    else
+
+
+        MrC = zeros(round(nT/trialDiv),nN, NB+NBo);
+
+        %%Create summary of identical trials
+
+        for u = 1:length(goodU)
+            j=1;
+
+            for i = 1:trialDiv:nT
+
+                meanRon = mean(squeeze(Mr(i:i+trialDiv-1,u,:)));
+
+                meanRoff =  mean(squeeze(Mro(i:i+trialDiv-1,u,:)));
+
+                MrC(j,u,:) = [meanRon meanRoff]; %Combine on and off response
+
+                j = j+1;
+
+            end
+        end
+        
+        MrMean = mean(MrC,3);%-Nbase;
+
+    end
 
     cd(NP.recordingDir + "\Figs")
 %     respU = [138,134,127,124,123,121,118,112]; %PV67-1 %check Offset response also.
@@ -687,6 +754,7 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
             %                 hold on; plot(Xc,Yc,points{C(i,3)},MarkerSize=10);
 
             %figure;imagesc(xyScreen')
+
             VideoScreen(:,:,j) = xyScreen';
             
         elseif nSize ==1 %%Add the possibility of several sizes but square.
@@ -751,6 +819,10 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
     VD = repmat(VideoScreen,[1 1 1 nN]);
 
+    NanPos = isnan(MrMean);
+
+    MrMean(NanPos) = 0;
+
     Res = reshape(MrMean,[1,1,size(MrMean,1),nN]);
 
     RFu = squeeze(sum(VD.*Res,3));
@@ -760,7 +832,7 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
     N_bootstrap = 1000;
     cd(NP.recordingDir)
 
-    boot_means = load(sprintf('RectGrid-Base-Boot-1000-%s',NP.recordingName)).boot_means;
+    %boot_means = load(sprintf('RectGrid-Base-Boot-1000-%s',NP.recordingName)).boot_means;
     normMatrixMean = repmat(pxyScreen,[1,1,nN]).*reshape(Nbase,[1,1,nN]);
     normMatrixSTD = repmat(pxyScreen,[1,1,nN]).*((reshape(std(Nb2),[1,1,nN]))+eps);%&+1/(nT));
 
@@ -772,21 +844,32 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
     %figure;imagesc(normRFu(:,:,21))
 
     save(sprintf('RFuStatic-%s',NP.recordingName),"normRFu")
+%&
 
     if plotHeatMap
-         eNeuron =[13 25];%selecN{1}(2,selecN{1}(1,:)==ex);
+         eNeuron =[72];%selecN{1}(2,selecN{1}(1,:)==ex);
          cd(NP.recordingDir)
          %Parameters
          eye_to_monitor_distance = 21.5; % Distance from eye to monitor in cm
          pixel_size = 33/(1080/reduF); % Size of one pixel in cm (e.g., 25 micrometers)
          monitor_resolution = [screenRed, screenRed]; % Width and height in pixels
          [theta_x theta_y] = pixels2eyeDegrees(eye_to_monitor_distance,pixel_size,monitor_resolution);
+
+         if noEyeMoves
+            ResNanPos = reshape(NanPos,[offsetN, offsetN, size(NanPos,2)]);
+         else
+             zeros = size(offsetN,offsetN,nN);
+         end
+
          
          for u = eNeuron
-             fig = figure;imagesc(normRFu(:,:,u))
+             ResNanPosU = ResNanPos(:,:,u)';
+             M = normRFu(:,:,u);
+             M(ResNanPosU) = 0;
+             fig = figure;imagesc(M)
              cd(NP.recordingDir)
              colorbarMBlims = load(sprintf('%s-Unit-%d-MovBall-RFlims-Dirs.mat',NP.recordingName,u)).colorbarlims;
-             c = colorbar;title(c,'Z-score');caxis([0 6.2])
+             c = colorbar;title(c,'Z-score');%caxis([0 6.2])
              set(gcf,'Color','w')
              colormap('jet')
              xt = xticks;
@@ -797,7 +880,7 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
              ylabel('Y degrees')
              fig.Position = [ 527   511   455   360];
              cd(NP.recordingDir+"\Figs")
-             print(gcf,sprintf('%s-Unit-%d-rectGrid-RF.png',NP.recordingName,u),'-dpng')
+             print(gcf,sprintf('%s-NEM-Unit-%d-rectGrid-RF.png',NP.recordingName,u),'-dpng')
 
 
          end
@@ -806,28 +889,76 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 %
     if calculateEntropy ==1
 
+        offsetN = cell2mat(rect.VSMetaData.allPropVal(find(strcmp(rect.VSMetaData.allPropName,'rectGridSize'))));
+
          entropies = zeros(1,nN);
 
-            for u = 1:nN
+         if noEyeMoves
+             ResNanPos = reshape(NanPos,[offsetN, offsetN, size(NanPos,2)]);
+         else
+             ResNanPos = zeros(offsetN,offsetN,nN);
+         end
 
+            for u = 1:nN
                 
                 M = squeeze(normRFu(:,:,u));
+                
 
+                ResNanPosU = ResNanPos(:,:,u)';
+
+                %
+                %figure;imagesc(P_scaled);colorbar
+
+                %%Prepare matrix for entropy calculation
+
+
+                % Define edges for rows and columns
+                rowEdges = round(linspace(1, size(M, 1) + 1, offsetN + 1));
+                colEdges = round(linspace(1, size(M, 2) + 1, offsetN + 1));
+
+                % Initialize the resulting matrix
+                reducedMatrix = zeros(offsetN, offsetN);
+
+                % Assign central element of each block
+                for i = 1:offsetN
+                    for j = 1:offsetN
+                        % Extract block using edges
+                        block = M(rowEdges(i):rowEdges(i+1)-1, colEdges(j):colEdges(j+1)-1);
+
+%                        % Find the central element of the block
+%                         centralRow = ceil(size(block, 1) / 2);
+%                         centralCol = ceil(size(block, 2) / 2);
+%                         centralValue = block(centralRow, centralCol);
+
+                        % Assign the central value to the reduced matrix
+                        reducedMatrix(i, j) = mean(block(:), 'omitnan');
+                    end
+                end
+
+
+                if noEyeMoves
+                    reducedMatrix(ResNanPosU) = 0;
+                end
+                
+                
               
                 % Normalize to create a probability distribution
-                M = M / sum(M(:));
+                reducedMatrix = reducedMatrix / sum(reducedMatrix(:),'omitnan');
 
                 % Convert to an image-like format and calculate entropy
                 % (scale to [0, 1] for compatibility with `entropy`)
-                P_scaled = mat2gray(M);
-%                 P_scaled = zeros(size(M));
-%                 P_scaled(1,1) = 1;
+                P_scaled = mat2gray(reducedMatrix);
+                %figure;imagesc(reducedMatrix);colorbar;
                 entropies(u) = entropy(P_scaled);
             end
 
             cd(NP.recordingDir)
             %sign = 0.005;
-            save(sprintf('Entropies-RG-RF-respU-%s.mat',NP.recordingName),'entropies')
+            if noEyeMoves
+                save(sprintf('NEM-Entropies-RG-RF-respU-%s.mat',NP.recordingName),'entropies')
+            else
+                save(sprintf('Entropies-RG-RF-respU-%s.mat',NP.recordingName),'entropies')
+            end
 
 
 

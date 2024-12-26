@@ -5,10 +5,11 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-GoodRecordings =[1:20,40:43];%[1:20,28:32,40:48]; Perform bootstrap with SA5
+GoodRecordings =[1:18,40:43];%[1:20,28:32,40:48]; Perform bootstrap with SA5
 
 %%
-animalN = 5;
+%GoodRecordings = 44;
+animalN = 4;
 i=1;
 animalID = cell(1,animalN); %1
 DepthUnit = cell(1,length(GoodRecordings)); %2
@@ -24,6 +25,8 @@ SpatialRG = cell(1,length(GoodRecordings));%11
 OSI =cell(1,length(GoodRecordings));%12
 DSI = cell(1,length(GoodRecordings));%13
 PreferAngle = cell(1,length(GoodRecordings));%14
+EntropMB = cell(1,length(GoodRecordings));
+EntropRG = cell(1,length(GoodRecordings));
 
 zscoreRG= cell(1,length(GoodRecordings));%14
 zscoreMB= cell(1,length(GoodRecordings));%14
@@ -79,7 +82,9 @@ for ex = GoodRecordings
         
 
         if MBsig
-            
+
+
+            sign = '0.005';
             zscoreMB{i} = ZscoreNeuronsMB(respNeuronsMB<0.005);
             uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
             [preferDir dirInd] = max(tuningCurve,[],2);
@@ -89,6 +94,14 @@ for ex = GoodRecordings
             %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
             pvalsMB{i} = respNeuronsMB(respNeuronsMB<0.005);
             SpatialMB{i} = spaTuningMB(respNeuronsMB<0.005);
+            try
+            EntropMB{i} = load(sprintf('NEM-Entropies-MB-RF-respU-%s-%s.mat',sign,NP.recordingName)).entropies;
+            catch
+            EntropMB{i} = [];
+            end
+            %DepthUnit{i} = 
+            colors = repmat([0 0 0],size(goodU,2),1);
+            [Coor] = neuronLocation(NP,data(ex,:),goodU(:,respNeuronsMB<0.005),1,0,colors, 0, 1);
 
         end
 
@@ -141,6 +154,8 @@ for ex = GoodRecordings
         NeuronNMB{i} =0;
         pvalsMB{i} =0;
         SpatialMB{i} =0;
+        EntropMB{i} = 0;
+
 
     end
 
@@ -160,6 +175,9 @@ for ex = GoodRecordings
             SpatialRG{i} = spaTuningRG(respNeuronsMB<0.005);
             NeuronNRG{i} = find(respNeuronsMB<0.005);
             zscoreRG{i} = ZscoreNeuronsRG(respNeuronsMB<0.005);
+            entropiesRG = load(sprintf('NEM-Entropies-RG-RF-respU-%s.mat',NP.recordingName)).entropies;
+
+            EntropRG{i} = entropiesRG(respNeuronsMB<0.005);
         end
 
 
@@ -186,6 +204,7 @@ for ex = GoodRecordings
             SpatialRG{i} = spaTuningRG(respNeuronsRG<0.005 & respNeuronsMB<0.005);
             NeuronNRG{i} = find(respNeuronsRG<0.005 & respNeuronsMB<0.005);
             zscoreRG{i} = ZscoreNeuronsRG(respNeuronsRG<0.005 & respNeuronsMB<0.005);
+             EntropRG{i} = entropiesRG(respNeuronsRG<0.005 & respNeuronsMB<0.005);
         end
 
     else
@@ -193,6 +212,7 @@ for ex = GoodRecordings
         pvalsRG{i} = 0;
         SpatialRG{i} = 0;
         NeuronNRG{i} = 0;
+        EntropRG{i} = 0;
 
     end
 
@@ -359,14 +379,24 @@ print(gcf,'SIg(MB)-ResponseMB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)',
 MB = cell2mat(zscoreMB);
 RG = cell2mat(zscoreRG);
 
+eMB = cell2mat(EntropMB);
+eRG = cell2mat(EntropRG);
+
 values = ([MB RG MB-RG]);
+
+values = ([eMB eRG eMB-eRG]);
 
 %%randomly select 10 neurons but from animals that have full receptive
 %%field tuning == PV35 & PV139 19:20 40:43
-goodRFr = cell2mat(zscoreMB(19:24))-cell2mat(zscoreRG(19:24));
-MBh = length(MB)+length(RG)+length(cell2mat(zscoreMB(1:18)))+find(goodRFr>0);
-RGh = length(MB)+length(RG)+length(cell2mat(zscoreMB(1:18)))+find(goodRFr<0);
+%goodRFr = cell2mat(zscoreMB(1))-cell2mat(zscoreRG(19:24));
+goodRFr = cell2mat(EntropMB(1))-cell2mat(EntropRG(1));
+%MBh = length(MB)+length(RG)+length(cell2mat(zscoreMB(1)))+find(goodRFr<0);
+MBh = length(MB)+length(RG)+find(goodRFr<0);
+RGh = length(MB)+length(RG)+find(goodRFr>0);
 
+seed1 = 42;
+
+seed2 = 43;
 randN = 5;
 rng(42);
 rMB = 1 + round((length(MBh) - 1) * rand(1, randN));
@@ -375,8 +405,8 @@ rRG = 1 + round((length(RGh) - 1) * rand(1, randN));
 
 %selected neurons:
 
-selecN = {[tablePosN((MBh(rMB)-length(MB)*2));NeuronID((MBh(rMB)-length(MB)*2))];...
-    [tablePosN(RGh(rRG)-length(MB));NeuronID(RGh(rRG)-length(MB))]};
+%selecN = {[tablePosN((MBh(rMB)-length(MB)*2));NeuronID((MBh(rMB)-length(MB)*2))];...
+  %  [tablePosN(RGh(rRG)-length(MB));NeuronID(RGh(rRG)-length(MB))]};
 
 
 %randomNeur = 1 + round((length(cats) - 1) * rand(1, 10));
@@ -388,18 +418,18 @@ figure;
 s = swarmchart(T.cats, T.values, 10, T.color,'filled','MarkerFaceAlpha',0.5);
 
 hold on %%Chose before, 2 and 5;
-% chooseNb = 2;
-% swarmchart(T.cats([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), ...
-%     T.values([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), 70,...
-%     T.color([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]),...
-%     'filled','MarkerEdgeColor','r','LineWidth',2);
+chooseNb = 1;
+swarmchart(T.cats([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), ...
+    T.values([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), 70,...
+    T.color([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]),...
+    'filled','MarkerEdgeColor','r','LineWidth',2);
 
-hold on
-chooseNr = 2;
-swarmchart(T.cats([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]),...
-    T.values([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]), 50, ...
-    T.color([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]),...
-    'filled','MarkerEdgeColor','g','LineWidth',2);
+% hold on
+% chooseNr = 1;
+% swarmchart(T.cats([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]),...
+%     T.values([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]), 50, ...
+%     T.color([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB) RGh(rRG(chooseNr))]),...
+%     'filled','MarkerEdgeColor','g','LineWidth',2);
 % 
 % 
 % myColormap = [
@@ -414,14 +444,21 @@ swarmchart(T.cats([RGh(rRG(chooseNr))-length(MB)*2 RGh(rRG(chooseNr))-length(MB)
 % colormap(gca,myColormap)
 
 
-myColormap = [
-    1, 0, 0;    % Red
-    0, 1, 0;    % Green
-    0, 0, 1;    % Blue
-    1, 0, 1;    % Magenta
-    0, 0, 0;    % Black
-]*0.7;
-colormap(gca,myColormap)
+% myColormap = [
+%     1, 0, 0;    % Red
+%     0, 1, 0;    % Green
+%     0, 0, 1;    % Blue
+%     1, 0, 1;    % Magenta
+%     0, 0, 0;    % Black
+% ]*0.7;
+% colormap(gca,myColormap)
+
+% myColormap = [
+%     0, 0, 1;    % Blue
+%     1, 0, 1;    % Magenta
+%     0, 0, 0;    % Black
+% ]*0.7;
+% colormap(gca,myColormap)
 
 
 
@@ -450,16 +487,17 @@ end
 grid on
 set(gcf,'Color','w');%
 xticklabels({'Moving','Static','Mov. - Stat.'})
-ylabel('Z-score')
+ylabel('Entropy')
 yL = ylim;
-ylim([yL(1) 20])
+%ylim([yL(1) 60])
 cd('\\sil3\data\Large_scale_mapping_NP\lizards\SummaryFigs')
-c = colorbar;
-title(c, 'Animals (N=5)');%caxis([1 5])
-c.Ticks = [linspace(1.5,4.5,5)];
-c.TickLabels = {'PV139', 'PV67', 'PV27', 'PV103','PV35'};
+%c = colorbar;
+% title(c, 'Animals (N=5)');%caxis([1 5])
+%c.Ticks = [linspace(1.5,4.5,5)];
+% c.Ticks = [linspace(1.5,2.5,animalN)];
+% c.TickLabels = {'PV67','PV139',  'PV35'};
 
-print(gcf,'4N-SIg(MB)-Z-score-MB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)','-dpng')
+print(gcf,'NEM-AWAKESIg(MB)-entropy-MB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)','-dpng')
 % 
  %% Plot both signifficant responsive. 
 

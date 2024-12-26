@@ -20,16 +20,19 @@ function EyePositionAnalysis(NP,divisions,varargin)%plots,newRun)
 % stimType = false;
 % newRun = false;
 
-% % Assign optional inputs if provided
-% if nargin > 2
-%     plots = varargin{1};
-% end
-% if nargin > 3
-%     stimType = varargin{2}; %n by three matrix where the first column is onset time, 2nd is offset time and third is stim type index
-% end
-% if nargin > 4
-%     newRun = varargin{3};% Rewrite previous run with same parameters
-% end
+% Assign optional inputs if provided
+if nargin > 2
+    plots = varargin{1};
+end
+if nargin > 3
+    stimType = varargin{2}; %n by three matrix where the first column is onset time, 2nd is offset time and third is stim type index
+else
+    stimType = 0;
+end
+
+if nargin > 4
+    newRun = varargin{3};% Rewrite previous run with same parameters
+end
 
 if mod(divisions,2)~=1
     disp('Divisions can not be even in order to obtain a central quadrant')
@@ -40,14 +43,14 @@ if ~exist(sprintf('timeSnipsNoMov-%d-quadrants.mat',divisions), 'file') || newRu
 patternIndex = strfind(string(NP.recordingDir), "\catgt");
 endIndex = patternIndex(1)-1;
 ellipseDir= string(NP.recordingDir);
-ellipseDir = extractBetween(ellipseDir,1,endIndex)+"\Processed_Video";
+ellipseDir = extractBetween(ellipseDir,1,endIndex);%+"\Processed_Video";
 file = dir (ellipseDir);
 filenames = {file.name};
 
 ellipseName = filenames(contains(filenames,"Eye_ellipse_thr_0.8"));
 goodFrames = filenames(contains(filenames, "good_frames_thr_0.8"));
 videoFile =  filenames(contains(filenames,".mp4"));
-videoFile = videoFile{2};
+videoFile = videoFile{1};
 
 %ellipsePath = "\\sil3\data\Large_scale_mapping_NP\lizards\PV35\PV35_Experiment_18_8_24\Insertion2\PV35_2_Eye_ellipse";
 
@@ -416,8 +419,7 @@ if length(stimType)> 1
                 
 
                 end
-
-                
+               
                 
             end
             j=j+1;
@@ -470,6 +472,12 @@ y = k + a * cos(theta) * sin(phi) + b * sin(theta) * cos(phi);
 plot(x, y, 'r', 'LineWidth', 2);
 axis equal;
 legend('off')
+xt = xticks;
+xticklabels(round(xt));
+yt = yticks;
+xticklabels(round(yt));
+set(gcf,'Color','w')
+print(gcf, sprintf('%s-Eye-Movs-summary.png',NP.recordingName),'-dpng');
 end
 
 else
