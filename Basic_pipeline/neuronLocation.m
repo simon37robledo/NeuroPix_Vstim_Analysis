@@ -73,7 +73,7 @@ if (plotN || plotIns) && isempty(Fig)
     offsetTextY = 0;
     offsetTextZ = 1;
 
-else
+elseif plotN || plotIns
 
     figure(Fig)
     sideview = [90 0];

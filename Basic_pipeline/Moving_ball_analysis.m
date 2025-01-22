@@ -18,7 +18,7 @@ repeatConv =1;
 plotRF =0;
 spatialTuning=0;
 calculateEntropy =1;
-noEyeMoves = 1;
+noEyeMoves = 0;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
@@ -29,7 +29,7 @@ summPlot =0;
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
-GoodRecordingsPV =[1:20,40:43];
+GoodRecordingsPV =[1:21,40:43];
 GoodRecordingsRF = [15:20,40:48];
 Awake = [44:48];
 %Plot specific neurons
@@ -38,13 +38,13 @@ Awake = [44:48];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  44%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
     try %%In case it is not run in Vstim computer, which has drives mapped differently
-        cd(path)
+        cd(pathE)
     catch
         try
             originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
@@ -224,12 +224,12 @@ for ex =  44%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     goodSPKS = p.nSpks(label == 'good');
     goodAmp = p.neuronAmp(label == 'good');
     goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
-
-
-    colors = repmat([1 1 1],size(goodU,2),1);
-
-    %6. Get depths of units correcting for angle and micromanipulator depth:
-    [Coor] = neuronLocation(NP,data(ex,:),goodU,1,1,colors, 1);
+% 
+% 
+%     colors = repmat([1 1 1],size(goodU,2),1);
+% 
+%     %6. Get depths of units correcting for angle and micromanipulator depth:
+%     [Coor] = neuronLocation(NP,data(ex,:),goodU,1,1,colors, 1);
 
     %7. Load raster matrices
     bin = 1;
@@ -784,11 +784,6 @@ if tuning ==1
     DSI(isnan(DSI))=0;
     L(isnan(L))=0;
 
-    if any(DSI>1)
-
-        2+2
-
-    end
     
 
     save(sprintf('Angle-prefer-%s',NP.recordingName),'Theta')
@@ -1471,7 +1466,7 @@ for convNeuron = 1
 
         pvalTi= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
 
-        respU = find(pvalTi <0.005);
+        respU = find(pvalTi <0.05);
 
         if ~isempty(respU)
 
@@ -1852,7 +1847,7 @@ for convNeuron = 1
             end
 
 
-% 
+% %Test with figures:
 %             figure;imagesc(squeeze(RFuSTmaskD(d,:,:,2)));
 % 
 % 
@@ -1985,15 +1980,16 @@ for convNeuron = 1
                 % Convert to an image-like format and calculate entropy
                 % (scale to [0, 1] for compatibility with `entropy`)
                 P_scaled = mat2gray(reducedMatrix);
-%                 figure;imagesc((P_scaled));
-%                 set(gca, 'YDir', 'reverse', 'XDir', 'reverse');
+                figure;imagesc((P_scaled));
+                set(gca, 'YDir', 'reverse', 'XDir', 'reverse');
+                colorbar;
 
                 entropies(u) = entropy(P_scaled);
             end
 
 
             cd(NP.recordingDir)
-            sign = '0.005';
+            sign = '0.05';
 
             if noEyeMoves
 

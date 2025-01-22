@@ -14,19 +14,19 @@ calculateEntropy =1;
 ex=1;
 responseDo = 1;
 redoResp =0;
-noEyeMoves = 1;
+noEyeMoves = 0;
 newDiode =0;
 
-Shuffling_baseline=0;
+Shuffling_baseline=1;
 repeatShuff =0;
 
-GoodRecordingsPV =[15:20,40:43];
+%GoodRecordingsPV =[15:20,40:43];
 SpatialTuning = 0;
 
 Awake = [44:48];
 
 %%
-for ex = 44%GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
+for ex = GoodRecordings%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -890,6 +890,7 @@ for ex = 44%GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:4
     if calculateEntropy ==1
 
         offsetN = cell2mat(rect.VSMetaData.allPropVal(find(strcmp(rect.VSMetaData.allPropName,'rectGridSize'))));
+        offsetN = 9; %Make it the same for all!!
 
          entropies = zeros(1,nN);
 
@@ -943,7 +944,7 @@ for ex = 44%GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:4
                 
               
                 % Normalize to create a probability distribution
-                reducedMatrix = reducedMatrix / sum(reducedMatrix(:),'omitnan');
+               % reducedMatrix = reducedMatrix / sum(reducedMatrix(:),'omitnan');
 
                 % Convert to an image-like format and calculate entropy
                 % (scale to [0, 1] for compatibility with `entropy`)

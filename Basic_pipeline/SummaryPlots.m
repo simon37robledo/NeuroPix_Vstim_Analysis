@@ -5,7 +5,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-GoodRecordings =[1:18,40:43];%[1:20,28:32,40:48]; Perform bootstrap with SA5
+GoodRecordings =[15:21,40:43];%[1:20,28:32,40:48]; Perform bootstrap with SA5
 
 %%
 %GoodRecordings = 44;
@@ -30,13 +30,23 @@ EntropRG = cell(1,length(GoodRecordings));
 
 zscoreRG= cell(1,length(GoodRecordings));%14
 zscoreMB= cell(1,length(GoodRecordings));%14
+unitCoorX = cell(1,length(GoodRecordings)); %medial-lateral
+unitCoorY = cell(1,length(GoodRecordings)); %frontal-caudal
+unitCoorZ = cell(1,length(GoodRecordings)); %superior-inferior
 
+
+%%%What neurons to select?
 MBsig =1; 
 RGsig =0;
 bothSig = 0;
 allN = 0;
 noEyeMoves = 0;
 AllParams = cell(3,14);
+
+%%%What to plot?
+BrainPlots=1;
+DSIplot =0;
+Zscoreplot = 1;
 
 close all
 
@@ -46,7 +56,7 @@ N_bootstrap = 1000;
 
 j = 1;
 
-for ex = 40:43%GoodRecordings
+for ex = GoodRecordings
 
      path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
@@ -80,7 +90,7 @@ for ex = 40:43%GoodRecordings
         NeuronValsMB = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
         respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
         respNeuronsRG = load(sprintf('RectGrid-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
-        spaTuningMB = load(sprintf('Spatial-Tuning_index-MB-%s',NP.recordingName)).SpaTuning;
+        %spaTuningMB = load(sprintf('Spatial-Tuning_index-MB-%s',NP.recordingName)).SpaTuning;
         tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
         ZscoreNeuronsMB = load(sprintf('MovBall-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName)).ZScoreU;
         ZscoreNeuronsRG = load(sprintf('RectGrid-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName)).ZScoreU;
@@ -98,26 +108,50 @@ for ex = 40:43%GoodRecordings
             NeuronNMB{i} = find(respNeuronsMB<sign);
             %RespMB{i} = max(NeuronValsMB(:,:,4),[],2)';
             pvalsMB{i} = respNeuronsMB(respNeuronsMB<sign);
-            SpatialMB{i} = spaTuningMB(respNeuronsMB<sign);
+            %SpatialMB{i} = spaTuningMB(respNeuronsMB<sign);
+            OSIi = load(sprintf('Orientation-Tuning-Index-%s',NP.recordingName)).L;
+            DSIi = load(sprintf('Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
+            OSI{i} = OSIi(respNeuronsMB<sign);
+            DSI{i} = DSIi(respNeuronsMB<sign);
             
             if noEyeMoves
                 try
-                    EntropMB{i} = load(sprintf('NEM-Entropies-MB-RF-respU-%s-%s.mat',sign,NP.recordingName)).entropies;
+                    EntropMB{i} = load(sprintf('NEM-Entropies-MB-RF-respU-%s-%s.mat','0.005',NP.recordingName)).entropies;
                 catch
                     EntropMB{i} = [];
                 end
             else
                 try
-                    EntropMB{i} = load(sprintf('Entropies-MB-RF-respU-%s-%s.mat',sign,NP.recordingName)).entropies;
+                    EntropMB{i} = load(sprintf('Entropies-MB-RF-respU-%s-%s.mat','0.005',NP.recordingName)).entropies;
                 catch
                     EntropMB{i} = [];
                 end
 
             end
 
+            minCaxis = 0;%min(cell2mat(zscoreMB));
+            maxCaxis = 1; %max(cell2mat(zscoreMB));
             %DepthUnit{i} =
-            colors = repmat([0 0 0],size(goodU,2),1);
-            if sum(respNeuronsMB<0.005) >0
+            p = NP.convertPhySorting2tIc(NP.recordingDir);
+            label = string(p.label');
+            goodU = p.ic(:,label == 'good');
+
+            if sum(respNeuronsMB<sign)>0 && BrainPlots
+                if DSIplot
+                    colors = repmat([1 1 1],size(goodU(:,respNeuronsMB<sign),2),1)-DSIi(respNeuronsMB<sign); %%All black 1-DSI
+                end
+
+                if Zscoreplot
+                    ncolor = 64;
+                    maxZscore = 15; %by looking at z-score graph
+                    possibleColors = linspace(0,maxZscore,ncolor);
+                    ZscoreNeuronsMB(ZscoreNeuronsMB>maxZscore) = maxZscore;
+                    for n = 1:size(goodU,2)
+                        [minZS idxC(n)] = min(abs(possibleColors - ZscoreNeuronsMB(n)));
+                    end
+                    colors = repmat([1 1 1],size(goodU(:,respNeuronsMB<sign),2),1)-idxC(respNeuronsMB<sign)'/ncolor; %%All black, highest z-score
+                end
+
                 if j ==1
                     [Coor, Fig] = neuronLocation(NP,data(ex,:),goodU(:,respNeuronsMB<sign),1,0,colors, [], 1);
 
@@ -128,11 +162,24 @@ for ex = 40:43%GoodRecordings
                 end
                 j =j+1;
 
+                unitCoorX{i} = Coor{1,1}(2,:);
+                unitCoorY{i} = Coor{1,2}(2,:);
+                unitCoorZ{i} = Coor{1,3}(2,:);
+
+            elseif sum(respNeuronsMB<sign)>0
+                [Coor,~] = neuronLocation(NP,data(ex,:),goodU(:,respNeuronsMB<sign),0,0,[], [], 1);
+
+                unitCoorX{i} = Coor{1,1}(2,:);
+                unitCoorY{i} = Coor{1,2}(2,:);
+                unitCoorZ{i} = Coor{1,3}(2,:);
+            else
+
+                unitCoorX{i} = [];
+                unitCoorY{i} = [];
+                unitCoorZ{i} = [];
             end
 
-
-
-      
+            
 
         end
 
@@ -195,7 +242,7 @@ for ex = 40:43%GoodRecordings
 %         RGsig =1;
 %         MBsig = 0;
         NeuronValsRG= load(sprintf('RectGrid-NeuronRespCat-%s',NP.recordingName)).NeuronVals;
-        spaTuningRG = load(sprintf('Spatial-Tuning_index-RG-%s',NP.recordingName)).SpaTuning;
+%        spaTuningRG = load(sprintf('Spatial-Tuning_index-RG-%s',NP.recordingName)).SpaTuning;
         respNeuronsRG = load(sprintf('RectGrid-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
         ZscoreNeuronsRG = load(sprintf('RectGrid-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName)).ZScoreU;
         
@@ -203,7 +250,7 @@ for ex = 40:43%GoodRecordings
             
             RespRG{i} = (max(NeuronValsRG(respNeuronsMB<sign,:,4),[],2))';
             pvalsRG{i} = respNeuronsRG(respNeuronsMB<sign);
-            SpatialRG{i} = spaTuningRG(respNeuronsMB<sign);
+%            SpatialRG{i} = spaTuningRG(respNeuronsMB<sign);
             NeuronNRG{i} = find(respNeuronsMB<sign);
             zscoreRG{i} = ZscoreNeuronsRG(respNeuronsMB<sign);
 
@@ -222,14 +269,13 @@ for ex = 40:43%GoodRecordings
                 
             end
 
-            EntropRG{i} = entropiesRG(respNeuronsMB<sign);
         end
 
 
         if RGsig
             RespRG{i} = (max(NeuronValsRG(respNeuronsRG<sign,:,4),[],2))';
             pvalsRG{i} = respNeuronsRG(respNeuronsRG<sign);
-            SpatialRG{i} = spaTuningRG(respNeuronsRG<sign);
+%            SpatialRG{i} = spaTuningRG(respNeuronsRG<sign);
             NeuronNRG{i} = find(respNeuronsRG<sign);
             zscoreRG{i} = ZscoreNeuronsRG(respNeuronsRG<sign);
         end
@@ -238,7 +284,7 @@ for ex = 40:43%GoodRecordings
         if allN 
             RespRG{i} = (max(NeuronValsRG(:,:,4),[],2))';
             pvalsRG{i} = respNeuronsRG;
-            SpatialRG{i} = spaTuningRG;
+  %          SpatialRG{i} = spaTuningRG;
             NeuronNRG{i} = 1:length(respNeuronsRG);
             zscoreRG{i} =0;
         end
@@ -246,7 +292,7 @@ for ex = 40:43%GoodRecordings
         if bothSig
             RespRG{i} = (max(NeuronValsRG(respNeuronsRG<sign & respNeuronsMB<sign,:,4),[],2))';
             pvalsRG{i} = respNeuronsRG(respNeuronsRG <sign & respNeuronsMB<sign);
-            SpatialRG{i} = spaTuningRG(respNeuronsRG<sign & respNeuronsMB<sign);
+%            SpatialRG{i} = spaTuningRG(respNeuronsRG<sign & respNeuronsMB<sign);
             NeuronNRG{i} = find(respNeuronsRG<sign & respNeuronsMB<sign);
             zscoreRG{i} = ZscoreNeuronsRG(respNeuronsRG<sign & respNeuronsMB<sign);
              EntropRG{i} = entropiesRG(respNeuronsRG<sign & respNeuronsMB<sign);
@@ -255,7 +301,7 @@ for ex = 40:43%GoodRecordings
     else
         RespRG{i} = 0;
         pvalsRG{i} = 0;
-        SpatialRG{i} = 0;
+ %       SpatialRG{i} = 0;
         NeuronNRG{i} = 0;
         EntropRG{i} = 0;
 
@@ -286,12 +332,200 @@ for ex = 40:43%GoodRecordings
     i=i+1;
 
 end
-%
+%% plot colorbar for brain plot
+c= colorbar;
+colormap(repmat([1 1 1],64,1)-repmat(linspace(0,1,64),3,1)')
+c.Title.String = "DSI";
+
+print('DSI_index_brain','-dpdf', '-r1000');
+
+%% plot variables against X,y and Z unit position
+[uniqueStrings,~,indexAnimal] = unique([animalID{:}],'stable');
+color1 = [];
+for i = 1:length(animalID) %each color is an animal.
+    
+    color1 = [color1 zeros(1,length(RespMB{i}))+indexAnimal(i)];
+
+
+end
+
+colormap('jet'); % Use a colormap (e.g., 'jet', 'parula', etc.)
+colors = colormap; % Get colormap colors
+n_colors = size(colors, 1); % Number of colors in the colormap
+
+% Normalize indices to match the colormap range
+mapped_colors = colors(ceil((color1 / max(color1)) * n_colors), :);
+
+
+DSIm = cell2mat(DSI')';
+entropM = cell2mat(EntropMB);
+X = cell2mat(unitCoorX);
+Y = cell2mat(unitCoorY);
+Z = cell2mat(unitCoorZ);
+
+
+y = DSIm;
+fig = tiledlayout(3,3);
+
+nexttile
+x = X-min(X);
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Medial to Lateral')
+ylabel('DSI')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+nexttile
+x = Y-min(Y);
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Rostral to Caudal')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+nexttile
+x = Z;
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Depth')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+
+y = cell2mat(zscoreMB);
+nexttile
+x = X-min(X);
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Medial to Lateral')
+ylabel('Z-score')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+nexttile
+x = Y-min(Y);
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Rostral to Caudal')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+nexttile
+x = Z;
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Depth')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+y = entropM;
+
+nexttile
+x = X-min(X);
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Medial to Lateral')
+ylabel('Entropy')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+nexttile
+x = Y-min(Y);
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Rostral to Caudal')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+nexttile
+x = Z;
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Depth')
+mdl = fitlm(x, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+
+
+
+%%
+figure;
+x = DSIm;
+y = cell2mat(zscoreMB);
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('DSI')
+ylabel('Z-score')
+mdl = fitlm(DSIm, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+
+figure;
+x = DSIm;
+y = entropM;
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('DSI')
+ylabel('Entropy')
+mdl = fitlm(DSIm, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+
+
+figure;
+x = cell2mat(zscoreMB);
+y = entropM;
+scatter(x,y,50,mapped_colors,'filled')
+xlabel('Z-score')
+ylabel('Entropy')
+mdl = fitlm(DSIm, y);
+x_fit = linspace(min(x), max(x), 100); % Generate x values for the line
+y_fit = predict(mdl, x_fit');          % Predict corresponding y values
+hold on;plot(x_fit, y_fit, 'r-', 'LineWidth', 2); % Red fitted line
+R_squared = mdl.Rsquared.Ordinary; % Extract R^2 value
+title(sprintf('Rsquared = %d',R_squared));
+
+figure; scatter(1:max(indexAnimal),ones(1,max(indexAnimal)),50,colors(ceil((unique(indexAnimal) / max(indexAnimal)) * n_colors), :))
+
 %% Prepare data for summary plots
 MB = cell2mat(RespMB);
 RG = cell2mat(RespRG);
 
-[uniqueStrings,~,indexAnimal] = unique([animalID{:}]);
+[uniqueStrings,~,indexAnimal] = unique([animalID{:}], 'stable');
 color1 =[];
 color2 =[];
 
@@ -429,7 +663,7 @@ eRG = cell2mat(EntropRG);
 
 values = ([MB RG MB-RG]);
 
-values = ([eMB eRG eMB-eRG]);
+%values = ([eMB eRG eMB-eRG]);
 
 %%randomly select 10 neurons but from animals that have full receptive
 %%field tuning == PV35 & PV139 19:20 40:43
@@ -457,17 +691,16 @@ rRG = 1 + round((length(RGh) - 1) * rand(1, randN));
 %randomNeur = 1 + round((length(cats) - 1) * rand(1, 10));
 
 T = table(cats',values',color','VariableNames',{'cats','values','color'});
-
 figure;
-
+% 
 s = swarmchart(T.cats, T.values, 10, T.color,'filled','MarkerFaceAlpha',0.5);
-
-hold on %%Chose before, 2 and 5;
-chooseNb = 1;
-swarmchart(T.cats([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), ...
-    T.values([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), 70,...
-    T.color([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]),...
-    'filled','MarkerEdgeColor','r','LineWidth',2);
+% 
+% hold on %%Chose before, 2 and 5;
+% chooseNb = 1;
+% swarmchart(T.cats([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), ...
+%     T.values([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]), 70,...
+%     T.color([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB) MBh(rMB(chooseNb))]),...
+%     'filled','MarkerEdgeColor','r','LineWidth',2);
 
 % hold on
 % chooseNr = 1;
@@ -477,16 +710,16 @@ swarmchart(T.cats([MBh(rMB(chooseNb))-length(MB)*2 MBh(rMB(chooseNb))-length(MB)
 %     'filled','MarkerEdgeColor','g','LineWidth',2);
 % 
 % 
-% myColormap = [
-%     1, 0, 0;    % Red
-%     0, 1, 0;    % Green
-%     0, 0, 1;    % Blue
-%     1, 1, 0;    % Yellow
-%     1, 0, 1;    % Magenta
-%     0, 1, 1;    % Cyan
-%     0, 0, 0;    % Black
-% ]*0.7;
-% colormap(gca,myColormap)
+myColormap = [
+    1, 0, 0;    % Red
+    0, 1, 0;    % Green
+    0, 0, 1;    % Blue
+    1, 1, 0;    % Yellow
+    1, 0, 1;    % Magenta
+    0, 1, 1;    % Cyan
+    0, 0, 0;    % Black
+]*0.7;
+colormap(gca,myColormap)
 
 
 % myColormap = [
@@ -532,7 +765,7 @@ end
 grid on
 set(gcf,'Color','w');%
 xticklabels({'Moving','Static','Mov. - Stat.'})
-ylabel('Entropy')
+ylabel('Z-score')
 yL = ylim;
 %ylim([yL(1) 60])
 cd('\\sil3\data\Large_scale_mapping_NP\lizards\SummaryFigs')
@@ -542,7 +775,7 @@ cd('\\sil3\data\Large_scale_mapping_NP\lizards\SummaryFigs')
 % c.Ticks = [linspace(1.5,2.5,animalN)];
 % c.TickLabels = {'PV67','PV139',  'PV35'};
 
-print(gcf,'NEM-AWAKESIg(MB)-entropy-MB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)','-dpng')
+%print(gcf,'NEM-AWAKESIg(MB)-entropy-MB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)','-dpng')
 % 
  %% Plot both signifficant responsive. 
 
