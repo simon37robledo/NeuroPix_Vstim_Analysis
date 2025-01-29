@@ -4,14 +4,14 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
-summPlot = 0;
+summPlot = 1;
 plotexamplesMB =0;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
-Shuffling =0;Shuffling_baseline=0;
+Shuffling =0;Shuffling_baseline=1;
 repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
-tuning =0;
+tuning =1;
 depthPlot =0;
 ReceptiveFieldConvolutions =1;
 repeatConv =1;
@@ -25,7 +25,6 @@ examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
 %examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
-summPlot =0;
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
@@ -38,7 +37,7 @@ Awake = [44:48];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [51,52] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -147,6 +146,7 @@ for ex =  GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:siz
 
     
     uDir = unique(directions);
+    uSpeed = unique(speeds);
     offsetN = length(unique(offsets));
     direcN = length(unique(directions));
     speedN = length(unique(speeds));
@@ -160,7 +160,8 @@ for ex =  GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:siz
 
     %3. Load Triggers (diode)
     Ordered_stims= strsplit(data.VS_ordered{ex},',');
-    containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
+    %containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
+    containsMB = strcmp(Ordered_stims, 'MB');
     ttlInd = find(containsMB);
 
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
@@ -267,34 +268,57 @@ for ex =  GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:siz
     Norm(Norm>2) = 2;
 
     %8. Plot summary response
-
+%
     for plotOp = summPlot
         if summPlot
 
-            fig = figure;
-            imagesc(Norm);
-            xline(preBase/bin,'k', LineWidth=1.5)
-            xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
-            hcb = colorbar();
-            title(hcb,'SpkR/Baseline');
-            xticks([0.5 (preBase/bin):10:nB])
-            xticklabels([-preBase 0:10*bin:nB*bin])
-            ylabel('Neurons');xlabel('Time (ms)');
-            % Define key colors: blue, white, yellow
-            keyColors = [0 0 0.5; 1 1 1;[0 0.5 0]]; % RGB for blue, white, yellow
-            % Number of colors to interpolate between each key color
-            nInterpolations = 32;
-            % Interpolate colors between blue and white
-            blueToWhite = interp1([1,2], keyColors(1:2,:), linspace(1,2,nInterpolations));
-            % Interpolate colors between white and yellow
-            whiteToYellow = interp1([1,2], keyColors(2:3,:), linspace(1,2,nInterpolations));
-            % Combine the two gradients, omitting one instance of white to maintain 64 colors
-            customColormap = [blueToWhite; whiteToYellow(2:end,:)];
-            % Apply the custom colormap
-            colormap(customColormap);
-            cd(NP.recordingDir)
-            cd(NP.recordingDir + "\Figs")
-            print(fig, sprintf('%s-MovBall-summary.png',NP.recordingName),'-dpng');
+            for s = 1:speedN
+                S = Coff(:,5)'== uSpeed(s);
+                stimDurS = mean(-directimesSorted(S)+directimesSortedOff(S));
+
+                [MrS] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted(S)-stimInter/2)/bin),round((stimDurS+stimInter)/bin)); %response matrix
+                [nT,nN,nB] = size(MrS);
+
+                %figure;imagesc(squeeze(Mr(:,15,:)));colormap(flipud(gray(64)));xline(preBase/bin);xline((preBase+stimDur)/bin);yline(trialDivision:trialDivision:nT-1);
+
+                [MbS] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted((S))-preBase)/bin),round((preBase)/bin));% baseline matrix (whole baseline)
+                
+                baseline = squeeze(mean(squeeze(mean(MbS)),2));
+                MrMean = squeeze(mean(MrS));
+
+                v_replicated = repmat(baseline, 1, size(MrMean, 2));
+                Norm = MrMean ./ v_replicated; %normalization by division
+                Norm(Norm>5) = 5;
+
+                fig = figure;
+                imagesc(Norm);
+                xline(preBase/bin,'k', LineWidth=1.5)
+                xline(stimDurS/bin+preBase/bin,'k',LineWidth=1.5)
+                hcb = colorbar();
+                title(hcb,'SpkR/Baseline');
+%                 xticks([0.5 (preBase/bin):50:nB])
+%                 xticklabels([-preBase 0:10*bin:nB*bin])
+                xt = xticks;
+                xticklabels(round(xticks/1000))
+                ylabel('Neurons');xlabel('Time (ms)');
+                % Define key colors: blue, white, yellow
+                keyColors = [0 0 0.5; 1 1 1;[0 0.5 0]]; % RGB for blue, white, yellow
+                % Number of colors to interpolate between each key color
+                nInterpolations = 32;
+                % Interpolate colors between blue and white
+                blueToWhite = interp1([1,2], keyColors(1:2,:), linspace(1,2,nInterpolations));
+                % Interpolate colors between white and yellow
+                whiteToYellow = interp1([1,2], keyColors(2:3,:), linspace(1,2,nInterpolations));
+                % Combine the two gradients, omitting one instance of white to maintain 64 colors
+                customColormap = [blueToWhite; whiteToYellow(2:end,:)];
+                % Apply the custom colormap
+                colormap(customColormap);
+                title(sprintf('Speed = %d',uSpeed(s)))
+                cd(NP.recordingDir)
+                cd(NP.recordingDir + "\Figs")
+                print(fig, sprintf('%s-MovBall-summary.png',NP.recordingName),'-dpng');
+            end
+
         end
     end
 

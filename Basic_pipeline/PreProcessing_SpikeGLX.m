@@ -74,12 +74,15 @@ expPV35 = 'PV35_Experiment_18_8_24';
 basic_pathSA8 = '\\sil3\data\Large_scale_mapping_NP\lizards\SA8';
 expSA8 = 'SA8_Experiment_7_11_24';
 
+basic_pathPV97= '\\sil3\data\Large_scale_mapping_NP\lizards\PV97';
+expPV97= 'PV97_Experiment_21_01_25';
+
 
 %% Basic variables
-base_dir = string(basic_pathSA8)+"\"+string(expSA8);
+base_dir = string(basic_pathPV97)+"\"+string(expPV97);
 %Folder that has catgt and tprime subfolders
-insertion = "5";
-fileName = "SA8_Experiment";
+insertion = "6";
+fileName = "PV97_Experiment";
 runs = "mult";
 dig_CH = "1";
 concat = 1;

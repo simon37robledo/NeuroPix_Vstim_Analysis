@@ -5,7 +5,9 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-GoodRecordings =[15:21,40:43];%[1:20,28:32,40:48]; Perform bootstrap with SA5
+GoodRecordingsA =[1:21,40:43];%Anesthetized
+FFFrecordingsA = [15:18,40:43]; %anesthetized
+SDGrecordingsA = [1:14,40:43]; %anesthetized 
 
 %%
 %GoodRecordings = 44;
@@ -34,29 +36,37 @@ unitCoorX = cell(1,length(GoodRecordings)); %medial-lateral
 unitCoorY = cell(1,length(GoodRecordings)); %frontal-caudal
 unitCoorZ = cell(1,length(GoodRecordings)); %superior-inferior
 
+%Neuron counts
+nTFFF = 0;
+nTSDGs = 0;
+nTSDGm = 0;
+nTMB = 0;
+nTRG = 0;
+totalN =0;
+
 
 %%%What neurons to select?
-MBsig =1; 
+MBsig =0; 
 RGsig =0;
 bothSig = 0;
 allN = 0;
+eachSign = 1;
 noEyeMoves = 0;
 AllParams = cell(3,14);
 
 %%%What to plot?
-BrainPlots=1;
+BrainPlots=0;
 DSIplot =0;
-Zscoreplot = 1;
+Zscoreplot = 0;
 
 close all
 
 sign = 0.05;
 
 N_bootstrap = 1000;
-
 j = 1;
 
-for ex = GoodRecordings
+for ex = SDGrecordingsA
 
      path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
@@ -84,11 +94,13 @@ for ex = GoodRecordings
     NP = NPAPRecording(path);
 
 
+
     if contains(data.VS_ordered(ex),"MB")
 %         MBsig =1; 
 %         RGsig = 0;
         NeuronValsMB = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
         respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+        totalN = totalN+length(respNeuronsMB);
         respNeuronsRG = load(sprintf('RectGrid-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
         %spaTuningMB = load(sprintf('Spatial-Tuning_index-MB-%s',NP.recordingName)).SpaTuning;
         tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
@@ -101,6 +113,7 @@ for ex = GoodRecordings
 
             %sign = '0.005';
             zscoreMB{i} = ZscoreNeuronsMB(respNeuronsMB<sign);
+            nTMB = nTMB+length(ZscoreNeuronsMB(respNeuronsMB<sign));
             uDir = rad2deg(unique(squeeze(NeuronValsMB(:,:,5))));
             [preferDir dirInd] = max(tuningCurve,[],2);
             PreferAngle{i} = preferDir(respNeuronsMB<sign);
@@ -210,6 +223,16 @@ for ex = GoodRecordings
 
         end
 
+        if eachSign
+
+            zscoreMB{i} = ZscoreNeuronsMB(respNeuronsMB<sign);
+            RespMB{i} = max(NeuronValsMB(respNeuronsMB<sign,:,4),[],2)';
+            pvalsMB{i} = respNeuronsMB(respNeuronsMB<sign);
+            NeuronNMB{i} = find(respNeuronsMB<sign);
+            nTMB = nTMB+length(ZscoreNeuronsMB(respNeuronsMB<sign));
+
+        end
+
         if bothSig
 
             zscoreMB{i} = ZscoreNeuronsMB(respNeuronsRG<sign & respNeuronsMB<sign);
@@ -250,6 +273,7 @@ for ex = GoodRecordings
             
             RespRG{i} = (max(NeuronValsRG(respNeuronsMB<sign,:,4),[],2))';
             pvalsRG{i} = respNeuronsRG(respNeuronsMB<sign);
+            
 %            SpatialRG{i} = spaTuningRG(respNeuronsMB<sign);
             NeuronNRG{i} = find(respNeuronsMB<sign);
             zscoreRG{i} = ZscoreNeuronsRG(respNeuronsMB<sign);
@@ -289,6 +313,16 @@ for ex = GoodRecordings
             zscoreRG{i} =0;
         end
 
+        if eachSign
+            RespRG{i} = (max(NeuronValsRG(respNeuronsRG<sign,:,4),[],2))';
+            pvalsRG{i} = respNeuronsRG(respNeuronsRG<sign);
+            %            SpatialRG{i} = spaTuningRG(respNeuronsRG<sign);
+            NeuronNRG{i} = find(respNeuronsRG<sign);
+            zscoreRG{i} = ZscoreNeuronsRG(respNeuronsRG<sign);
+            nTRG = nTRG+length(respNeuronsRG(respNeuronsRG<sign));
+
+        end
+
         if bothSig
             RespRG{i} = (max(NeuronValsRG(respNeuronsRG<sign & respNeuronsMB<sign,:,4),[],2))';
             pvalsRG{i} = respNeuronsRG(respNeuronsRG <sign & respNeuronsMB<sign);
@@ -306,6 +340,71 @@ for ex = GoodRecordings
         EntropRG{i} = 0;
 
     end
+
+    if contains(data.VS_ordered(ex),"FFF")
+
+        NeuronValsFFF= load(sprintf('%s-FFF-respVal',NP.recordingName)).respVal;
+        %        spaTuningRG = load(sprintf('Spatial-Tuning_index-RG-%s',NP.recordingName)).SpaTuning;
+        respNeuronsFFF = load(sprintf('FFF-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+        ZscoreNeuronsFFF = load(sprintf('FFF-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName)).ZScoreU;
+
+        if eachSign
+            RespFFF{i} = NeuronValsFFF(respNeuronsFFF<sign);
+            pvalsFFF{i} = respNeuronsFFF(respNeuronsFFF<sign);
+            NeuronNFFF{i} = find(respNeuronsFFF<sign);
+            zscoreFFF{i} = ZscoreNeuronsFFF(respNeuronsFFF<sign);
+            nTFFF = nTFFF+length(respNeuronsFFF(respNeuronsFFF<sign));
+
+        end
+
+
+    else
+        RespFFF{i} =0;
+        pvalsFFF{i} = 0;
+        NeuronNFFF{i} = 0;
+        zscoreFFF{i} = 0;
+
+    end
+
+    if contains(data.VS_ordered(ex),"SDG")
+
+        %NeuronValsFFF= load(sprintf('%s-FFF-respVal',NP.recordingName)).respVal;
+        %        spaTuningRG = load(sprintf('Spatial-Tuning_index-RG-%s',NP.recordingName)).SpaTuning;
+        respNeuronsSDGm = load(sprintf('SDGm-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponseM;
+        ZscoreNeuronsSDGm = load(sprintf('SDGm-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName)).ZScoreUM;
+        respNeuronsSDGs = load(sprintf('SDGs-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponseS;
+        ZscoreNeuronsSDGs = load(sprintf('SDGs-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName)).ZScoreUS;
+
+        if eachSign
+            %RespSDGm{i} = NeuronValsFFF(respNeuronsFFF<sign);
+            pvalsSDGm{i} = respNeuronsSDGm(respNeuronsSDGm<sign);
+            NeuronNSDGm{i} = find(respNeuronsSDGm<sign);
+            zscoreSDGm{i} = ZscoreNeuronsSDGm(respNeuronsSDGm<sign);
+            nTSDGm = nTSDGm+length(respNeuronsSDGm(respNeuronsSDGm<sign));
+
+           % RespSDG{i} = NeuronValsFFF(respNeuronsFFF<sign);
+            pvalsSDG{i} = respNeuronsSDGs(respNeuronsSDGs<sign);
+            NeuronNSDG{i} = find(respNeuronsSDGs<sign);
+            zscoreSDG{i} = ZscoreNeuronsSDGs(respNeuronsSDGs<sign);
+            nTSDG = nTSDGs+length(respNeuronsSDGs(respNeuronsSDGs<sign));
+
+        end
+
+
+    else
+        %RespSDGm{i} = NeuronValsFFF(respNeuronsFFF<sign);
+        pvalsSDGm{i} =0;
+        NeuronNSDGm{i} = 0;
+        zscoreSDGm{i} = 0;
+
+        % RespSDG{i} = NeuronValsFFF(respNeuronsFFF<sign);
+        pvalsSDG{i} = 0;
+        NeuronNSDG{i} = 0;
+        zscoreSDG{i} = 0;
+     
+
+    end
+
 
 
 % 

@@ -8,9 +8,15 @@ data = readtable(excelFile);
 newTIC = 0;
 repeatShuff =0;
 rasters = 1;
-rands = 0;
+shuffling = 0;
+
+newDiode = 0;
+
+Shuffling_baseline = 1;
+repeatShuff = 0;
 tuningIndex =0;
 boxplots = 0;
+generalResponseSates = 0;
 
 examplesSDG = [8 9 10 11 12 13 14 29 30 31 32 40 41 42 43];
 StaticResponses = cell(1,length(examplesSDG));
@@ -22,7 +28,7 @@ MovingResponses = cell(1,length(examplesSDG));
 %SA5_1,PV103_7,PV27_1
 
 k=0;
-for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
+for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
    
     %%%%%%%%%%%% Load data and data paremeters
@@ -30,35 +36,47 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
     try %%In case it is not run in Vstim computer, which has drives mapped differently
-        cd(path)
+        cd(pathE)
     catch
-        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-        if strcmp(originP,'sil3\data')
-            path = replaceBetween(path,"","\Large_scale","W:");
-        else
-            path = replaceBetween(path,"","\Large_scale","Y:");
+        try
+            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","W:");
+            else
+                path = replaceBetween(path,"","\Large_scale","Y:");
+            end
+
+            cd(path)
+        catch
+
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
+            else
+                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
+            end
+            cd(path)
+
         end
-        cd(path)
     end
     NP = NPAPRecording(path);
 
-    k=k+1;
-    if ~isempty(StaticResponses{k})
-        %disp()
-        w= sprintf('The following file is already processed: %s',NP.recordingName);
-        warning(w)
-        continue
-    end
+%     k=k+1;
+%     if ~isempty(StaticResponses{k})
+%         %disp()
+%         w= sprintf('The following file is already processed: %s',NP.recordingName);
+%         warning(w)
+%         continue
+%     end
 
     %Create Figs and matData folders if they don't exist
 
     if ~exist(path+"\Figs",'dir')
         mkdir Figs
     end
-
-    if ~exist(path+"\matData",'dir')
-        mkdir matData
-    end
+% 
+%     if ~exist(path+"\matData",'dir')
+%         mkdir matData
+%     end
 
  %2. Extract moving ball statistics
     patternIndex = strfind(string(NP.recordingDir), "\catgt");
@@ -110,6 +128,8 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
 
             interStimStats = cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'interTrialDelay'))))*1000;
 
+            static_time = cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'static_time'))))*1000;
+
             j = j+1;
         end
         disp('Visual stats extracted!')
@@ -121,8 +141,8 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
     containsMB = cellfun(@(x) contains(x,'SDG'),Ordered_stims);
     ttlInd = find(containsMB);
 
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"SDG",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
-    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,1,"SDG",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"SDG",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+    [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"SDG",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
     static_time = cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'static_time'))))*1000; %Static time
 
@@ -142,12 +162,6 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
     uTempFR = unique(tempFR);nTempFR = length(uTempFR);
     uSpatFR = unique(spatFR);nSpatFR = length(uSpatFR);
 
-
-    if LFP
-
-        Ra
-
-    end
 
 
     %5. Load data to select good units
@@ -210,12 +224,138 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
     denom = mad(Mb,0)+eps;
     direcTrials = trialDivision*nSpatFR*nTempFR;
 
+
+    trialsPerAngle = nT/nDir;
+    
+    %%%Response static
+    kernel_size = min(500,static_time); %ms
+
+    Ms =  BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((static_time)/bin));
+
+    statR = zeros(nDir,nN);
+    j=1;
+    for i =1:trialsPerAngle:nT
+        mean_statR = squeeze(mean(Ms(i:trialsPerAngle+i-1,:,100:min(static_time,kernel_size+100)),3));
+        statR(j,:) = mean(mean_statR); 
+        j=j+1;
+
+    end
+
+    [respValS statPos] = max(statR,[],1);
+
+    %%%Response moving
+        %Moving mean approach (works)
+
+    Mm = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+static_time)/bin),round((stimDur-static_time)/bin));
+
+   
+    j = 1;
+    movR = zeros(nDir,nN);
+    movRpos = zeros(nDir,nN);
+    for i =1:trialsPerAngle:nT %iterate through angles
+        %         mean_movR = squeeze(mean(movmean(Mm(i:trialsPerAngle+i-1,:,:), kernel_size, 1)));
+        %         [movR(j,:), movRpos(j,:)] = max(mean_movR,[],2);
+        mean_movR = squeeze(mean(Mm(i:trialsPerAngle+i-1,:,100:min(static_time,kernel_size+100)),3));
+        movR(j,:) = mean(mean_movR); 
+
+        j=j+1;
+    end
+
+    [respValM, pos] = max(movR,[],1);
+    maxMRPos = movRpos(pos);
+
+     if Shuffling_baseline
+
+        if ~isfile(sprintf('SDGm-pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
+
+            baseline = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((preBase)/bin));
+            baseline = single(baseline);
+            [nT,nN,nB] = size(baseline);
+
+            % Bootstrapping settings
+            N_bootstrap = 1000; % Number of bootstrap iterations
+            boot_means = zeros(N_bootstrap, nN,'single');
+            resampled_indicesTr = single(randi(nT, [nT, N_bootstrap]));% To store bootstrapped means
+            resampled_indicesTi = single(randi(nB, [nB, N_bootstrap]));
+
+            duration = min(300, preBase);
+
+            kernel = ones(nT, duration) / (nT * duration); % Normalize for mean
+            % Start a parallel pool (if not already started)
+            if isempty(gcp('nocreate'))
+                parpool; % Start a pool with the default number of workers
+            end
+
+            tic
+            parfor i = 1:N_bootstrap
+                % Resample trials with replacement
+                resampled_trials = baseline(resampled_indicesTr(:, i), :,resampled_indicesTi(:, i));
+                for ui = 1:nN
+                    % Extract the slice for the current unit (t x b matrix)
+                    slice = resampled_trials(:, ui, :);
+                    slice = squeeze(slice); % Result is t x b
+
+                    % Compute the mean using 2D convolution
+                    means = conv2(slice, kernel, 'valid'); % 'valid' ensures the window fits within bounds
+
+                    % Find the maximum mean in this slice (of moving
+                    % window)
+                    boot_means(i, ui) = max(means(:));
+                end
+            end
+            toc
+
+
+            %%% Calculate p-value & Filter out neurons in which max response window is empty for more than
+            %%% 60% of trials
+
+            pvalsResponseS = zeros(1,nN);
+            ZScoreUS = zeros(1,nN);
+
+            pvalsResponseM = zeros(1,nN);
+            ZScoreUM = zeros(1,nN);
+
+            %boot_means(:,nN+1) =zeros(1,N_bootstrap);
+
+            for u = 1:nN
+
+                maxWindowS = squeeze(Ms(:,u,:));
+                emptyRowsS = sum(all(maxWindowS == 0, 2));
+
+                maxWindowM = squeeze(Mm(:,u,:));
+                emptyRowsM = sum(all(maxWindowM == 0, 2));
+
+                pvalsResponseS(u) = mean(boot_means(:,u)>respValS(u));
+                ZScoreUS(u) = (respValS(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
+
+                pvalsResponseM(u) = mean(boot_means(:,u)>respValM(u));
+                ZScoreUM(u) = (respValM(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
+
+                if emptyRowsS/nT > 0.6
+                    pvalsResponseS(u) = 1;
+                end
+
+                if emptyRowsM/nT > 0.6
+                    pvalsResponseM(u) = 1;
+                end 
+
+            end
+            find(pvalsResponseM<0.05);
+            save(sprintf('SDGm-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponseM')
+            save(sprintf('SDGm-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreUM')
+            save(sprintf('SDGs-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponseS')
+            save(sprintf('SDGs-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreUS')
+            save(sprintf('SDG-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')
+        end
+
+    end
+
     %%%Build rasters
 
     for Rasters = 1
         if rasters ==1
-            preR=500;
-            binr = 50;
+            preR=preBase;
+            binr = 10;
             [MrRast] =BuildBurstMatrix(goodU,round(p.t/binr),round((directimesSorted-preR)/binr),round((stimDur+preR*2)/binr));
             %response matrix
             [nT,nN,nB] = size(MrRast);
@@ -238,7 +378,7 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
                 xticks([preR/binr:static_time/binr:nB])
                 xticklabels([preR:static_time:nB*binr])
                 %yticklabels(repmat([1  (nTrials/length(tfNames))/2],1,length(tfNames))); yticks(sort([x y]));
-
+                caxis([0 1])
                 yyaxis right
                 ylim([1,nT])
                 yticks([direcTrials:direcTrials:nT])
@@ -271,6 +411,8 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
             end
         end
     end
+
+    if generalResponseSates
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%% GENERAL RESPONSE STATISTICS V%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -411,9 +553,10 @@ for ex =examplesSDG%1:size(data,1) 7 6 5 40 41 42 43
     MovingResponses{k} = MaxMR./stdBaseline;
    
     %%%
+    end
 
-    for shuffing =1
-    if rands==1
+    for Shuffing =1
+    if shuffling==1
     rands =1000;
     rand_diffStatic = zeros(rands,nN);
     rand_diffMoving = zeros(rands,nN);
