@@ -5,7 +5,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-GoodRecordingsA =[1:21,40:43];%Anesthetized
+GoodRecordings =[1:21,40:43];%Anesthetized
 FFFrecordingsA = [15:18,40:43]; %anesthetized
 SDGrecordingsA = [1:14,40:43]; %anesthetized 
 
@@ -64,9 +64,10 @@ close all
 sign = 0.05;
 
 N_bootstrap = 1000;
+%%
 j = 1;
 
-for ex = SDGrecordingsA
+for ex = 8%SDGrecordingsA
 
      path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");

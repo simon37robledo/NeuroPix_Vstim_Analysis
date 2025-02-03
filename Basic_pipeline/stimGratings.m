@@ -162,6 +162,10 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     uTempFR = unique(tempFR);nTempFR = length(uTempFR);
     uSpatFR = unique(spatFR);nSpatFR = length(uSpatFR);
 
+    if bombcellUnits
+        [qMetric,unitType]=NP.getBombCell(NP.recordingDir,1,1);
+    end
+
 
 
     %5. Load data to select good units
@@ -266,14 +270,14 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
      if Shuffling_baseline
 
+          N_bootstrap = 1000; % Number of bootstrap iterations
         if ~isfile(sprintf('SDGm-pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
 
-            baseline = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round((preBase)/bin));
+            baseline = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-(preBase))/bin),round((preBase)/bin));
             baseline = single(baseline);
             [nT,nN,nB] = size(baseline);
 
             % Bootstrapping settings
-            N_bootstrap = 1000; % Number of bootstrap iterations
             boot_means = zeros(N_bootstrap, nN,'single');
             resampled_indicesTr = single(randi(nT, [nT, N_bootstrap]));% To store bootstrapped means
             resampled_indicesTi = single(randi(nB, [nB, N_bootstrap]));
@@ -350,7 +354,7 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     end
 
-    %%%Build rasters
+    %% %Build rasters
 
     for Rasters = 1
         if rasters ==1
@@ -359,9 +363,15 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
             [MrRast] =BuildBurstMatrix(goodU,round(p.t/binr),round((directimesSorted-preR)/binr),round((stimDur+preR*2)/binr));
             %response matrix
             [nT,nN,nB] = size(MrRast);
+            
+            binr2 = 100;
+            [MrRast2] =BuildBurstMatrix(goodU,round(p.t/binr2),round((directimesSorted-preR)/binr2),round((stimDur+preR*2)/binr2));
+            %response matrix
+            [nT2,nN2,nB2] = size(MrRast2);
 
             for u =1:nN
-                t= tiledlayout(2,1,"TileSpacing","tight"); %figure('Color','w');
+                fig = figure;
+                tiledlayout(2,1,"TileSpacing","tight"); %figure('Color','w');
                 nexttile
                 imagesc(squeeze(MrRast(:,u,:)));colormap(flipud(gray(64)));
                 title(sprintf('SDG|%s|UnitN-%d|UnitPhy-%d',strrep(NP.recordingName,'_','-'),u,GoodU_or(u)))
@@ -376,7 +386,7 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 yticks([direcTrials:direcTrials:nT])
                 yticklabels([repmat(direcTrials, 1,nDir)]);
                 xticks([preR/binr:static_time/binr:nB])
-                xticklabels([preR:static_time:nB*binr])
+                xticklabels([round(preR/100)*100:static_time:nB*binr])
                 %yticklabels(repmat([1  (nTrials/length(tfNames))/2],1,length(tfNames))); yticks(sort([x y]));
                 caxis([0 1])
                 yyaxis right
@@ -390,22 +400,45 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 xt = xticks;
 
                 nexttile
-                h = histogram(sum(squeeze(MrRast(:,u,:))),round(size(MrRast,3)/2));
-                xlim([lims(1)/(size(MrRast,3)/h.NumBins) lims(2)/(size(MrRast,3)/h.NumBins)])
-                xticks(round(xt/2))
-                xticklabels([preR:static_time:nB*binr])
-                xline(preR/binr/(size(MrRast,3)/h.NumBins),'-g', LineWidth=1.5);
-                xline(preR/binr/(size(MrRast,3)/h.NumBins)+static_time/binr/(size(MrRast,3)/h.NumBins)...
-                    , '-b', LineWidth=1.5)
-                xline(nB/(size(MrRast,3)/h.NumBins)-preR/binr/(size(MrRast,3)/h.NumBins),'-r',LineWidth=1.5)
-                xlabel('Time (ms)')
-                yticklabels((round(100*(yticks/size(MrRast,1)))/100)*1000/binr)
-                ylabel('Spike Rate (spikes/sec)')
 
-                set(gcf,'Color','w')
+                y = (mean(squeeze(MrRast2(:,u,:)))./binr2)*1000;
+                x = 1:nB2; 
+                y_smooth = smooth(x, y, 0.2, 'loess')';
+
+                hold on;
+                fill([x, fliplr(x)], [y_smooth, zeros(size(y_smooth))], 'b', 'FaceAlpha', 0.3, 'EdgeColor', 'none'); % Fill area
+                plot(x, y_smooth, '-b', 'LineWidth', 2); % Smoothed curve
+                plot(x, y, 'ko', 'MarkerFaceColor', 'k'); % Data points
+                hold off;
+                xline(preR/binr2, '-g', LineWidth=1.5);
+                xline(preR/binr2+static_time/binr2, '-b', LineWidth=1.5);
+                xline(nB2-preR/binr2,'-r',LineWidth=1.5)
+                xlim([lims(1)*(binr/binr2) lims(2)*(binr/binr2)])
+                xticks([preR/binr2:static_time/binr2:nB2])
+                xticklabels([round(preR/100)*100:static_time:nB2*binr2])
+                try
+                    ylim([min(y)-std(y) max(y)+std(y)])
+                end
+                ylabel('Spikes/sec')
+                xlabel('Time (ms)')
                 
+
+% 
+%                 h = plot(smoothSum,'LineWidth', 2);
+%                 
+%                 xticks(round(xt/2))
+%                 xticklabels([preR:static_time:nB*binr])
+%                 xline(preR/binr/),'-g', LineWidth=1.5);
+%                 xline(preR/binr/(size(MrRast,3)/h.NumBins)+static_time/binr/(size(MrRast,3)/h.NumBins)...
+%                     , '-b', LineWidth=1.5)
+%                 xline(nB/(size(MrRast,3)/h.NumBins)-preR/binr/(size(MrRast,3)/h.NumBins),'-r',LineWidth=1.5)
+%                 xlabel('Time (ms)')
+%                 yticklabels((round(100*(yticks/size(MrRast,1)))/100)*1000/binr)
+%                 ylabel('Spike Rate (spikes/sec)')
+
+                set(gcf,'Color','w')    
                 cd(NP.recordingDir+"\Figs")
-                print(t, sprintf('SDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
+                print(fig, sprintf('SDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
                 clear f
                 close all
             end
