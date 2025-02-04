@@ -8,16 +8,16 @@ summPlot = 1;
 plotexamplesMB =0;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
-Shuffling =0;Shuffling_baseline=1;
+Shuffling =0;Shuffling_baseline=0;
 repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =1;
 depthPlot =0;
-ReceptiveFieldConvolutions =1;
-repeatConv =1;
+ReceptiveFieldConvolutions =0;
+repeatConv =0;
 plotRF =0;
 spatialTuning=0;
-calculateEntropy =1;
+calculateEntropy =0;
 noEyeMoves = 0;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
@@ -37,7 +37,7 @@ Awake = [44:48];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [51,52] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -658,6 +658,9 @@ for Shuffle =1
     end
 
     if Shuffling_baseline
+        
+        
+        N_bootstrap = 1000;
 
         if ~isfile(sprintf('pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
 
@@ -666,7 +669,7 @@ for Shuffle =1
         [nT,nN,nB] = size(baseline);
         
         % Bootstrapping settings
-        N_bootstrap = 1000; % Number of bootstrap iterations
+      
         boot_means = zeros(N_bootstrap, nN,'single');
         resampled_indicesTr = single(randi(nT, [nT, N_bootstrap]));% To store bootstrapped means
         resampled_indicesTi = single(randi(nB, [nB, N_bootstrap]));
