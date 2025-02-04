@@ -5,6 +5,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
+allGoodRec = [1:21, 28:36, 40:55];
 GoodRecordings =[1:21,40:43];%Anesthetized
 FFFrecordingsA = [15:18,40:43]; %anesthetized
 SDGrecordingsA = [1:14,40:43]; %anesthetized 

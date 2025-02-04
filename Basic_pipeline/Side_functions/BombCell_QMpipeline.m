@@ -143,14 +143,55 @@ ic = ic(:,ic(1,:)~=0);
 
  p = NP.convertPhySorting2tIc(NP.recordingDir);
 
- %%
+ %% 
+cd('\\sil3\data\Large_scale_mapping_NP')
+excelFile = 'Experiment_Excel.xlsx';
 
+data = readtable(excelFile);
+
+
+ %%
+allGoodRec = [2:21, 28:36, 40:55];
 % %path = '\\sil3\data\\Large_scale_mapping_NP\lizards\PV139\PV139_Experiment_6_2_24\Insertion1\catgt_PV139_Experiment_6_2_24_1_g0';
 % path = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_28_11_23\Insertion1\catgt_Mice_exp_28_11_23_1_g0';
 
-NP = NPAPRecording(path);
+% Iterate through experiments (insertions and animals) in excel file
+for ex =  allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+    %%%%%%%%%%%% Load data and data paremeters
+    %1. Load NP class
+    path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
+        +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
+    try %%In case it is not run in Vstim computer, which has drives mapped differently
+        cd(pathE)
+    catch
+        try
+            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","W:");
+            else
+                path = replaceBetween(path,"","\Large_scale","Y:");
+            end
 
-[qMetric,unitType]=NP.getBombCell(NP.recordingDir,1,1);
+            cd(path)
+        catch
+
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
+            else
+                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
+            end
+            cd(path)
+
+        end
+
+    end
+
+    NP = NPAPRecording(path);
+
+    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,0,1);
+    close all
+
+end
 
 
 
