@@ -5,6 +5,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
+bombcellUnits = 1;
 newTIC = 0;
 repeatShuff =0;
 rasters = 1;
@@ -12,7 +13,9 @@ shuffling = 0;
 
 newDiode = 0;
 
-Shuffling_baseline = 1;
+bootstraping = 1; 
+
+Shuffling_baseline = 0;
 repeatShuff = 0;
 tuningIndex =0;
 boxplots = 0;
@@ -216,9 +219,9 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
 
-    Mb = mean(Mb,3); %mean across time bins
+    Mbm = mean(Mb,3); %mean across time bins
 
-    spkRateBM = mean(Mb); %Calculate baseline spike rate of each neuron.
+    spkRateBM = mean(Mbm); %Calculate baseline spike rate of each neuron.
 
     %2. Calculate denominator for Z-score calculation
     %spkRateBM = mean(Mb); %total mean.
@@ -229,7 +232,7 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     direcTrials = trialDivision*nSpatFR*nTempFR;
 
 
-    trialsPerAngle = nT/nDir;
+    direcTrials = nT/nDir;
     
     %%%Response static
     kernel_size = min(500,static_time); %ms
@@ -238,8 +241,8 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     statR = zeros(nDir,nN);
     j=1;
-    for i =1:trialsPerAngle:nT
-        mean_statR = squeeze(mean(Ms(i:trialsPerAngle+i-1,:,100:min(static_time,kernel_size+100)),3));
+    for i =1:direcTrials:nT
+        mean_statR = squeeze(mean(Ms(i:direcTrials+i-1,:,100:min(static_time,kernel_size+100)),3));
         statR(j,:) = mean(mean_statR); 
         j=j+1;
 
@@ -267,7 +270,114 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     [respValM, pos] = max(movR,[],1);
     maxMRPos = movRpos(pos);
+%%
 
+    if bootstraping
+        %%%Bootstrap the baseline per trial
+        %%%category and then compare mean b_baseline vs b_response per
+        %%%neuron. 
+
+        %Bootstrap parameters
+
+        num_trials = direcTrials;
+        n_runs = 10000;
+        param = 'mean';
+        sigmaG = 50;
+        duration = 300;
+        alpha = 0.05;
+        lower_threshold = alpha / 2;
+        upper_threshold = 1 - (alpha / 2);
+
+        statTableM = table();
+
+        statTableS = table();
+
+        for u = 1:size(goodU,2)
+
+
+            j = 1;
+
+             baseline = squeeze(Mb(:,u,:));
+
+             bBaseline = get_bootstrapped_equalsamples(baseline,n_runs,num_trials,param);
+
+
+            for i = 1:direcTrials:nT
+
+                responseM = squeeze(Mm(i:direcTrials+i-1,u,:));
+
+                [responseMG]=ConvBurstMatrix(responseM,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
+
+                % Sham Neuron check
+%                 responseM = zeros(size(baseline)); %sham neuron
+%                 baseline = zeros(size(responseM)); %sham neuron
+% 
+%                 responseM(1:8,1:2:100) = rand(1);
+% 
+%                 baseline(1:8,1:2:50) = rand(1);
+
+                [p_boot_Mov, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseMG,0,n_runs,num_trials,param);
+
+                %Calculate probability of bootstats2 >= bootstats1:
+
+                activated_Mov = p_boot_Mov>upper_threshold;
+                suppresed_Mov = p_boot_Mov<lower_threshold;
+
+                bootstats_center_base = bootstats_center(1);
+                bootstats_center_resp_Mov = bootstats_center(2);
+
+                bootstats_sem_base = bootstats_sem(1); 
+                bootstats_sem_resp_Mov = bootstats_sem(2);
+
+                category = uDir(j);
+
+                statTableM = [statTableM; table(u,category,alpha,bootstats_center_base,bootstats_sem_base,activated_Mov,suppresed_Mov,p_boot_Mov,...
+                    bootstats_center_resp_Mov,bootstats_sem_resp_Mov)];
+
+                %%%%Static
+                
+                responseS = squeeze(Ms(i:direcTrials+i-1,u,:));
+
+                [responseSG]=ConvBurstMatrix(responseS,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
+
+                % Sham Neuron check
+%                 responseM = zeros(size(baseline)); %sham neuron
+%                 baseline = zeros(size(responseM)); %sham neuron
+% 
+%                 responseM(1:8,1:2:100) = rand(1);
+% 
+%                 baseline(1:8,1:2:50) = rand(1);
+
+                [p_boot_Sta, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseSG,0,n_runs,num_trials,param);
+
+                %Calculate probability of bootstats2 >= bootstats1:
+
+                activated_Sta = p_boot_Sta>upper_threshold;
+                suppresed_Sta = p_boot_Sta<lower_threshold;
+
+                bootstats_center_base = bootstats_center(1);
+                bootstats_center_resp_Sta = bootstats_center(2);
+
+                bootstats_sem_base = bootstats_sem(1); 
+                bootstats_sem_resp_Sta = bootstats_sem(2);
+
+                category = uDir(j);
+
+                statTableS = [statTableS; table(activated_Sta,suppresed_Sta,p_boot_Sta,...
+                    bootstats_center_resp_Sta,bootstats_sem_resp_Sta)];
+
+
+                j = j+1;
+            end
+
+        end
+
+        statTable = [statTableM,statTableS];
+
+        statSign = statTable(statTable.activated == 1 | statTable.suppresed == 1,:);
+
+    end
+%%
      if Shuffling_baseline
 
           N_bootstrap = 1000; % Number of bootstrap iterations
@@ -354,12 +464,12 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     end
 
-    %% %Build rasters
+    % %Build rasters
 
     for Rasters = 1
         if rasters ==1
             preR=preBase;
-            binr = 10;
+            binr = 50;
             [MrRast] =BuildBurstMatrix(goodU,round(p.t/binr),round((directimesSorted-preR)/binr),round((stimDur+preR*2)/binr));
             %response matrix
             [nT,nN,nB] = size(MrRast);
@@ -388,7 +498,7 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 xticks([preR/binr:static_time/binr:nB])
                 xticklabels([round(preR/100)*100:static_time:nB*binr])
                 %yticklabels(repmat([1  (nTrials/length(tfNames))/2],1,length(tfNames))); yticks(sort([x y]));
-                caxis([0 1])
+                %caxis([0 1])
                 yyaxis right
                 ylim([1,nT])
                 yticks([direcTrials:direcTrials:nT])

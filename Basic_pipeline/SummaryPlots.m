@@ -62,13 +62,13 @@ Zscoreplot = 0;
 
 close all
 
-sign = 0.05;
+sign = 0.005;
 
 N_bootstrap = 1000;
 %%
 j = 1;
 
-for ex = 8%SDGrecordingsA
+for ex = SDGrecordingsA
 
      path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
@@ -96,6 +96,7 @@ for ex = 8%SDGrecordingsA
     NP = NPAPRecording(path);
 
 
+     %%%%%%%%%%%%%%%%%%% MB 
 
     if contains(data.VS_ordered(ex),"MB")
 %         MBsig =1; 
@@ -262,6 +263,8 @@ for ex = 8%SDGrecordingsA
 
     end
 
+     %%%%%%%%%%%%%%%%%%% RG
+
 
     if contains(data.VS_ordered(ex),"RG") &&  contains(data.VS_ordered(ex),"MB")
 %         RGsig =1;
@@ -343,6 +346,9 @@ for ex = 8%SDGrecordingsA
 
     end
 
+
+    %%%%%%%%%%%%%%%%%%% FFF 
+
     if contains(data.VS_ordered(ex),"FFF")
 
         NeuronValsFFF= load(sprintf('%s-FFF-respVal',NP.recordingName)).respVal;
@@ -367,6 +373,9 @@ for ex = 8%SDGrecordingsA
         zscoreFFF{i} = 0;
 
     end
+
+
+     %%%%%%%%%%%%%%%%%%% SDG 
 
     if contains(data.VS_ordered(ex),"SDG")
 
