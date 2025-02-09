@@ -31,7 +31,7 @@ MovingResponses = cell(1,length(examplesSDG));
 %SA5_1,PV103_7,PV27_1
 
 k=0;
-for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
+for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
    
     %%%%%%%%%%%% Load data and data paremeters
@@ -96,12 +96,12 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     stimFiles = filenames(contains(filenames,"StaticDrifting"));
 
     
-        if isempty(stimFiles)
-            %disp()
-            w= sprintf('No static- drifting gratings ball files where found in %s. Skipping into next experiment.',NP.recordingName);
-            warning(w)
-            continue
-        end
+%         if isempty(stimFiles)
+%             %disp()
+%             w= sprintf('No static- drifting gratings ball files where found in %s. Skipping into next experiment.',NP.recordingName);
+%             warning(w)
+%             continue
+%         end
 
     directions = [];
     tempFR = [];
@@ -270,114 +270,210 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     [respValM, pos] = max(movR,[],1);
     maxMRPos = movRpos(pos);
-%%
+    %%
 
     if bootstraping
         %%%Bootstrap the baseline per trial
         %%%category and then compare mean b_baseline vs b_response per
-        %%%neuron. 
+        %%%neuron.
 
         %Bootstrap parameters
 
         num_trials = direcTrials;
-        n_runs = 10000;
+        n_runs = 1000;
         param = 'mean';
         sigmaG = 50;
         duration = 300;
         alpha = 0.05;
         lower_threshold = alpha / 2;
         upper_threshold = 1 - (alpha / 2);
+        emptyTrialThres = 0.6;
 
         statTableM = table();
 
         statTableS = table();
+        tic
 
         for u = 1:size(goodU,2)
 
 
             j = 1;
 
-             baseline = squeeze(Mb(:,u,:));
+            baseline = squeeze(Mb(:,u,:));
 
-             bBaseline = get_bootstrapped_equalsamples(baseline,n_runs,num_trials,param);
+            bBaseline = get_bootstrapped_equalsamples(baseline,n_runs,num_trials,param);
 
 
             for i = 1:direcTrials:nT
 
-                responseM = squeeze(Mm(i:direcTrials+i-1,u,:));
-
-                [responseMG]=ConvBurstMatrix(responseM,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
-
-                % Sham Neuron check
-%                 responseM = zeros(size(baseline)); %sham neuron
-%                 baseline = zeros(size(responseM)); %sham neuron
-% 
-%                 responseM(1:8,1:2:100) = rand(1);
-% 
-%                 baseline(1:8,1:2:50) = rand(1);
-
-                [p_boot_Mov, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseMG,0,n_runs,num_trials,param);
-
-                %Calculate probability of bootstats2 >= bootstats1:
-
-                activated_Mov = p_boot_Mov>upper_threshold;
-                suppresed_Mov = p_boot_Mov<lower_threshold;
-
-                bootstats_center_base = bootstats_center(1);
-                bootstats_center_resp_Mov = bootstats_center(2);
-
-                bootstats_sem_base = bootstats_sem(1); 
-                bootstats_sem_resp_Mov = bootstats_sem(2);
-
                 category = uDir(j);
 
-                statTableM = [statTableM; table(u,category,alpha,bootstats_center_base,bootstats_sem_base,activated_Mov,suppresed_Mov,p_boot_Mov,...
-                    bootstats_center_resp_Mov,bootstats_sem_resp_Mov)];
+                responseM = squeeze(Mr(i:direcTrials+i-1,u,:));
 
-                %%%%Static
-                
                 responseS = squeeze(Ms(i:direcTrials+i-1,u,:));
 
-                [responseSG]=ConvBurstMatrix(responseS,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
+                emptyRespM(j) = (sum(sum(responseM,2) > 0))/direcTrials;
+                
+                emptyRespS(j) = (sum(sum(responseS,2) > 0))/direcTrials;
 
-                % Sham Neuron check
-%                 responseM = zeros(size(baseline)); %sham neuron
-%                 baseline = zeros(size(responseM)); %sham neuron
-% 
-%                 responseM(1:8,1:2:100) = rand(1);
-% 
-%                 baseline(1:8,1:2:50) = rand(1);
+                
 
-                [p_boot_Sta, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseSG,0,n_runs,num_trials,param);
+                if sum(bBaseline,'all') ==0 && (sum(responseM,'all')==0 && sum(responseS,'all')==0) %%No spikes in this unit for this stimulus.
 
-                %Calculate probability of bootstats2 >= bootstats1:
+                    bootstats_center_base = 0;
+                    bootstats_sem_base = 0;
+                    activated_Mov = 0;
+                    suppresed_Mov = 0;
+                    p_boot_Mov = 0;
+                    bootstats_center_resp_Mov = 0;
+                    bootstats_sem_resp_Mov = 0;
+                    activated_Sta = 0;
+                    suppresed_Sta = 0;
+                    p_boot_Sta = 0;
+                    bootstats_center_resp_Sta = 0;
+                    bootstats_sem_resp_Sta = 0;
+                    validUnit = 0;
+                    statTableM = [statTableM; table(u,category,alpha,bootstats_center_base,bootstats_sem_base,activated_Mov,suppresed_Mov,p_boot_Mov,...
+                        bootstats_center_resp_Mov,bootstats_sem_resp_Mov)];
+                    statTableS = [statTableS; table(activated_Sta,suppresed_Sta,p_boot_Sta,...
+                        bootstats_center_resp_Sta,bootstats_sem_resp_Sta, validUnit)];
 
-                activated_Sta = p_boot_Sta>upper_threshold;
-                suppresed_Sta = p_boot_Sta<lower_threshold;
 
-                bootstats_center_base = bootstats_center(1);
-                bootstats_center_resp_Sta = bootstats_center(2);
+                else %%% Neuron has spikes during SDG
+                    
 
-                bootstats_sem_base = bootstats_sem(1); 
-                bootstats_sem_resp_Sta = bootstats_sem(2);
+                    [responseMG]=ConvBurstMatrix(responseM,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
 
-                category = uDir(j);
+                    % Sham Neuron check
+                    %                 responseM = zeros(size(baseline)); %sham neuron
+                    %                 baseline = zeros(size(responseM)); %sham neuron
+                    %
+                    %                 responseM(1:8,1:2:100) = rand(1);
+                    %
+                    %                 baseline(1:8,1:2:50) = rand(1);
 
-                statTableS = [statTableS; table(activated_Sta,suppresed_Sta,p_boot_Sta,...
-                    bootstats_center_resp_Sta,bootstats_sem_resp_Sta)];
+                    [p_boot_Mov, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseMG,0,n_runs,num_trials,param);
+
+                    %Calculate probability of bootstats2 >= bootstats1:
+
+                    activated_Mov = p_boot_Mov>upper_threshold;
+                    suppresed_Mov = p_boot_Mov<lower_threshold;
+
+                    bootstats_center_base = bootstats_center(1);
+                    bootstats_center_resp_Mov = bootstats_center(2);
+
+                    bootstats_sem_base = bootstats_sem(1);
+                    bootstats_sem_resp_Mov = bootstats_sem(2);
+
+                    if emptyRespM(j) < emptyTrialThres
+
+                        activated_Mov = 0;
+
+                    end
+                
+
+                    statTableM = [statTableM; table(u,category,alpha,bootstats_center_base,bootstats_sem_base,activated_Mov,suppresed_Mov,p_boot_Mov,...
+                        bootstats_center_resp_Mov,bootstats_sem_resp_Mov)];
+
+
+                    %%%%Static
+
+
+                    [responseSG]=ConvBurstMatrix(responseS,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
+
+                    % Sham Neuron check
+                    %                 responseM = zeros(size(baseline)); %sham neuron
+                    %                 baseline = zeros(size(responseM)); %sham neuron
+                    %
+                    %                 responseM(1:8,1:2:100) = rand(1);
+                    %
+                    %                 baseline(1:8,1:2:50) = rand(1);
+
+                    [p_boot_Sta, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseSG,0,n_runs,num_trials,param);
+
+                    %Calculate probability of bootstats2 >= bootstats1:
+
+                    activated_Sta = p_boot_Sta>upper_threshold;
+                    suppresed_Sta = p_boot_Sta<lower_threshold;
+
+                    bootstats_center_base = bootstats_center(1);
+                    bootstats_center_resp_Sta = bootstats_center(2);
+
+                    bootstats_sem_base = bootstats_sem(1);
+                    bootstats_sem_resp_Sta = bootstats_sem(2);
+
+                    category = uDir(j);
+
+                    validUnit =1;
+
+                    if emptyRespS(j) < emptyTrialThres
+
+                        activated_Sta = 0;
+
+                    end
+
+                    statTableS = [statTableS; table(activated_Sta,suppresed_Sta,p_boot_Sta,...
+                        bootstats_center_resp_Sta,bootstats_sem_resp_Sta,validUnit)];
+
+                end
 
 
                 j = j+1;
             end
 
         end
+        toc
 
-        statTable = [statTableM,statTableS];
+            statTable = [statTableM,statTableS];
 
-        statSign = statTable(statTable.activated == 1 | statTable.suppresed == 1,:);
+           % alpha = 0.05;
 
+            lower_threshold = alpha / 2;
+            upper_threshold = 1 - (alpha / 2);
+
+
+% 
+%             statTable.activated_Mov(statTable.activated_Mov ==1) = statTable.p_boot_Mov(statTable.activated_Mov ==1)>upper_threshold;
+%             statTable.suppresed_Mov(statTable.suppresed_Mov==1) = statTable.p_boot_Mov(statTable.suppresed_Mov==1)<lower_threshold;
+% 
+%             statTable.activated_Sta(statTable.activated_Sta == 1) = statTable.p_boot_Sta(statTable.activated_Sta ==1)>upper_threshold;
+%             statTable.suppresed_Sta(statTable.suppresed_Sta==1) = statTable.p_boot_Sta(statTable.suppresed_Sta==1)<lower_threshold;
+
+%             for i = 1:direcTrials:nT
+% 
+%                 responseM = squeeze(Mr(i:direcTrials+i-1,:,:));
+% 
+%                 responseS = squeeze(Ms(i:direcTrials+i-1,:,:));
+% 
+%                 emptyRespM = (sum(sum(responseM,3) > 0))/direcTrials;
+% 
+%                 emptyRespS = (sum(sum(responseS,3) > 0))/direcTrials;
+% 
+% 
+%                 if emptyRespM < emptyTrialThres
+% 
+%                     statTable.activated_Mov(j) = 0;
+% 
+%                 end
+% 
+%                 if emptyRespS(j) < emptyTrialThres
+% 
+%                     statTable.activated_Sta(j) = 0;
+% 
+%                 end
+% 
+%             end
+
+
+            statSign = statTable(statTable.activated_Sta == 1 | statTable.activated_Mov == 1,:);
+
+            save('bootstrap_stats','statTable');
+            save(sprintf('bootstrap_stats_signN-%d',alpha),'statSign')
+            RU = unique(statSign.u);
     end
-%%
+
+    unique(statSign.u)
+%
      if Shuffling_baseline
 
           N_bootstrap = 1000; % Number of bootstrap iterations
@@ -464,7 +560,7 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     end
 
-    % %Build rasters
+    %% %Build rasters
 
     for Rasters = 1
         if rasters ==1
@@ -479,9 +575,9 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
             %response matrix
             [nT2,nN2,nB2] = size(MrRast2);
 
-            for u =1:nN
+            for u = 1:size(goodU,2)
                 fig = figure;
-                tiledlayout(2,1,"TileSpacing","tight"); %figure('Color','w');
+                tiledlayout(1,1,"TileSpacing","tight"); %figure('Color','w');
                 nexttile
                 imagesc(squeeze(MrRast(:,u,:)));colormap(flipud(gray(64)));
                 title(sprintf('SDG|%s|UnitN-%d|UnitPhy-%d',strrep(NP.recordingName,'_','-'),u,GoodU_or(u)))
@@ -508,29 +604,29 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 ylabel('Angles')
                 lims =xlim;
                 xt = xticks;
-
-                nexttile
-
-                y = (mean(squeeze(MrRast2(:,u,:)))./binr2)*1000;
-                x = 1:nB2; 
-                y_smooth = smooth(x, y, 0.2, 'loess')';
-
-                hold on;
-                fill([x, fliplr(x)], [y_smooth, zeros(size(y_smooth))], 'b', 'FaceAlpha', 0.3, 'EdgeColor', 'none'); % Fill area
-                plot(x, y_smooth, '-b', 'LineWidth', 2); % Smoothed curve
-                plot(x, y, 'ko', 'MarkerFaceColor', 'k'); % Data points
-                hold off;
-                xline(preR/binr2, '-g', LineWidth=1.5);
-                xline(preR/binr2+static_time/binr2, '-b', LineWidth=1.5);
-                xline(nB2-preR/binr2,'-r',LineWidth=1.5)
-                xlim([lims(1)*(binr/binr2) lims(2)*(binr/binr2)])
-                xticks([preR/binr2:static_time/binr2:nB2])
-                xticklabels([round(preR/100)*100:static_time:nB2*binr2])
-                try
-                    ylim([min(y)-std(y) max(y)+std(y)])
-                end
-                ylabel('Spikes/sec')
-                xlabel('Time (ms)')
+% 
+%                 nexttile
+% 
+%                 y = (mean(squeeze(MrRast2(:,u,:)))./binr2)*1000;
+%                 x = 1:nB2; 
+%                 y_smooth = smooth(x, y, 0.2, 'loess')';
+% 
+%                 hold on;
+%                 fill([x, fliplr(x)], [y_smooth, zeros(size(y_smooth))], 'b', 'FaceAlpha', 0.3, 'EdgeColor', 'none'); % Fill area
+%                 plot(x, y_smooth, '-b', 'LineWidth', 2); % Smoothed curve
+%                 plot(x, y, 'ko', 'MarkerFaceColor', 'k'); % Data points
+%                 hold off;
+%                 xline(preR/binr2, '-g', LineWidth=1.5);
+%                 xline(preR/binr2+static_time/binr2, '-b', LineWidth=1.5);
+%                 xline(nB2-preR/binr2,'-r',LineWidth=1.5)
+%                 xlim([lims(1)*(binr/binr2) lims(2)*(binr/binr2)])
+%                 xticks([preR/binr2:static_time/binr2:nB2])
+%                 xticklabels([round(preR/100)*100:static_time:nB2*binr2])
+%                 try
+%                     ylim([min(y)-std(y) max(y)+std(y)])
+%                 end
+%                 ylabel('Spikes/sec')
+%                 xlabel('Time (ms)')
                 
 
 % 
@@ -548,9 +644,10 @@ for ex = 8%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
                 set(gcf,'Color','w')    
                 cd(NP.recordingDir+"\Figs")
-                print(fig, sprintf('SDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
+                pause(1);
+                print(fig, sprintf('weirdSDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
                 clear f
-                close all
+                close 
             end
         end
     end
