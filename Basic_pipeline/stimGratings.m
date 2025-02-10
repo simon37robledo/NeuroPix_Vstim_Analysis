@@ -5,7 +5,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-bombcellUnits = 0;
+bombcellUnits = 1;
 newTIC = 0;
 repeatShuff =0;
 rasters = 1;
@@ -31,7 +31,7 @@ MovingResponses = cell(1,length(examplesSDG));
 %SA5_1,PV103_7,PV27_1
 
 k=0;
-for ex = 49%1:size(data,1) 7 6 5 40 41 42 43
+for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
    
     %%%%%%%%%%%% Load data and data paremeters
@@ -178,12 +178,6 @@ for ex = 49%1:size(data,1) 7 6 5 40 41 42 43
 
     %If new tic matrix needs to be used, move oldTIc files and run convertPhySorting2tIc
     cd(NP.recordingDir)
-    if ex == 51
-        newTIC =1;
-    else
-        newTIC =0;
-    end
-
     if isfile("sorting_tIc.mat") && newTIC
 
         if ~exist('oldTIC', 'dir')
@@ -238,7 +232,7 @@ for ex = 49%1:size(data,1) 7 6 5 40 41 42 43
     direcTrials = trialDivision*nSpatFR*nTempFR;
 
 
-    trialsPerAngle = nT/nDir;
+    direcTrials = nT/nDir;
     
     %%%Response static
     kernel_size = min(500,static_time); %ms
@@ -276,7 +270,7 @@ for ex = 49%1:size(data,1) 7 6 5 40 41 42 43
 
     [respValM, pos] = max(movR,[],1);
     maxMRPos = movRpos(pos);
-    %
+    %%
 
     if bootstraping
         %%%Bootstrap the baseline per trial
@@ -566,7 +560,7 @@ for ex = 49%1:size(data,1) 7 6 5 40 41 42 43
 
     end
 
-    % %Build rasters
+    %% %Build rasters
 
     for Rasters = 1
         if rasters ==1
