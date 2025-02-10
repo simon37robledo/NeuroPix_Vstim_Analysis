@@ -5,25 +5,26 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-bombcellUnits = 1;
+bombcellUnits = 0;
 newTIC = 0;
 repeatShuff =0;
-rasters = 1;
+rasters = 0;
 shuffling = 0;
 
 newDiode = 0;
 
-bootstraping = 1; 
+bootstraping = 0; 
 
-Shuffling_baseline = 0;
-repeatShuff = 0;
+Shuffling_baseline = 1;
+repeatShuff = 1;
 tuningIndex =0;
 boxplots = 0;
 generalResponseSates = 0;
 
-examplesSDG = [8 9 10 11 12 13 14 29 30 31 32 40 41 42 43];
+examplesSDGA = [8:14 29 30 31 32 40 41 42 43 44 49:55];
 StaticResponses = cell(1,length(examplesSDG));
 MovingResponses = cell(1,length(examplesSDG));
+trialThres = 0.6;
 
 
 %examplesSDG = [8 9 10 11 12 13 14 29 30 31 32];
@@ -31,7 +32,7 @@ MovingResponses = cell(1,length(examplesSDG));
 %SA5_1,PV103_7,PV27_1
 
 k=0;
-for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
+for ex = examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
    
     %%%%%%%%%%%% Load data and data paremeters
@@ -96,12 +97,12 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     stimFiles = filenames(contains(filenames,"StaticDrifting"));
 
     
-%         if isempty(stimFiles)
-%             %disp()
-%             w= sprintf('No static- drifting gratings ball files where found in %s. Skipping into next experiment.',NP.recordingName);
-%             warning(w)
-%             continue
-%         end
+        if isempty(stimFiles)
+            %disp()
+            w= sprintf('No static- drifting gratings ball files where found in %s. Skipping into next experiment.',NP.recordingName);
+            warning(w)
+            continue
+        end
 
     directions = [];
     tempFR = [];
@@ -148,6 +149,18 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"SDG",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
     static_time = cell2mat(stim.VSMetaData.allPropVal(find(strcmp(stim.VSMetaData.allPropName,'static_time'))))*1000; %Static time
+% 
+%     %%%Test diode triggers vs difital triggers:
+%     tr = NP.getTrigger;
+%      onDigital = tr{3}(tr{3} > tr{1}(ttlInd) &  tr{3} < tr{2}(ttlInd+1));
+% 
+%      offDigital = tr{4}(tr{4} > tr{1}(ttlInd) &  tr{4} < tr{2}(ttlInd+1));
+% 
+%      figure;plot(onDigital,stimOn,'g')
+%      hold on;
+%      plot(stimOn,stimOn,'k')
+%      plot(offDigital,stimOff,'r');
+%      plot(stimOff,stimOff,'b')
 
 
     stimInter= mean(stimOn(2:end)-stimOff(1:end-1)); % When dealing with different speeds, save different stim durs, and create M for each speed
@@ -164,12 +177,11 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     uDir = unique(directions);nDir = length(uDir);
     uTempFR = unique(tempFR);nTempFR = length(uTempFR);
     uSpatFR = unique(spatFR);nSpatFR = length(uSpatFR);
+    
 
     if bombcellUnits
-        [qMetric,unitType]=NP.getBombCell(NP.recordingDir,1,1);
+        [qMetric,unitType]=NP.getBombCell(NP.recordingDir);
     end
-
-
 
     %5. Load data to select good units
     cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
@@ -205,6 +217,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-stimInter/2)/bin),round((stimDur+stimInter)/bin)); %response matrix
     [nT,nN,nB] = size(Mr);
     trialDivision = nT/(nDir*nSpatFR*nTempFR);
+    trialsPerAngle = nT/nDir;
 
     %figure;imagesc(squeeze(Mr(:,15,:)));colormap(flipud(gray(64)));xline(preBase/bin);xline((preBase+stimDur)/bin);yline(trialDivision:trialDivision:nT-1);
 
@@ -217,7 +230,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     %%%%%%%%%%%%%% Select baseline
 
-    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
+    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
 
     Mbm = mean(Mb,3); %mean across time bins
 
@@ -235,14 +248,14 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     direcTrials = nT/nDir;
     
     %%%Response static
-    kernel_size = min(500,static_time); %ms
+    kernel_size = floor(min([700,static_time,stimDur-static_time])); %ms
 
     Ms =  BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((static_time)/bin));
 
     statR = zeros(nDir,nN);
     j=1;
     for i =1:direcTrials:nT
-        mean_statR = squeeze(mean(Ms(i:direcTrials+i-1,:,100:min(static_time,kernel_size+100)),3));
+        mean_statR = squeeze(mean(Ms(i:direcTrials+i-1,:,1:kernel_size),3));
         statR(j,:) = mean(mean_statR); 
         j=j+1;
 
@@ -262,7 +275,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     for i =1:trialsPerAngle:nT %iterate through angles
         %         mean_movR = squeeze(mean(movmean(Mm(i:trialsPerAngle+i-1,:,:), kernel_size, 1)));
         %         [movR(j,:), movRpos(j,:)] = max(mean_movR,[],2);
-        mean_movR = squeeze(mean(Mm(i:trialsPerAngle+i-1,:,100:min(static_time,kernel_size+100)),3));
+        mean_movR = squeeze(mean(Mm(i:trialsPerAngle+i-1,:,1:kernel_size),3));
         movR(j,:) = mean(mean_movR); 
 
         j=j+1;
@@ -270,7 +283,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     [respValM, pos] = max(movR,[],1);
     maxMRPos = movRpos(pos);
-    %%
+    %
 
     if bootstraping
         %%%Bootstrap the baseline per trial
@@ -292,19 +305,27 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
         statTableM = table();
 
         statTableS = table();
+        
+
+        if isempty(gcp('nocreate'))
+            parpool; % Start a pool with the default number of workers
+        end
+
         tic
+        parfor u = 1:size(goodU,2)
 
-        for u = 1:size(goodU,2)
 
+            %baseline = squeeze(Mb(:,u,:));
 
-            j = 1;
+            %bBaseline = get_bootstrapped_equalsamples(baseline,n_runs,num_trials,param);
 
-            baseline = squeeze(Mb(:,u,:));
+            % Start a parallel pool (if not already started)
 
-            bBaseline = get_bootstrapped_equalsamples(baseline,n_runs,num_trials,param);
 
 
             for i = 1:direcTrials:nT
+
+                j = ceil((i-1)/direcTrials) +1;
 
                 category = uDir(j);
 
@@ -312,11 +333,11 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
                 responseS = squeeze(Ms(i:direcTrials+i-1,u,:));
 
-                emptyRespM(j) = (sum(sum(responseM,2) > 0))/direcTrials;
-                
-                emptyRespS(j) = (sum(sum(responseS,2) > 0))/direcTrials;
+                baseline = squeeze(Mb(i:direcTrials+i-1,u,:)); 
 
+                emptyRespM = (sum(sum(responseM,2) > 0))/direcTrials;
                 
+                emptyRespS = (sum(sum(responseS,2) > 0))/direcTrials;         
 
                 if sum(bBaseline,'all') ==0 && (sum(responseM,'all')==0 && sum(responseS,'all')==0) %%No spikes in this unit for this stimulus.
 
@@ -342,17 +363,18 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 else %%% Neuron has spikes during SDG
                     
 
-                    [responseMG]=ConvBurstMatrix(responseM,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
+                    %[responseMG]=ConvBurstMatrix(responseM,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
 
-                    % Sham Neuron check
-                    %                 responseM = zeros(size(baseline)); %sham neuron
-                    %                 baseline = zeros(size(responseM)); %sham neuron
-                    %
-                    %                 responseM(1:8,1:2:100) = rand(1);
-                    %
-                    %                 baseline(1:8,1:2:50) = rand(1);
+                    %%% Sham Neuron check
+%                     responseM = zeros(size(responseM)); %sham neuron
+%                     baseline = zeros(size(baseline)); %sham neuron
+% 
+%                     val = rand(1);
+%                     responseM(1:10,1:2:100) = val;
+% 
+%                     %baseline(1:10,1:2:100) = val/2;
 
-                    [p_boot_Mov, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseMG,0,n_runs,num_trials,param);
+                    [p_boot_Mov, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(baseline,0,responseM,0,n_runs,num_trials,param);
 
                     %Calculate probability of bootstats2 >= bootstats1:
 
@@ -365,7 +387,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                     bootstats_sem_base = bootstats_sem(1);
                     bootstats_sem_resp_Mov = bootstats_sem(2);
 
-                    if emptyRespM(j) < emptyTrialThres
+                    if emptyRespM < emptyTrialThres
 
                         activated_Mov = 0;
 
@@ -375,9 +397,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                     statTableM = [statTableM; table(u,category,alpha,bootstats_center_base,bootstats_sem_base,activated_Mov,suppresed_Mov,p_boot_Mov,...
                         bootstats_center_resp_Mov,bootstats_sem_resp_Mov)];
 
-
                     %%%%Static
-
 
                     [responseSG]=ConvBurstMatrix(responseS,fspecial('gaussian',[1 duration],sigmaG),'same'); %apply gausian filter to response to smooth spike values
 
@@ -389,7 +409,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                     %
                     %                 baseline(1:8,1:2:50) = rand(1);
 
-                    [p_boot_Sta, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseSG,0,n_runs,num_trials,param);
+                    [p_boot_Sta, bootstats, bootstats_center, bootstats_sem] = get_bootstrap_results_equalsamples(bBaseline,1,responseS,0,n_runs,num_trials,param);
 
                     %Calculate probability of bootstats2 >= bootstats1:
 
@@ -406,7 +426,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
                     validUnit =1;
 
-                    if emptyRespS(j) < emptyTrialThres
+                    if emptyRespS < emptyTrialThres
 
                         activated_Sta = 0;
 
@@ -417,8 +437,6 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
                 end
 
-
-                j = j+1;
             end
 
         end
@@ -426,57 +444,38 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
             statTable = [statTableM,statTableS];
 
-           % alpha = 0.05;
+            statTable.Properties.VariableNames{1} = 'u';
 
-            lower_threshold = alpha / 2;
-            upper_threshold = 1 - (alpha / 2);
+            %%% Change Alpha and check results 
+%            alpha = 0.005;
+% 
+%            lower_threshold = alpha / 2;
+%            upper_threshold = 1 - (alpha / 2);
+% 
+%            
+%                        statTable.activated_Mov(statTable.activated_Mov ==1) = statTable.p_boot_Mov(statTable.activated_Mov ==1)>upper_threshold;
+%                        statTable.suppresed_Mov(statTable.suppresed_Mov==1) = statTable.p_boot_Mov(statTable.suppresed_Mov==1)<lower_threshold;
+%            
+%                        statTable.activated_Sta(statTable.activated_Sta == 1) = statTable.p_boot_Sta(statTable.activated_Sta ==1)>upper_threshold;
+%                        statTable.suppresed_Sta(statTable.suppresed_Sta==1) = statTable.p_boot_Sta(statTable.suppresed_Sta==1)<lower_threshold;
+% 
+%               
 
+           
+           save('bootstrap_stats','statTable');
+           %save(sprintf('bootstrap_stats_signN-%d',alpha),'statSign')
 
-% 
-%             statTable.activated_Mov(statTable.activated_Mov ==1) = statTable.p_boot_Mov(statTable.activated_Mov ==1)>upper_threshold;
-%             statTable.suppresed_Mov(statTable.suppresed_Mov==1) = statTable.p_boot_Mov(statTable.suppresed_Mov==1)<lower_threshold;
-% 
-%             statTable.activated_Sta(statTable.activated_Sta == 1) = statTable.p_boot_Sta(statTable.activated_Sta ==1)>upper_threshold;
-%             statTable.suppresed_Sta(statTable.suppresed_Sta==1) = statTable.p_boot_Sta(statTable.suppresed_Sta==1)<lower_threshold;
-
-%             for i = 1:direcTrials:nT
-% 
-%                 responseM = squeeze(Mr(i:direcTrials+i-1,:,:));
-% 
-%                 responseS = squeeze(Ms(i:direcTrials+i-1,:,:));
-% 
-%                 emptyRespM = (sum(sum(responseM,3) > 0))/direcTrials;
-% 
-%                 emptyRespS = (sum(sum(responseS,3) > 0))/direcTrials;
-% 
-% 
-%                 if emptyRespM < emptyTrialThres
-% 
-%                     statTable.activated_Mov(j) = 0;
-% 
-%                 end
-% 
-%                 if emptyRespS(j) < emptyTrialThres
-% 
-%                     statTable.activated_Sta(j) = 0;
-% 
-%                 end
-% 
-%             end
-
-
-            statSign = statTable(statTable.activated_Sta == 1 | statTable.activated_Mov == 1,:);
-
-            save('bootstrap_stats','statTable');
-            save(sprintf('bootstrap_stats_signN-%d',alpha),'statSign')
-            RU = unique(statSign.u);
+           RUMovAct = (unique(statTable(statTable.activated_Mov == 1,:).u));
+           RUMovSup = (unique(statTable(statTable.suppresed_Mov == 1,:).u));
+           RUStatSup = (unique(statTable(statTable.suppresed_Sta == 1,:).u));
+           RUStatAct = (unique(statTable(statTable.activated_Sta == 1,:).u));
     end
 
     unique(statSign.u)
-%
-     if Shuffling_baseline
+    %
+    if Shuffling_baseline
 
-          N_bootstrap = 1000; % Number of bootstrap iterations
+        N_bootstrap = 1000; % Number of bootstrap iterations
         if ~isfile(sprintf('SDGm-pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
 
             baseline = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-(preBase))/bin),round((preBase)/bin));
@@ -541,16 +540,18 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 pvalsResponseM(u) = mean(boot_means(:,u)>respValM(u));
                 ZScoreUM(u) = (respValM(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
 
-                if emptyRowsS/nT > 0.6
+                if emptyRowsS/nT > trialThres
                     pvalsResponseS(u) = 1;
                 end
 
-                if emptyRowsM/nT > 0.6
+                if emptyRowsM/nT > trialThres
                     pvalsResponseM(u) = 1;
                 end 
 
             end
-            find(pvalsResponseM<0.05);
+            find(pvalsResponseM<0.005);
+            find(pvalsResponseS<0.005);
+
             save(sprintf('SDGm-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponseM')
             save(sprintf('SDGm-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreUM')
             save(sprintf('SDGs-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponseS')
@@ -560,7 +561,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
     end
 
-    %% %Build rasters
+    % %Build rasters
 
     for Rasters = 1
         if rasters ==1
@@ -577,7 +578,7 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
             for u = 1:size(goodU,2)
                 fig = figure;
-                tiledlayout(1,1,"TileSpacing","tight"); %figure('Color','w');
+                tiledlayout(2,1,"TileSpacing","tight"); %figure('Color','w');
                 nexttile
                 imagesc(squeeze(MrRast(:,u,:)));colormap(flipud(gray(64)));
                 title(sprintf('SDG|%s|UnitN-%d|UnitPhy-%d',strrep(NP.recordingName,'_','-'),u,GoodU_or(u)))
@@ -604,53 +605,41 @@ for ex = 7%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 ylabel('Angles')
                 lims =xlim;
                 xt = xticks;
-% 
-%                 nexttile
-% 
-%                 y = (mean(squeeze(MrRast2(:,u,:)))./binr2)*1000;
-%                 x = 1:nB2; 
-%                 y_smooth = smooth(x, y, 0.2, 'loess')';
-% 
-%                 hold on;
-%                 fill([x, fliplr(x)], [y_smooth, zeros(size(y_smooth))], 'b', 'FaceAlpha', 0.3, 'EdgeColor', 'none'); % Fill area
-%                 plot(x, y_smooth, '-b', 'LineWidth', 2); % Smoothed curve
-%                 plot(x, y, 'ko', 'MarkerFaceColor', 'k'); % Data points
-%                 hold off;
-%                 xline(preR/binr2, '-g', LineWidth=1.5);
-%                 xline(preR/binr2+static_time/binr2, '-b', LineWidth=1.5);
-%                 xline(nB2-preR/binr2,'-r',LineWidth=1.5)
-%                 xlim([lims(1)*(binr/binr2) lims(2)*(binr/binr2)])
-%                 xticks([preR/binr2:static_time/binr2:nB2])
-%                 xticklabels([round(preR/100)*100:static_time:nB2*binr2])
-%                 try
-%                     ylim([min(y)-std(y) max(y)+std(y)])
-%                 end
-%                 ylabel('Spikes/sec')
-%                 xlabel('Time (ms)')
-                
 
-% 
-%                 h = plot(smoothSum,'LineWidth', 2);
-%                 
-%                 xticks(round(xt/2))
-%                 xticklabels([preR:static_time:nB*binr])
-%                 xline(preR/binr/),'-g', LineWidth=1.5);
-%                 xline(preR/binr/(size(MrRast,3)/h.NumBins)+static_time/binr/(size(MrRast,3)/h.NumBins)...
-%                     , '-b', LineWidth=1.5)
-%                 xline(nB/(size(MrRast,3)/h.NumBins)-preR/binr/(size(MrRast,3)/h.NumBins),'-r',LineWidth=1.5)
-%                 xlabel('Time (ms)')
-%                 yticklabels((round(100*(yticks/size(MrRast,1)))/100)*1000/binr)
-%                 ylabel('Spike Rate (spikes/sec)')
+                nexttile
+
+                y = (mean(squeeze(MrRast2(:,u,:)))./binr2)*1000;
+                x = 1:nB2; 
+                y_smooth = smooth(x, y, 0.2, 'loess')';
+
+                hold on;
+                fill([x, fliplr(x)], [y_smooth, zeros(size(y_smooth))], 'b', 'FaceAlpha', 0.3, 'EdgeColor', 'none'); % Fill area
+                plot(x, y_smooth, '-b', 'LineWidth', 2); % Smoothed curve
+                plot(x, y, 'ko', 'MarkerFaceColor', 'k','MarkerSize',3); % Data points
+                hold off;
+                xline(preR/binr2, '-g', LineWidth=1.5);
+                xline(preR/binr2+static_time/binr2, '-b', LineWidth=1.5);
+                xline(nB2-preR/binr2,'-r',LineWidth=1.5)
+                xlim([lims(1)*(binr/binr2) lims(2)*(binr/binr2)])
+                xticks([preR/binr2:static_time/binr2:nB2])
+                xticklabels([round(preR/100)*100:static_time:nB2*binr2])
+                try
+                    ylim([min(y)-std(y) max(y)+std(y)])
+                end
+                ylabel('Spikes/sec')
+                xlabel('Time (ms)')
 
                 set(gcf,'Color','w')    
                 cd(NP.recordingDir+"\Figs")
-                pause(1);
+                pause(0.5);
                 print(fig, sprintf('weirdSDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
                 clear f
                 close 
             end
         end
     end
+
+    %
 
     if generalResponseSates
 

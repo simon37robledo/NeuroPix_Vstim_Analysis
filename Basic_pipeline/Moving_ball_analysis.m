@@ -5,15 +5,15 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 1;
-plotexamplesMB =0;
+plotexamplesMB =1;
 newTIC = 0;
 ZscoresDo=1; redoResp=0;
-Shuffling =0;Shuffling_baseline=0;
+Shuffling =0;Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
 repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =1;
 depthPlot =0;
-ReceptiveFieldConvolutions =0;
+ReceptiveFieldConvolutions =1;
 repeatConv =0;
 plotRF =0;
 spatialTuning=0;
