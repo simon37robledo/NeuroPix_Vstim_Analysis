@@ -92,7 +92,7 @@ sign = 0.005;
 
 N_bootstrap = 1000;
 
-%
+%%
 j = 1;
 
 for ex = SDGrecordingsA
@@ -500,7 +500,7 @@ for ex = SDGrecordingsA
       SDGmAndSDGs = SDGmAndSDGs+length(ZscoreNeuronsMB((respNeuronsSDGm <= sign & respNeuronsSDGs <= sign) & respNeuronsMB>sign & respNeuronsRG > sign ));
       SDGmAndMB = SDGmAndMB+length(ZscoreNeuronsMB((respNeuronsMB<=sign & respNeuronsSDGm <= sign) & respNeuronsRG > sign & respNeuronsSDGs > sign));
       MBandSDGs = MBandSDGs+length(ZscoreNeuronsMB((respNeuronsMB<=sign & respNeuronsSDGs <= sign) & respNeuronsRG > sign & respNeuronsSDGm > sign ));
-      MBandSDGmsndSDGs = MBandSDGmsndSDGs+length(ZscoreNeuronsMB((respNeuronsMB<=sign & respNeuronsSDGm <= sign & respNeuronsSDGs <= sign) & respNeuronsRG > sign));
+      MBandSDGmsndSDGs = MBandSDGmsndSDGs+length(ZscoreNeuronsMB(respNeuronsMB<=sign &respNeuronsSDGm <= sign) & respNeuronsRG > sign & respNeuronsSDGm <= sign & respNeuronsSDGs <= sign));
       
       MBtotal = MBtotal+length(ZscoreNeuronsMB(respNeuronsMB<=sign & respNeuronsRG > sign));
       RGtotal = RGtotal+length(ZscoreNeuronsMB(respNeuronsRG<=sign));

@@ -4,21 +4,22 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
-summPlot = 1;
+summPlot = 0;
 plotexamplesMB =1;
 newTIC = 0;
-ZscoresDo=1; redoResp=0;
-Shuffling =0;Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials 
-repeatShuff =0;
+ResponseProfile=1; redoResp=1;
+Shuffling =0;Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =1;
 ReceptiveFieldFixedDelay = 0;
-tuning =1;
+tuning =0;
 depthPlot =0;
-ReceptiveFieldConvolutions =1;
+ReceptiveFieldConvolutions =0;
 repeatConv =0;
 plotRF =0;
 spatialTuning=0;
 calculateEntropy =0;
 noEyeMoves = 0;
+includeOnespeed = 1;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 
@@ -168,6 +169,7 @@ for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
     %Check diode
+
     % for i = 1:length(stimOn)
     %
     %     Lon = length(onSync(onSync>=stimOn(i) & onSync<=stimOff(i)));
@@ -187,20 +189,65 @@ for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,
     %
     % end
 
-    stimInter= mean(stimOn(2:end)-stimOff(1:end-1)); % When dealing with different speeds, save different stim durs, and create M for each speed
-    stimDur = mean(-stimOn+stimOff); %When dealing with different speeds, save different stim durs, and create M for each speed
+% 
+%     
+%     %%Test diode triggers vs difital triggers:
+%      tr = NP.getTrigger;
+%      onDigital = tr{3}(tr{3} > tr{1}(ttlInd) &  tr{3} < tr{2}(ttlInd+1));
+% 
+%      offDigital = tr{4}(tr{4} > tr{1}(ttlInd) &  tr{4} < tr{2}(ttlInd+1));
+% 
+%      figure;plot(onDigital,stimOn','g')
+%      hold on;
+%      plot(stimOn,stimOn,'k')
+%      plot(offDigital,stimOff,'r');
+%      plot(stimOff,stimOff,'b')
+% % 
+% %      figure;plot(1:length(stimOff),offDigital-stimOff')
+% figure;plot(1:length(directimesSortedOff)-1,diff(directimesSortedOff)/1000)
+% figure;plot(1:length(directimesSorted)-1,diff(directimesSorted)/1000)
+
+
+     %When dealing with different speeds, save different stim durs, and create M for each speed
     A = [stimOn directions' offsets' sizes' speeds' orientations'];
     [C indexS] = sortrows(A,[2 3 4 5 6]);
 
-    %find(-stimOn+stimOff>3000)
-
-
-    %4. Sort directions:
-    directimesSorted = C(:,1)';
-
     B = [stimOff directions' offsets' sizes' speeds' orientations'];
     [Coff indexSo] = sortrows(B,[2 3 4 5 6]);
+
+    stimInter= mean(stimOn(2:end)-stimOff(1:end-1));
+
+    if includeOnespeed
+
+        A =  A(A(:,5) == max(A(:,5)),:);
+
+        B =  B(B(:,5) == max(B(:,5)),:);
+
+        [C indexS] = sortrows(A,[2 3 4 5 6]);
+
+        [Coff indexSo] = sortrows(B,[2 3 4 5 6]);
+
+        stimOn = A(:,1);
+        stimOff = B(:,1);
+
+        digon  =onDigital(A(:,5) == max(A(:,5)));
+
+        stimInter = interStimStats;
+
+    end
+
+%     figure;plot(1:length(stimOn)-1,diff(digon)/1000)
+
+    %find(-stimOn+stimOff>3000)
+    %4. Sort directions:
+    directimesSorted = C(:,1)';
     directimesSortedOff = Coff(:,1)';
+
+   
+
+     % When dealing with different speeds, save different stim durs, and create M for each speed
+    stimDur = mean(-stimOn+stimOff);
+
 
     %5. Load data to select good units
     cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
@@ -234,17 +281,17 @@ for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,
 
     %7. Load raster matrices
     bin = 1;
-    preBase = round(stimInter/2);%round(3*interStimStats/4);
+    preBase = round(stimInter-200);%round(3*interStimStats/4);
 
-    %%Construct stimType matrix for eye movement plot.
-    stimType = zeros(length(C),6); %3 plus number of example neurons
-    stimType(:,1) = A(:,1);
-    stimType(:,2) = A(:,1)+stimDur;
-    stimType(:,3) = A(:,2);
-    stimType(:,4) = A(:,3);
-    
+    %%%%%%% Construct stimType matrix for eye movement plot.
+%     stimType = zeros(length(A),6); %3 plus number of example neurons
+%     stimType(:,1) = A(:,1);
+%     stimType(:,2) = A(:,1)+stimDur;
+%     stimType(:,3) = A(:,2);
+%     stimType(:,4) = A(:,3);
+%     
     % Get response strenght of specific neurons and save it in stimType
-    [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+    %[MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
     %ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
     %ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
 %     stimType(:,end-1) = ResponseStrengthU34;
@@ -327,7 +374,7 @@ for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,
     %%%%%%%%%%%%%% Select baseline
     %NP.recordingDuration_ms/1000/60
 
-    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((stims-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
+    [Mb] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin)); %Baseline matrix plus
 
     Mb = mean(Mb,3); %mean across time bins
 
@@ -343,8 +390,8 @@ for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,
     %%%%%%%%%%%%%%%%%%%% Select responsive units and calculate their tunning profile
     %3. Convolute matrix to spread response
     % Convolute in the 3rd dimension (trials)
-    for ZscoreData =1
-if ZscoresDo ==1
+    for ResponseProfileF =1
+if ResponseProfile ==1
     %4. Create window to scan rasters and get the maximum response
     duration =300; %ms
     Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
@@ -367,7 +414,13 @@ if ZscoresDo ==1
 
     %[1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 20, 22, 23, 24, 28, 32, 34, 36]
 
-    if ~isfile(sprintf(sprintf('NeuronRespCat-%s.mat',NP.recordingName))) || redoResp
+    if includeOnespeed
+        responseFile = sprintf('OneSpeed-%d-NeuronRespCat-%s.mat',max(speeds),NP.recordingName);
+    else
+        responseFile = sprintf('NeuronRespCat-%s.mat',NP.recordingName);
+    end
+
+    if ~isfile(sprintf('NeuronRespCat-%s.mat',NP.recordingName)) || redoResp
     
     %Baseline = size window
 
@@ -461,9 +514,18 @@ if ZscoresDo ==1
 
         NeuronVals(u,:,:) = NeuronRespProfile;
     end
-        save(sprintf('NeuronRespCat-%s',NP.recordingName),"NeuronVals")
+            if includeOnespeed
+                save(sprintf('OneSpeed-%d-NeuronRespCat-%s',max(speeds),NP.recordingName),"NeuronVals")
+            else
+                save(sprintf('NeuronRespCat-%s',NP.recordingName),"NeuronVals")
+            end
     else
-        NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
+
+        if includeOnespeed
+            NeuronVals = load(sprintf('OneSpeed-%d-NeuronRespCat-%s',max(speeds),NP.recordingName)).NeuronVals;
+        else
+            NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
+        end
     end
 
     %Create tunning curve, based on direction tunning curve 
@@ -660,7 +722,7 @@ for Shuffle =1
     if Shuffling_baseline
         
         
-        N_bootstrap = 1000;
+        N_bootstrap = 10000;
 
         if ~isfile(sprintf('pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
 
@@ -671,7 +733,17 @@ for Shuffle =1
         % Bootstrapping settings
       
         boot_means = zeros(N_bootstrap, nN,'single');
-        resampled_indicesTr = single(randi(nT, [nT, N_bootstrap]));% To store bootstrapped means
+        resampled_indicesTr = single(randi(nT, [trialDivision, N_bootstrap]));% To store bootstrapped means
+
+        temp = NaN(trialDivision,duration);
+        rand_lev1 = randi(num_lev1,num_lev1,1);
+        for j = 1:length(rand_lev1)
+            num_lev2 = find(~isnan(data(rand_lev1(j),:)),1,'last'); %We need to calculate this again here because there is a different number of trials for each neuron
+            rand_lev2 = randi(num_lev2,1,num_trials); %Resample only from trials with data but same number of sample trials for all
+            temp(j,:) = data(rand_lev1(j),rand_lev2);
+        end
+    
+        
         resampled_indicesTi = single(randi(nB, [nB, N_bootstrap]));
 
         kernel = ones(trialDivision, duration) / (trialDivision * duration); % Normalize for mean
@@ -719,7 +791,7 @@ for Shuffle =1
             pvalsResponse(u) = mean(boot_means(:,u)>respVal(u));
             ZScoreU(u) = (respVal(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
 
-            if emptyRows/trialDivision > 0.6
+            if emptyRows/trialDivision >= 0.5
                 pvalsResponse(u) = 1;
             end
 
@@ -729,6 +801,8 @@ for Shuffle =1
         save(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')
         
         end
+
+        find(pvalsResponse <0.05)
         
 
     end
@@ -764,8 +838,8 @@ if tuning ==1
     cd(NP.recordingDir)
     %pvalTr=  load(sprintf('pvalTrials-%s',NP.recordingName)).pvalTr;
     %pvalTi= load(sprintf('pvalTime-%s',NP.recordingName)).pvalTi;
-    tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
-    NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
+    %tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
+    %NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
 
     %Tuning index
     % Calculate tuning direction and strength for all neurons then plot it across depth and in 3D
@@ -997,21 +1071,18 @@ for plotOp = plotexamplesMB
 
             A = [selectedTstamps' selectedDir' selectedOffsets' selectedSizes' selectedSpeeds'];
 
- 
-        else
-             A = [stimOn directions' offsets' sizes' speeds'];
 
         end
 
 
-        eNeuron = 19;%1:length(goodU); %8
+        %eNeuron = 19;%1:length(goodU); %8
 
         orderS = [2 3 4 5;4 2 3 5;5 2 3 4;3 2 4 5];
         orderNames = {'dir_off_sizes_speeds';'sizes_dir_off_speeds';'speeds_dir_off_sizes';'off_dir_sizes_speeds'};
 
 
         cd(NP.recordingDir)
-        NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
+        %NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
 
         posX = squeeze(NeuronVals(:,:,3));
         posY = squeeze(NeuronVals(:,:,2));
@@ -1024,7 +1095,7 @@ for plotOp = plotexamplesMB
 
         uDir = unique(directions);
         bin = 1;
-        bin2 =10;
+        bin2 =20;
         trialsPerAngle = trialDivision*offsetN*speedN*sizeN*orientN;
         for k = 1
 
@@ -1034,10 +1105,17 @@ for plotOp = plotexamplesMB
 
             directimesSorted = C(:,1)';
 
+            preBase = stimInter;
+
             [Mr] = BuildBurstMatrix(goodU,round(p.t/bin2),round((directimesSorted-preBase)/bin2),round((stimDur+preBase*2)/bin2));
 
             [nT,nN,nB] = size(Mr);
+
             Mr2 = [];
+
+             pvals = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse').pvalsResponse;
+
+             eNeuron = find(pvals<0.05);
 
             for u = eNeuron
 
@@ -1166,7 +1244,7 @@ for plotOp = plotexamplesMB
                     % Centered in the trial block
 
                     % Call the plotArrow function to plot the arrows
-                    plotArrow(ax, direction, arrowLength, startX, startY, headSize);
+                    %plotArrow(ax, direction, arrowLength, startX, startY, headSize);
                 end
 
                 set(gcf, 'Color', 'w'); 
@@ -1177,10 +1255,10 @@ for plotOp = plotexamplesMB
                 end
                 cd(NP.recordingDir + "\Figs")
                 if noEyeMoves
-                    print(fig, sprintf('%s-MovBall-NoEyeMoves-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
+                    print(fig, sprintf('%s-MovBall-NoEyeMoves-%s-U%d-W%d-%dW-speed-500.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
 
                 else
-                    print(fig, sprintf('%s-MovBall-%s-U%d-W%d-%dW.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
+                    print(fig, sprintf('%s-MovBall-%s-U%d-W%d-%dW-speed-500.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
                 end
 
 
@@ -1213,7 +1291,7 @@ for plotOp = plotexamplesMB
 end
 % %%%%%%%%%%%%%%%%%%%%%%%% Position heatmap
 
-for receptiveField=1 %%ReceptiveFieldMethod1
+for receptiveField=1 %%ReceptiveFieldMethod1 fixed delay
 
         if ReceptiveFieldFixedDelay ==1
             %%%

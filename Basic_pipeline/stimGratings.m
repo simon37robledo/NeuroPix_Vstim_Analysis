@@ -7,7 +7,6 @@ data = readtable(excelFile);
 
 bombcellUnits = 0;
 newTIC = 0;
-repeatShuff =0;
 rasters = 0;
 shuffling = 0;
 
@@ -20,11 +19,12 @@ repeatShuff = 1;
 tuningIndex =0;
 boxplots = 0;
 generalResponseSates = 0;
+trialThres =0.6;
 
-examplesSDGA = [8:14 29 30 31 32 40 41 42 43 44 49:55];
-StaticResponses = cell(1,length(examplesSDG));
-MovingResponses = cell(1,length(examplesSDG));
-trialThres = 0.6;
+examplesSDGA = [8:14 29 30 31 32 40 41 42 43 44 49:54];
+% StaticResponses = cell(1,length(examplesSDG));
+% MovingResponses = cell(1,length(examplesSDG));
+% trialThres = 0.6;
 
 
 %examplesSDG = [8 9 10 11 12 13 14 29 30 31 32];
@@ -32,7 +32,7 @@ trialThres = 0.6;
 %SA5_1,PV103_7,PV27_1
 
 k=0;
-for ex = examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
+for ex = [43 44 49:54]%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
    
     %%%%%%%%%%%% Load data and data paremeters
@@ -470,10 +470,11 @@ for ex = examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
            RUStatSup = (unique(statTable(statTable.suppresed_Sta == 1,:).u));
            RUStatAct = (unique(statTable(statTable.activated_Sta == 1,:).u));
     end
-
-    unique(statSign.u)
-    %
+    
+    %%%%%%%%%%%%%%%%%%% 
     if Shuffling_baseline
+
+        trialDivision = trialsPerAngle;
 
         N_bootstrap = 1000; % Number of bootstrap iterations
         if ~isfile(sprintf('SDGm-pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
@@ -550,13 +551,18 @@ for ex = examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
             end
             find(pvalsResponseM<0.005);
-            find(pvalsResponseS<0.005);
+            find(pvalsResponseS<0.05);
 
+            cd(NP.recordingDir)
             save(sprintf('SDGm-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponseM')
             save(sprintf('SDGm-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreUM')
             save(sprintf('SDGs-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponseS')
             save(sprintf('SDGs-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreUS')
             save(sprintf('SDG-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')
+        else
+            pvalsResponseM = load(load(sprintf('SDGm-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName))).pvalsResponseM;
+
+
         end
 
     end
@@ -576,7 +582,7 @@ for ex = examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
             %response matrix
             [nT2,nN2,nB2] = size(MrRast2);
 
-            for u = 1:size(goodU,2)
+            for u = 40%1:size(goodU,2)
                 fig = figure;
                 tiledlayout(2,1,"TileSpacing","tight"); %figure('Color','w');
                 nexttile
@@ -595,7 +601,7 @@ for ex = examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 xticks([preR/binr:static_time/binr:nB])
                 xticklabels([round(preR/100)*100:static_time:nB*binr])
                 %yticklabels(repmat([1  (nTrials/length(tfNames))/2],1,length(tfNames))); yticks(sort([x y]));
-                %caxis([0 1])
+                caxis([0 1])
                 yyaxis right
                 ylim([1,nT])
                 yticks([direcTrials:direcTrials:nT])
@@ -628,12 +634,13 @@ for ex = examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 end
                 ylabel('Spikes/sec')
                 xlabel('Time (ms)')
+                ylim([0 max(y)+1])
 
                 set(gcf,'Color','w')    
                 cd(NP.recordingDir+"\Figs")
                 pause(0.5);
-                print(fig, sprintf('weirdSDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
-                clear f
+                fig.Position = [ 680    42   560   954];
+                print(fig, sprintf('SDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
                 close 
             end
         end

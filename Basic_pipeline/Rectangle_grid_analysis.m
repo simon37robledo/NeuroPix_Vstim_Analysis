@@ -8,9 +8,9 @@ data = readtable(excelFile);
 
 %Optionall
 plotRasters =0;
-heatMap = 1;
+heatMap = 0;
 plotHeatMap =0;
-calculateEntropy =1;
+calculateEntropy =0;
 ex=1;
 responseDo = 1;
 redoResp =0;
@@ -18,7 +18,7 @@ noEyeMoves = 0;
 newDiode =0;
 
 Shuffling_baseline=1;
-repeatShuff =0;
+repeatShuff =1;
 
 %GoodRecordingsPV =[15:20,40:43];
 SpatialTuning = 0;
@@ -26,7 +26,7 @@ SpatialTuning = 0;
 Awake = [44:48];
 
 %%
-for ex = GoodRecordings%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
+for ex = 49:54%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
