@@ -9,8 +9,8 @@ plotexamplesMB =0;
 newTIC = 0;
 ResponseProfile=0; redoResp=0;
 Shuffling =0;
-Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =0;
+Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =1;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
@@ -300,7 +300,7 @@ for ex =  SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN
         stimType(:,end-1) = ResponseStrengthU34;
         stimType(:,end) = ResponseStrengthU8;
 
-        EyePositionAnalysis(NP,11,1,0,1)
+        EyePositionAnalysis(NP,data.Eye_video_dir{ex},11,1,0,1)
 
     end
     

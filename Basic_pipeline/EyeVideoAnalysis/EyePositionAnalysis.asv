@@ -131,15 +131,16 @@ if plotOutlier
    [yMin yMinind] = min(Data.center_y);
 
 
-    video.CurrentTime = (goodFrames.Values(xMaxind) - 1) / video.FrameRate;
+   video.CurrentTime = (goodFrames.Values(xMaxind) - 1) / video.FrameRate;
    xMaxframe = imcrop(readFrame(video),rectNew);
-    video.CurrentTime = (goodFrames.Values(xMinind) - 1) / video.FrameRate;
+   video.CurrentTime = (goodFrames.Values(xMinind) - 1) / video.FrameRate;
    xMinframe = imcrop(readFrame(video),rectNew);
-    video.CurrentTime = (goodFrames.Values(yMaxind) - 1) / video.FrameRate;
+   video.CurrentTime = (goodFrames.Values(yMaxind) - 1) / video.FrameRate;
    yMaxframe = imcrop(readFrame(video),rectNew);
-    video.CurrentTime = (goodFrames.Values(yMinind) - 1) / video.FrameRate;
-   yMinframe = imcrop(readFrame(video),rectNew);
+   video.CurrentTime = (goodFrames.Values(yMinind) - 1) / video.FrameRate;
+   xMinframe = imcrop(readFrame(video),rectNew);
 
+ 
 
 end
 
@@ -198,95 +199,24 @@ end
 save(sprintf('timeSnipsNoMov-%d-quadrants',divisions),'timeSnips')
 
 if plots ==1
+%%%Plot data
+% Example data
+centers = [Data.center_x, Data.center_y]; % Replace with your X, Y data
+[X, Y] = meshgrid(grids, grids);
 
-    if ~plotOutlier
+figure;
+imagesc(croppedFrameC)
+% xlim([0 max(grid)])
+% ylim([0 max(grid)])
+axis equal
 
-        %%%Plot data
-        % Example data
-        [X, Y] = meshgrid(grids, grids);
-
-        figure;
-        imagesc(croppedFrameC)
-        % xlim([0 max(grid)])
-        % ylim([0 max(grid)])
-        axis equal
-
-        hold on;
-        plot(X, Y, 'w', X', Y', 'w');
-        % xlim([0 max(grid)]);
-        % ylim([0 max(grid)]);% Plot grid lines
-        xticks(grids)
-        yticks(grids)
-        axis equal;
-
-        % Parameters of the ellipse
-        a = Data.width(indEC); % Semi-major axis
-        b = Data.height(indEC); % Semi-minor axis
-        h = Data.center_x(indEC)-rectNew(1); % X-coordinate of the center
-        k = Data.center_y(indEC)-rectNew(2); % Y-coordinate of the center
-        phi =  Data.phi(indEC); % Rotation angle in radians (45 degrees)
-
-        theta = 0:0.01:2*pi; % Angle range for the ellipse
-
-        % Parametric equations for the ellipse with rotation
-        x = h + a * cos(theta) * cos(phi) - b * sin(theta) * sin(phi);
-        y = k + a * cos(theta) * sin(phi) + b * sin(theta) * cos(phi);
-        % Plot the ellipse
-        plot(x, y, 'r', 'LineWidth', 2);
-        axis equal;
-        legend('off')
-        xt = xticks;
-        xticklabels(round(xt));
-        yt = yticks;
-        xticklabels(round(yt));
-        set(gcf,'Color','w')
-        print(gcf, sprintf('%s-Eye-Movs-summary.png',NP.recordingName),'-dpng');
-
-    else %find outlier centers and plot 4 of them (2 x and 2 y)
-
-        [X, Y] = meshgrid(grids, grids);
-
-        figure;tiledlayout(2,2)
-        nexttile
-        imagesc(xMaxframe)
-        % xlim([0 max(grid)])
-        % ylim([0 max(grid)])
-        axis equal
-
-        hold on;
-        plot(X, Y, 'w', X', Y', 'w');
-        % xlim([0 max(grid)]);
-        % ylim([0 max(grid)]);% Plot grid lines
-        xticks(grids)
-        yticks(grids)
-        axis equal;
-
-        % Parameters of the ellipse
-        a = Data.width(xMaxind); % Semi-major axis
-        b = Data.height(xMaxind); % Semi-minor axis
-        h = Data.center_x(xMaxind)-rectNew(1); % X-coordinate of the center
-        k = Data.center_y(xMaxind)-rectNew(2); % Y-coordinate of the center
-        phi =  Data.phi(xMaxind); % Rotation angle in radians (45 degrees)
-
-        theta = 0:0.01:2*pi; % Angle range for the ellipse
-
-        % Parametric equations for the ellipse with rotation
-        x = h + a * cos(theta) * cos(phi) - b * sin(theta) * sin(phi);
-        y = k + a * cos(theta) * sin(phi) + b * sin(theta) * cos(phi);
-        % Plot the ellipse
-        plot(x, y, 'r', 'LineWidth', 2);
-        axis equal;
-        legend('off')
-        xt = xticks;
-        xticklabels(round(xt));
-        yt = yticks;
-        xticklabels(round(yt));
-        set(gcf,'Color','w')
-        print(gcf, sprintf('%s-Eye-Movs-summary.png',NP.recordingName),'-dpng');
-
-
-    end
-
+hold on;
+plot(X, Y, 'w', X', Y', 'w');
+% xlim([0 max(grid)]);
+% ylim([0 max(grid)]);% Plot grid lines
+xticks(grids)
+yticks(grids)
+axis equal;
 
 for StimEnabled = 1
 if length(stimType)> 1
@@ -580,8 +510,36 @@ axis equal;
 %scatter(Data.center_x(indEC)-rectNew(1),Data.center_y(indEC)-rectNew(2),25, 'filled','MarkerFaceColor','w')
 axis equal;
 
+if ~plotOutlier
+% Parameters of the ellipse
+a = Data.width(indEC); % Semi-major axis
+b = Data.height(indEC); % Semi-minor axis
+h = Data.center_x(indEC)-rectNew(1); % X-coordinate of the center
+k = Data.center_y(indEC)-rectNew(2); % Y-coordinate of the center
+phi =  Data.phi(indEC); % Rotation angle in radians (45 degrees)
 
+else %find outlier centers and plot 4 of them (2 x and 2 y)
 
+    isoutlier(Data.center_x)
+    isoutlier(Data.center_y)
+    
+
+end
+theta = 0:0.01:2*pi; % Angle range for the ellipse
+
+% Parametric equations for the ellipse with rotation
+x = h + a * cos(theta) * cos(phi) - b * sin(theta) * sin(phi);
+y = k + a * cos(theta) * sin(phi) + b * sin(theta) * cos(phi);
+% Plot the ellipse
+plot(x, y, 'r', 'LineWidth', 2);
+axis equal;
+legend('off')
+xt = xticks;
+xticklabels(round(xt));
+yt = yticks;
+xticklabels(round(yt));
+set(gcf,'Color','w')
+print(gcf, sprintf('%s-Eye-Movs-summary.png',NP.recordingName),'-dpng');
 end
 
 else
