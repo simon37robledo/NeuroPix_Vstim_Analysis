@@ -436,6 +436,7 @@ for ex = SDGrecordingsA%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:
                     end
 
                 end
+                cd(NP.recordingDir)
                 save(sprintf('RectGrid-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse')
                 save(sprintf('RectGrid-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreU')
                 save(sprintf('RectGrid-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')

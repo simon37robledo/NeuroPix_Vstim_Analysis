@@ -6,11 +6,11 @@ data = readtable(excelFile);
 %Optionall
 summPlot = 0;
 plotexamplesMB =0;
-newTIC = 1;
-ResponseProfile=1; redoResp=1;
+newTIC = 0;
+ResponseProfile=0; redoResp=0;
 Shuffling =0;
-Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =1;
+Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
@@ -279,33 +279,27 @@ for ex =  SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN
     goodSPKS = p.nSpks(label == 'good');
     goodAmp = p.neuronAmp(label == 'good');
     goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
-% 
-% 
-%     colors = repmat([1 1 1],size(goodU,2),1);
-% 
-%     %6. Get depths of units correcting for angle and micromanipulator depth:
-%     [Coor] = neuronLocation(NP,data(ex,:),goodU,1,1,colors, 1);
 
     %7. Load raster matrices
     bin = 1;
     preBase = round(stimInter-200);%round(3*interStimStats/4);
 
-    %%%%%%% Construct stimType matrix for eye movement plot.
-%     stimType = zeros(length(A),6); %3 plus number of example neurons
-%     stimType(:,1) = A(:,1);
-%     stimType(:,2) = A(:,1)+stimDur;
-%     stimType(:,3) = A(:,2);
-%     stimType(:,4) = A(:,3);
-%     
-    % Get response strenght of specific neurons and save it in stimType
-    %[MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
-    %ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
-    %ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
-%     stimType(:,end-1) = ResponseStrengthU34;
-%     stimType(:,end) = ResponseStrengthU8;
+    %%%%%% Construct stimType matrix for eye movement plot.
+    stimType = zeros(length(A),6); %3 plus number of example neurons
+    stimType(:,1) = A(:,1);
+    stimType(:,2) = A(:,1)+stimDur;
+    stimType(:,3) = A(:,2);
+    stimType(:,4) = A(:,3);
+    
+    %Get response strenght of specific neurons and save it in stimType
+    [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+    ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+    ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+    stimType(:,end-1) = ResponseStrengthU34;
+    stimType(:,end) = ResponseStrengthU8;
 
-    %EyePositionAnalysis(NP,11,1,0,1)
-    %
+    EyePositionAnalysis(NP,11,1,0,1)
+    
 
 
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-stimInter/2)/bin),round((stimDur+stimInter)/bin)); %response matrix

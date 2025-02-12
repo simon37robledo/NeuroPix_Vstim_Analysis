@@ -5,10 +5,10 @@ rect = load('linearlyMovingBall_2024_7_10_12_34_40_554');
 offsets = 9;
 coorRect = cell2mat(rect.VSMetaData.allPropVal(find(strcmp(rect.VSMetaData.allPropName,'rect'))));
 
-%%%%Set up rect Grid 
+%%%%Set up rect Grid = Divide screen side by number of offsets
 rectSizeTR1 = coorRect(4)/offsets;
 
-%%%Set up MovBall=Making sure that ball is within screen limits
+%%%Set up MovBall = Making sure that ball is within screen limits
 divisionoff = floor(offsets/2);
 
 halfScreen = coorRect(4)/2;
