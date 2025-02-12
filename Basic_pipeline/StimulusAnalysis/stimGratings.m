@@ -7,8 +7,7 @@ data = readtable(excelFile);
 
 bombcellUnits = 0;
 newTIC = 0;
-repeatShuff =0;
-rasters = 1;
+rasters = 0;
 shuffling = 0;
 
 newDiode = 0;
@@ -16,13 +15,13 @@ newDiode = 0;
 bootstraping = 0; 
 
 Shuffling_baseline = 1;
-repeatShuff = 0;
+repeatShuff = 1;
 tuningIndex =0;
 boxplots = 0;
 generalResponseSates = 0;
 trialThres =0.6;
 
-examplesSDGA = [8:14 29 30 31 32 40 41 42 43 44 49:55];
+examplesSDGA = [8:14 29 30 31 32 40 41 42 43 44 49:54];
 % StaticResponses = cell(1,length(examplesSDG));
 % MovingResponses = cell(1,length(examplesSDG));
 % trialThres = 0.6;
@@ -33,7 +32,7 @@ examplesSDGA = [8:14 29 30 31 32 40 41 42 43 44 49:55];
 %SA5_1,PV103_7,PV27_1
 
 k=0;
-for ex = 28%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
+for ex = SDGrecordingsA%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
    
     %%%%%%%%%%%% Load data and data paremeters
@@ -204,6 +203,12 @@ for ex = 28%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
     p = NP.convertPhySorting2tIc(NP.recordingDir);
     label = string(p.label');
     goodU = p.ic(:,label == 'good');
+    if isempty(goodU)
+        %disp()
+        w= sprintf('No somatic neurons in %s. Skipping into next experiment.',NP.recordingName);
+        warning(w)
+        continue
+    end
     goodSPKS = p.nSpks(label == 'good');
     goodAmp = p.neuronAmp(label == 'good');
     goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
@@ -471,7 +476,8 @@ for ex = 28%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
            RUStatSup = (unique(statTable(statTable.suppresed_Sta == 1,:).u));
            RUStatAct = (unique(statTable(statTable.activated_Sta == 1,:).u));
     end
-    %
+    
+    %%%%%%%%%%%%%%%%%%% 
     if Shuffling_baseline
 
         trialDivision = trialsPerAngle;
@@ -506,7 +512,8 @@ for ex = 28%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                     slice = squeeze(slice); % Result is t x b
 
                     % Compute the mean using 2D convolution
-                    means = conv2(slice, kernel, 'valid'); % 'valid' ensures the window fits within bounds
+                    means = conv2(slice, kernel, 'valid'); % take means across the kernel and select the max. 
+                    % 'valid' ensures the window fits within bounds
 
                     % Find the maximum mean in this slice (of moving
                     % window)
@@ -550,23 +557,38 @@ for ex = 28%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 end 
 
             end
-            find(pvalsResponseM<0.005);
-            find(pvalsResponseS<0.005);
+            
 
+            cd(NP.recordingDir)
             save(sprintf('SDGm-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponseM')
             save(sprintf('SDGm-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreUM')
             save(sprintf('SDGs-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponseS')
             save(sprintf('SDGs-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreUS')
             save(sprintf('SDG-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')
         else
-            pvalsResponseM = load(load(sprintf('SDGm-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName))).pvalsResponseM;
+            pvalsResponseM = load(sprintf('SDGm-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponseM;
+            pvalsResponseS = load(sprintf('SDGs-pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponseS;
+
+            if ~isempty(find(pvalsResponseM<0.005)) || ~isempty(find(pvalsResponseS<0.005))
+
+                sprintf('Responsive Neurons in %s',NP.recordingDir)
+
+            
+            end
+            
 
 
         end
 
     end
 
-    %% %Build rasters
+    %%%% %Build rasters
+
+    try
+       GoodU_or(size(goodU,2))
+    catch
+        ex
+    end
 
     for Rasters = 1
         if rasters ==1
@@ -581,12 +603,17 @@ for ex = 28%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
             %response matrix
             [nT2,nN2,nB2] = size(MrRast2);
 
-            for u = 1:size(goodU,2)
+            for u = find(pvalsResponseS<0.005)
                 fig = figure;
                 tiledlayout(2,1,"TileSpacing","tight"); %figure('Color','w');
                 nexttile
                 imagesc(squeeze(MrRast(:,u,:)));colormap(flipud(gray(64)));
-                title(sprintf('SDG|%s|UnitN-%d|UnitPhy-%d',strrep(NP.recordingName,'_','-'),u,GoodU_or(u)))
+                try
+                    title(sprintf('SDG|%s|UnitN-%d|UnitPhy-%d',strrep(NP.recordingName,'_','-'),u,GoodU_or(u)))
+                catch
+                    ex
+
+                end
                 
               
                 xline(preR/binr, '-g', LineWidth=1.5);
@@ -633,13 +660,13 @@ for ex = 28%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
                 end
                 ylabel('Spikes/sec')
                 xlabel('Time (ms)')
-                ylim([0 max(y)])
+                ylim([0 max(y)+1])
 
                 set(gcf,'Color','w')    
                 cd(NP.recordingDir+"\Figs")
                 pause(0.5);
-                print(fig, sprintf('weirdSDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
-                clear f
+                fig.Position = [ 680    42   560   954];
+                print(fig, sprintf('SDG-%s-Unit-%d.png',NP.recordingName,u),'-dpng');
                 close 
             end
         end
@@ -1066,96 +1093,96 @@ for ex = 28%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
 end
 
-%% Summary statists
-
-% for i = 1:7
-%     
+% %% Summary statists
+% 
+% % for i = 1:7
+% %     
+% % 
+% % end
+% % 
+% % responseStat{1} = meanIn';
+% % for i = 1:7
+% %    
+% % 
+% % end
+% % responseStat{2} = meanIn';
+% 
+% %group_names = {'staticR' 'movingR'};
+% 
+% animalColor = [repmat([0.4940 0.1840 0.5560],7,1);repmat([0.4660 0.6740 0.1880],8,1);...
+%     repmat([0.3010 0.7450 0.9330],4,1);repmat([0.6350 0.0780 0.1840],4,1)];
+% 
+% figure
+% hold on
+% 
+% animalNames = {'PV103','PV27','SA5','PV35'};
+% 
+% j=2;
+% yt =3;
+% name =1;
+% for i = 1:length(examplesSDG)
+% 
+%     j=j+1;
+% 
+%     SR = StaticResponses{i};
+%     MR = MovingResponses{i};
+% 
+%     indTopSR = find(SR>=prctile(SR,75));
+%     meanInS = mean(SR(SR>=prctile(SR,75)),'omitnan');
+%     meanInM = mean(MR(indTopSR),'omitnan');
+% 
+%     plot([1,2],[meanInS,meanInM],'-o','MarkerFaceColor',animalColor(i,:),'MarkerEdgeColor',animalColor(i,:),'Color',animalColor(i,:));
+% 
+%     if animalColor(min(j,length(animalColor)),1) ~= animalColor(j-1,1) || j>length(animalColor)
+%         yt=yt+4;
+%         text(2.5, yt, animalNames{name}, 'Color', animalColor(i,:), 'FontSize', 12, ...
+%         'FontWeight', 'bold', 'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom');
+%          name = name+1;
+%     end
 % 
 % end
+% hold off
+% xlim([0.5,2.5])
+% xlabel('static Response VS Moving response')
+% ylabel('mean Normalized response across neurons (std)')
+% title('Static vs Moving, Gratings. Line = insertion, Color = animal')
 % 
-% responseStat{1} = meanIn';
-% for i = 1:7
-%    
+% %%
+% %%%Moving
+% j=2;
+% yt =3;
+% name =1;
+% 
+% figure
+% hold on
+% for i = 1:length(examplesSDG)
+% 
+%     j=j+1;
+% 
+%     SR = StaticResponses{i};
+%     MR = MovingResponses{i};
+% 
+%     indTopMR = find(MR>=prctile(MR,75));
+%     meanInM = mean(MR(MR>=prctile(MR,75)),'omitnan');
+%     meanInS = mean(SR(indTopMR),'omitnan');
+% 
+%     plot([1,2],[meanInS,meanInM],'-o','MarkerFaceColor',animalColor(i,:),'MarkerEdgeColor',animalColor(i,:),'Color',animalColor(i,:));
+% 
+%     if animalColor(min(j,length(animalColor)),1) ~= animalColor(j-1,1) || j>length(animalColor)
+%         yt=yt+4;
+%         text(2.5, yt, animalNames{name}, 'Color', animalColor(i,:), 'FontSize', 12, ...
+%         'FontWeight', 'bold', 'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom');
+%          name = name+1;
+%     end
 % 
 % end
-% responseStat{2} = meanIn';
-
-%group_names = {'staticR' 'movingR'};
-
-animalColor = [repmat([0.4940 0.1840 0.5560],7,1);repmat([0.4660 0.6740 0.1880],8,1);...
-    repmat([0.3010 0.7450 0.9330],4,1);repmat([0.6350 0.0780 0.1840],4,1)];
-
-figure
-hold on
-
-animalNames = {'PV103','PV27','SA5','PV35'};
-
-j=2;
-yt =3;
-name =1;
-for i = 1:length(examplesSDG)
-
-    j=j+1;
-
-    SR = StaticResponses{i};
-    MR = MovingResponses{i};
-
-    indTopSR = find(SR>=prctile(SR,75));
-    meanInS = mean(SR(SR>=prctile(SR,75)),'omitnan');
-    meanInM = mean(MR(indTopSR),'omitnan');
-
-    plot([1,2],[meanInS,meanInM],'-o','MarkerFaceColor',animalColor(i,:),'MarkerEdgeColor',animalColor(i,:),'Color',animalColor(i,:));
-
-    if animalColor(min(j,length(animalColor)),1) ~= animalColor(j-1,1) || j>length(animalColor)
-        yt=yt+4;
-        text(2.5, yt, animalNames{name}, 'Color', animalColor(i,:), 'FontSize', 12, ...
-        'FontWeight', 'bold', 'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom');
-         name = name+1;
-    end
-
-end
-hold off
-xlim([0.5,2.5])
-xlabel('static Response VS Moving response')
-ylabel('mean Normalized response across neurons (std)')
-title('Static vs Moving, Gratings. Line = insertion, Color = animal')
-
-%%
-%%%Moving
-j=2;
-yt =3;
-name =1;
-
-figure
-hold on
-for i = 1:length(examplesSDG)
-
-    j=j+1;
-
-    SR = StaticResponses{i};
-    MR = MovingResponses{i};
-
-    indTopMR = find(MR>=prctile(MR,75));
-    meanInM = mean(MR(MR>=prctile(MR,75)),'omitnan');
-    meanInS = mean(SR(indTopMR),'omitnan');
-
-    plot([1,2],[meanInS,meanInM],'-o','MarkerFaceColor',animalColor(i,:),'MarkerEdgeColor',animalColor(i,:),'Color',animalColor(i,:));
-
-    if animalColor(min(j,length(animalColor)),1) ~= animalColor(j-1,1) || j>length(animalColor)
-        yt=yt+4;
-        text(2.5, yt, animalNames{name}, 'Color', animalColor(i,:), 'FontSize', 12, ...
-        'FontWeight', 'bold', 'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom');
-         name = name+1;
-    end
-
-end
-hold off
-xlim([0.5,2.5])
-xlabel('static Response VS Moving response')
-ylabel('mean Normalized response across neurons (std)')
-title('Static vs Moving, Gratings. Line = insertion, Color = animal')
-% Add the legend (only for the color groups)
-
+% hold off
+% xlim([0.5,2.5])
+% xlabel('static Response VS Moving response')
+% ylabel('mean Normalized response across neurons (std)')
+% title('Static vs Moving, Gratings. Line = insertion, Color = animal')
+% % Add the legend (only for the color groups)
+% 
 
 
 %legend(animalNames,"Color",mat2cell(unique(animalColor,'rows'),ones(1,size(unique(animalColor,'rows'),1)),3))

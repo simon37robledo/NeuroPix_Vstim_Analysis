@@ -12,36 +12,71 @@ data = readtable(excelFile,'Format','auto');
 
 %%
 
-for ex = [44]%examplesSDG%[7 8 28]%1:size(data,1)
+%% Process video files
+j=1;
+
+missingFrames = {};
+
+missedFramesVID ={};
+
+cd('\\sil3\data\Large_scale_mapping_NP')
+excelFile = 'Experiment_Excel.xlsx';
+
+data = readtable(excelFile,'Format','auto');
+
+%%
+
+for ex = [49:54]%examplesSDG%[7 8 28]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
+    %1. Load NP class
+
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
         +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
     try %%In case it is not run in Vstim computer, which has drives mapped differently
-        cd(path)
+        cd(pathE)
     catch
-        originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-        if strcmp(originP,'sil3\data')
-            path = replaceBetween(path,"","\Large_scale","W:");
-        else
-            path = replaceBetween(path,"","\Large_scale","Y:");
+        try
+            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","W:");
+            else
+                path = replaceBetween(path,"","\Large_scale","Y:");
+            end
+
+            cd(path)
+        catch
+
+            if strcmp(originP,'sil3\data')
+                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
+            else
+                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
+            end
+            cd(path)
+
         end
-        cd(path)
     end
     NP = NPAPRecording(path);
 
     [Ttrigger,chNumberT]=NP.getTrigger();
 
+%     %2. Extract video dir
+%     patternIndex = strfind(string(NP.recordingDir), "\catgt");
+%     endIndex = patternIndex(1)-1;
+%     vidDir = string(NP.recordingDir);
+%     vidDir = extractBetween(vidDir,1,endIndex)+"\Original_Video";
+
+
     %2. Extract video dir
-    patternIndex = strfind(string(NP.recordingDir), "\catgt");
+    patternIndex = strfind(string(NP.recordingDir),"Insertion"+string(data.Insertion(ex))+filesep+"catgt_"+string(NP.recordingName));
     endIndex = patternIndex(1)-1;
     vidDir = string(NP.recordingDir);
-    vidDir = extractBetween(vidDir,1,endIndex)+"\Original_Video";
+    vidDir = extractBetween(vidDir,1,endIndex)+"Videos";
 
     file = dir (vidDir);
     filenames = {file.name};
-    vidFrames = filenames(contains(filenames,".csv"));
-    vidFrames = vidFrames{contains(vidFrames, "Camera")};
+    %Original video path:
+    vidFrames = filenames(contains(filenames,".csv") & contains(filenames,"Camera") & ~contains(filenames,"snapshot") & contains(filenames,"_"+string(data.Insertion(ex))+"_"));
 
     %vidName = filenames(contains(filenames,".mp4"));
 

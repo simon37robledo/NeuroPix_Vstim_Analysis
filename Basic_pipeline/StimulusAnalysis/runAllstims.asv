@@ -1,0 +1,7 @@
+%%Run all stimuli scripts
+
+files = dir('D:\Mark_S13\Documents\GitHub\NeuroPix_Vstim_Analysis\Basic_pipeline\StimulusAnalysis\*.m'); % Get all .m files
+for i = 1:length(files)
+    run(fullfile(files(i).folder, files(i).name));
+    
+end

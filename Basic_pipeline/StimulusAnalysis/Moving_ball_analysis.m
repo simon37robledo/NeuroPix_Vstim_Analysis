@@ -5,10 +5,11 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 0;
-plotexamplesMB =1;
-newTIC = 0;
+plotexamplesMB =0;
+newTIC = 1;
 ResponseProfile=1; redoResp=1;
-Shuffling =0;Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+Shuffling =0;
+Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
 repeatShuff =1;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
@@ -29,7 +30,7 @@ examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
-GoodRecordingsPV =[1:21,40:43];
+GoodRecordingsPV =[8:21,40:43,50:54];
 GoodRecordingsRF = [15:20,40:48];
 Awake = [44:48];
 %Plot specific neurons
@@ -38,7 +39,7 @@ Awake = [44:48];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -230,7 +231,7 @@ for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,
         stimOn = A(:,1);
         stimOff = B(:,1);
 
-        digon  =onDigital(A(:,5) == max(A(:,5)));
+        %digon  =onDigital(A(:,5) == max(A(:,5)));
 
         stimInter = interStimStats;
 
@@ -269,6 +270,12 @@ for ex =  [49:54] %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,
     p = NP.convertPhySorting2tIc(NP.recordingDir);
     label = string(p.label');
     goodU = p.ic(:,label == 'good');
+    if isempty(goodU)
+        %disp()
+        w= sprintf('No somatic neurons in %s. Skipping into next experiment.',NP.recordingName);
+        warning(w)
+        continue
+    end
     goodSPKS = p.nSpks(label == 'good');
     goodAmp = p.neuronAmp(label == 'good');
     goodUdepth = NP.chLayoutPositions(2,goodU(1,:));
@@ -719,10 +726,12 @@ for Shuffle =1
  
     end
 
+    %%%%%%%%%%%%%%%%%%%%% Botstraping baseline
+
     if Shuffling_baseline
         
         
-        N_bootstrap = 10000;
+        N_bootstrap = 1000;
 
         if ~isfile(sprintf('pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
 
@@ -735,16 +744,16 @@ for Shuffle =1
         boot_means = zeros(N_bootstrap, nN,'single');
         resampled_indicesTr = single(randi(nT, [trialDivision, N_bootstrap]));% To store bootstrapped means
 
-        temp = NaN(trialDivision,duration);
-        rand_lev1 = randi(num_lev1,num_lev1,1);
-        for j = 1:length(rand_lev1)
-            num_lev2 = find(~isnan(data(rand_lev1(j),:)),1,'last'); %We need to calculate this again here because there is a different number of trials for each neuron
-            rand_lev2 = randi(num_lev2,1,num_trials); %Resample only from trials with data but same number of sample trials for all
-            temp(j,:) = data(rand_lev1(j),rand_lev2);
-        end
-    
+%         temp = NaN(trialDivision,duration);
+%         rand_lev1 = randi(num_lev1,num_lev1,1);
+%         for j = 1:length(rand_lev1)
+%             num_lev2 = find(~isnan(data(rand_lev1(j),:)),1,'last'); %We need to calculate this again here because there is a different number of trials for each neuron
+%             rand_lev2 = randi(num_lev2,1,num_trials); %Resample only from trials with data but same number of sample trials for all
+%             temp(j,:) = data(rand_lev1(j),rand_lev2);
+%         end
+%     
         
-        resampled_indicesTi = single(randi(nB, [nB, N_bootstrap]));
+        resampled_indicesTi = single(randi(nB, [duration, N_bootstrap]));
 
         kernel = ones(trialDivision, duration) / (trialDivision * duration); % Normalize for mean
         % Start a parallel pool (if not already started)
@@ -753,7 +762,7 @@ for Shuffle =1
         end
 
         tic
-        parfor i = 1:N_bootstrap
+        for i = 1:N_bootstrap
             % Resample trials with replacement
             resampled_trials = baseline(resampled_indicesTr(:, i), :,resampled_indicesTi(:, i));
             for ui = 1:nN
@@ -769,6 +778,8 @@ for Shuffle =1
             end
         end
         toc
+
+        %[bootstats] = get_bootstrapped_equalsamples(data,nruns,num_trials,param)
 
         [respVal,respVali]= max(NeuronVals(:,:,1),[],2);
 
@@ -1113,9 +1124,9 @@ for plotOp = plotexamplesMB
 
             Mr2 = [];
 
-             pvals = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse').pvalsResponse;
+             %pvals = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse').pvalsResponse;
 
-             eNeuron = find(pvals<0.05);
+             eNeuron = 80;%find(pvals<0.05);
 
             for u = eNeuron
 
@@ -1157,7 +1168,7 @@ for plotOp = plotexamplesMB
                 xline(stimDur/bin2+preBase/bin2,'k',LineWidth=1.5)
                 ylabel('Trials');xlabel('Time (ms)');
                 title(sprintf('U.%d-Unit-phy-%d',u,GoodU_or(u)));
-                caxis([0 1])
+                %caxis([0 1])
 
                 %xticks([0.5 (preBase/bin):10:nB])
                 %xticklabels([-preBase 0:10*bin:nB*bin])
@@ -2433,168 +2444,168 @@ end
 % implay(squeeze((RFuSizeSav(1,:,:,:,13))))
 % 
 % implay(squeeze(convolved_result_reshaped(:,:,:,13)))
-
-
-%% Dir analysis
-
-
-maxValdelayD = zeros(direcN,length(respU));
-maxInddelayD = zeros(direcN,length(respU));
-
-for d=1:direcN
-
-    % Parameters for the circular mask
-    radius = Usize(s1)/10; % Define the radius of the circular window
-    % Create a circular mask
-    [X, Y] = meshgrid(-radius:radius, -radius:radius);
-    circular_mask = (X.^2 + Y.^2) <= radius^2;
-
-    % Normalize the circular mask so that the sum of the mask elements is 1
-    circular_mask = double(circular_mask);
-    circular_mask = circular_mask / sum(circular_mask(:));
-
-    % Use convolution to find the sum of elements inside the circular window
-    A = squeeze(RFuSizeSav(s1,:,:,:,:));
-    A_reshaped = reshape(A, size(A, 1), size(A, 2), []);
-
-    %convolved_result = convn(A, reshape(circular_mask,[size(circular_mask,1),size(circular_mask, 2), 1, 1]), 'same');
-
-    convolved_result = convn(A_reshaped, circular_mask, 'same');
-    % Reshape the convolved result back to the original 4D structure
-    convolved_result_reshaped = reshape(convolved_result, size(A, 1), size(A, 2), size(A, 3), size(A, 4));
-
-    % Initialize arrays to store results
-    max_means = zeros(size(A, 3), size(A, 4));
-    center_row = zeros(size(A, 3), size(A, 4));
-    center_col = zeros(size(A, 3), size(A, 4));
-
-    % Find the maximum values and their positions for each slice across the 3rd and 4th dimensions
-    for j = 1:size(A, 4)
-        for i = 1:size(A, 3)
-            % Extract the 2D slice
-            slice = convolved_result_reshaped(:, :, i, j);
-            % Find the maximum value and its position
-            [max_means(i, j), max_idx] = max(slice(:));
-            [max_row, max_col] = ind2sub(size(slice), max_idx);
-            % Adjust positions to get the center of the circular mask
-            center_row(i, j) = max_row + radius;
-            center_col(i, j) = max_col + radius;
-        end
-    end
-
-    [max_across_3rd, idx_3rd] = max(max_means, [], 1);
-
-    maxValdelayS(s1,:) = max_across_3rd;
-
-    maxInddelayS(s1,:) = idx_3rd;
-
-end
-
-
-
-
-%%
-
-
-%Size
-sizeSPK = zeros(sizeN,size(Mr,1)/sizeN,length(respU),sizeX(4));
-
-dirsSPK =  zeros(direcN,size(Mr,1)/direcN,length(respU),sizeX(4));
-
-for s=1:sizeN
-    sizeSPK(s,:,:,:) = spikeSum(Usize(s)==C(:,6),:,:);
-end
-
-%Dir
-for d = 1:direcN
- dirsSPK(d,:,:,:) = spikeSum(Udir(d)==C(:,2),:,:);
-end
-
-figure;imagesc(squeeze(sizeSPK1(:,27,:)));colormap(flipud(gray(64)));
-
-nTs = size(spikeSum,1)/sizeN;
-nT = size(spikeSum,1);
-nTred = size(spikeSum,1)/trialDivision;
-
-MeanbyTD = squeeze(mean(reshape(spikeSum,[trialDivision, size(spikeSum,1)/trialDivision,size(spikeSum,2),size(spikeSum,3)])));
-
-MeanbyTDsize = squeeze(mean(reshape(sizeSPK,[trialDivision, size(sizeSPK,1), size(sizeSPK,2)/trialDivision,size(sizeSPK,3),size(sizeSPK,4)])));
-
-figure;imagesc(squeeze(sizeSPK(1,:,27,:)));
-colormap(flipud(gray(64)));
-%Plot stim start:
-%xline(preBase/bin,'k', LineWidth=1.5)
-%Plot stim end:
-%xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
-ylabel('Trials');xlabel('Time (ms)');
-%yticklabels([yticks]*mergeTrials)
-%Directions
-v = nTs/direcN:nTs/direcN:nTs-1;
-yline(v+0.5,'r', LineWidth=3);
-%Offsets
-v = nTs/(direcN*offsetN):nTs/(direcN*offsetN):nTs-1;
-yline(v+0.5,'b', LineWidth=2);
+% 
+% 
+% %% Dir analysis
+% 
+% 
+% maxValdelayD = zeros(direcN,length(respU));
+% maxInddelayD = zeros(direcN,length(respU));
+% 
+% for d=1:direcN
+% 
+%     % Parameters for the circular mask
+%     radius = Usize(s1)/10; % Define the radius of the circular window
+%     % Create a circular mask
+%     [X, Y] = meshgrid(-radius:radius, -radius:radius);
+%     circular_mask = (X.^2 + Y.^2) <= radius^2;
+% 
+%     % Normalize the circular mask so that the sum of the mask elements is 1
+%     circular_mask = double(circular_mask);
+%     circular_mask = circular_mask / sum(circular_mask(:));
+% 
+%     % Use convolution to find the sum of elements inside the circular window
+%     A = squeeze(RFuSizeSav(s1,:,:,:,:));
+%     A_reshaped = reshape(A, size(A, 1), size(A, 2), []);
+% 
+%     %convolved_result = convn(A, reshape(circular_mask,[size(circular_mask,1),size(circular_mask, 2), 1, 1]), 'same');
+% 
+%     convolved_result = convn(A_reshaped, circular_mask, 'same');
+%     % Reshape the convolved result back to the original 4D structure
+%     convolved_result_reshaped = reshape(convolved_result, size(A, 1), size(A, 2), size(A, 3), size(A, 4));
+% 
+%     % Initialize arrays to store results
+%     max_means = zeros(size(A, 3), size(A, 4));
+%     center_row = zeros(size(A, 3), size(A, 4));
+%     center_col = zeros(size(A, 3), size(A, 4));
+% 
+%     % Find the maximum values and their positions for each slice across the 3rd and 4th dimensions
+%     for j = 1:size(A, 4)
+%         for i = 1:size(A, 3)
+%             % Extract the 2D slice
+%             slice = convolved_result_reshaped(:, :, i, j);
+%             % Find the maximum value and its position
+%             [max_means(i, j), max_idx] = max(slice(:));
+%             [max_row, max_col] = ind2sub(size(slice), max_idx);
+%             % Adjust positions to get the center of the circular mask
+%             center_row(i, j) = max_row + radius;
+%             center_col(i, j) = max_col + radius;
+%         end
+%     end
+% 
+%     [max_across_3rd, idx_3rd] = max(max_means, [], 1);
+% 
+%     maxValdelayS(s1,:) = max_across_3rd;
+% 
+%     maxInddelayS(s1,:) = idx_3rd;
+% 
+% end
+% 
+% 
+% 
+% 
+% %%
+% 
+% 
+% %Size
+% sizeSPK = zeros(sizeN,size(Mr,1)/sizeN,length(respU),sizeX(4));
+% 
+% dirsSPK =  zeros(direcN,size(Mr,1)/direcN,length(respU),sizeX(4));
+% 
+% for s=1:sizeN
+%     sizeSPK(s,:,:,:) = spikeSum(Usize(s)==C(:,6),:,:);
+% end
+% 
+% %Dir
+% for d = 1:direcN
+%  dirsSPK(d,:,:,:) = spikeSum(Udir(d)==C(:,2),:,:);
+% end
+% 
+% figure;imagesc(squeeze(sizeSPK1(:,27,:)));colormap(flipud(gray(64)));
+% 
+% nTs = size(spikeSum,1)/sizeN;
+% nT = size(spikeSum,1);
+% nTred = size(spikeSum,1)/trialDivision;
+% 
+% MeanbyTD = squeeze(mean(reshape(spikeSum,[trialDivision, size(spikeSum,1)/trialDivision,size(spikeSum,2),size(spikeSum,3)])));
+% 
+% MeanbyTDsize = squeeze(mean(reshape(sizeSPK,[trialDivision, size(sizeSPK,1), size(sizeSPK,2)/trialDivision,size(sizeSPK,3),size(sizeSPK,4)])));
+% 
+% figure;imagesc(squeeze(sizeSPK(1,:,27,:)));
+% colormap(flipud(gray(64)));
+% %Plot stim start:
+% %xline(preBase/bin,'k', LineWidth=1.5)
+% %Plot stim end:
+% %xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
+% ylabel('Trials');xlabel('Time (ms)');
+% %yticklabels([yticks]*mergeTrials)
+% %Directions
+% v = nTs/direcN:nTs/direcN:nTs-1;
+% yline(v+0.5,'r', LineWidth=3);
+% %Offsets
+% v = nTs/(direcN*offsetN):nTs/(direcN*offsetN):nTs-1;
+% yline(v+0.5,'b', LineWidth=2);
+% % %sizes
+% % v = nT/(direcN*offsetN*sizeN):nT/(direcN*offsetN*sizeN):nT-1;
+% % yline(v+0.5, LineWidth=0.5);
+% 
+% 
+% 
+% figure;imagesc(squeeze(spikeSum(:,27,:)));
+% colormap(flipud(gray(64)));
+% %Plot stim start:
+% %xline(preBase/bin,'k', LineWidth=1.5)
+% %Plot stim end:
+% %xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
+% ylabel('Trials');xlabel('Time (ms)');
+% yticklabels([yticks]*mergeTrials)
+% %Directions
+% v = nT/direcN:nT/direcN:nT-1;
+% yline(v+0.5,'r', LineWidth=3);
+% %Offsets
+% v = nT/(direcN*offsetN):nT/(direcN*offsetN):nT-1;
+% yline(v+0.5,'b', LineWidth=2);
 % %sizes
 % v = nT/(direcN*offsetN*sizeN):nT/(direcN*offsetN*sizeN):nT-1;
 % yline(v+0.5, LineWidth=0.5);
-
-
-
-figure;imagesc(squeeze(spikeSum(:,27,:)));
-colormap(flipud(gray(64)));
-%Plot stim start:
-%xline(preBase/bin,'k', LineWidth=1.5)
-%Plot stim end:
-%xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
-ylabel('Trials');xlabel('Time (ms)');
-yticklabels([yticks]*mergeTrials)
-%Directions
-v = nT/direcN:nT/direcN:nT-1;
-yline(v+0.5,'r', LineWidth=3);
-%Offsets
-v = nT/(direcN*offsetN):nT/(direcN*offsetN):nT-1;
-yline(v+0.5,'b', LineWidth=2);
-%sizes
-v = nT/(direcN*offsetN*sizeN):nT/(direcN*offsetN*sizeN):nT-1;
-yline(v+0.5, LineWidth=0.5);
-
-
-figure;imagesc(squeeze(MeanbyTD(:,27,:)));
-colormap(flipud(gray(64)));
-%Plot stim start:
-%xline(preBase/bin,'k', LineWidth=1.5)
-%Plot stim end:
-%xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
-ylabel('Trials');xlabel('Time (ms)');
-yticklabels([yticks]*mergeTrials)
-%Directions
-v = nTred/direcN:nTred/direcN:nTred-1;
-yline(v+0.5,'r', LineWidth=3);
-%Offsets
-v = nTred/(direcN*offsetN):nTred/(direcN*offsetN):nTred-1;
-yline(v+0.5,'b', LineWidth=2);
-%sizes
-v = nTred/(direcN*offsetN*sizeN):nTred/(direcN*offsetN*sizeN):nTred-1;
-yline(v+0.5, LineWidth=0.5);
-
-%figure;imagesc(reshape(spikeSum,[trialDivision, size(spikeSum,1)/trialDivision,size(spikeSum,2),size(spikeSum,1)]))
-
-[m in] = max(squeeze((RFuSize(1,:,:,:,27))),[],'all')
-min(squeeze((RFuSize(1,:,:,:,27))),[],'all')
-implay(squeeze((RFuSize(1,:,:,:,27))))
-
-e = zeros(length(respU),sizeX(4));
-for i =1:sizeX(4)
-    for u = 1:length(respU)
-        e(u,i) = entropy(double(squeeze(RFuSize(1,:,:,i,u))));
-    end
-end
-    
-size(RFuSize)
-
-figure;plot(e(20,:))
-
-[m in]= max(e(10,:))
-
-min(squeeze(RFuSize(1,:,:,:,20)),[],'all')
+% 
+% 
+% figure;imagesc(squeeze(MeanbyTD(:,27,:)));
+% colormap(flipud(gray(64)));
+% %Plot stim start:
+% %xline(preBase/bin,'k', LineWidth=1.5)
+% %Plot stim end:
+% %xline(stimDur/bin+preBase/bin,'k',LineWidth=1.5)
+% ylabel('Trials');xlabel('Time (ms)');
+% yticklabels([yticks]*mergeTrials)
+% %Directions
+% v = nTred/direcN:nTred/direcN:nTred-1;
+% yline(v+0.5,'r', LineWidth=3);
+% %Offsets
+% v = nTred/(direcN*offsetN):nTred/(direcN*offsetN):nTred-1;
+% yline(v+0.5,'b', LineWidth=2);
+% %sizes
+% v = nTred/(direcN*offsetN*sizeN):nTred/(direcN*offsetN*sizeN):nTred-1;
+% yline(v+0.5, LineWidth=0.5);
+% 
+% %figure;imagesc(reshape(spikeSum,[trialDivision, size(spikeSum,1)/trialDivision,size(spikeSum,2),size(spikeSum,1)]))
+% 
+% [m in] = max(squeeze((RFuSize(1,:,:,:,27))),[],'all')
+% min(squeeze((RFuSize(1,:,:,:,27))),[],'all')
+% implay(squeeze((RFuSize(1,:,:,:,27))))
+% 
+% e = zeros(length(respU),sizeX(4));
+% for i =1:sizeX(4)
+%     for u = 1:length(respU)
+%         e(u,i) = entropy(double(squeeze(RFuSize(1,:,:,i,u))));
+%     end
+% end
+%     
+% size(RFuSize)
+% 
+% figure;plot(e(20,:))
+% 
+% [m in]= max(e(10,:))
+% 
+% min(squeeze(RFuSize(1,:,:,:,20)),[],'all')
 

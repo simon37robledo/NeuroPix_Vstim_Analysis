@@ -72,11 +72,11 @@ BombcelledNeurons = 1;
 
 %%%What neurons to select?
 MBsig =0; %%Neurons responsive to MB
-MBsigAnd =1; %%Neurons responsive to MB and each other stimuli
+MBsigAnd =0; %%Neurons responsive to MB and each other stimuli
 RGsig =0;
 bothSig = 0;
 allN = 0;
-eachSign = 0;
+eachSign = 1;
 noEyeMoves = 0;
 AllParams = cell(3,14);
 
@@ -92,7 +92,7 @@ sign = 0.005;
 
 N_bootstrap = 1000;
 
-%
+%%
 j = 1;
 
 for ex = SDGrecordingsA
@@ -429,8 +429,12 @@ for ex = SDGrecordingsA
            % RespSDG{i} = NeuronValsFFF(respNeuronsFFF<sign);
             pvalsSDG{i} = respNeuronsSDGs(respNeuronsSDGs<=sign);
             NeuronNSDG{i} = find(respNeuronsSDGs<=sign);
-            zscoreSDG{i} = ZscoreNeuronsSDGs(respNeuronsSDGs<=sign);
-            nTSDG = nTSDGs+length(respNeuronsSDGs(respNeuronsSDGs<=sign));
+            zscoreSDGs{i} = ZscoreNeuronsSDGs(respNeuronsSDGs<=sign);
+            nTSDGs = nTSDGs+length(respNeuronsSDGs(respNeuronsSDGs<=sign));
+
+            if length(respNeuronsSDGs) ~= length(ZscoreNeuronsMB)
+                    2+2
+            end
 
         end
 
@@ -509,6 +513,32 @@ for ex = SDGrecordingsA
       FFFtotal = FFFtotal+length(ZscoreNeuronsMB(respNeuronsFFF<=sign));
 
 end
+%% Plot venn diagram for responsive neurons
+close
+[h S]= venn([MBtotal,SDGmtotal,SDGstotal],[SDGmAndMB,MBandSDGs,SDGmAndSDGs,MBandSDGmsndSDGs],'FaceColor',{"#7E2F8E","#77AC30",	"#D95319"},'EdgeColor','w');
+axis off;         % Hide axis
+set(gca, 'Color', 'none'); % Remove axis background
+set(gcf, 'Color', 'w');  % Set figure background to white
+
+NamesStim = {'MB','MG','SG'};
+values = [onlyMB, onlySDGm, onlySDGs, SDGmAndMB,MBandSDGs,SDGmAndSDGs,MBandSDGmsndSDGs];
+
+%Now label each zone
+for i = 1:7
+    text(S.ZoneCentroid(i,1), S.ZoneCentroid(i,2), num2str(values(i)))
+end
+
+
+text(S.ZoneCentroid(1,1)-5, S.ZoneCentroid(1,2)+15, {NamesStim{1}, sprintf('N = %d',MBtotal)}, 'HorizontalAlignment', 'center', 'Color',"#7E2F8E")
+text(S.ZoneCentroid(2,1)-2, S.ZoneCentroid(2,2)-9, {NamesStim{2}, sprintf('N = %d',SDGmtotal)},'HorizontalAlignment', 'center','Color',"#77AC30")
+text(S.ZoneCentroid(3,1)-1, S.ZoneCentroid(3,2)+7, {NamesStim{3}, sprintf('N = %d',SDGstotal)},'HorizontalAlignment', 'center','Color',"#D95319")
+
+cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
+print(gcf, 'VennDiagram3groups.pdf', '-dpdf', '-r300', '-vector');
+
+
+
+
 %% plot colorbar for brain plot
 c= colorbar;
 colormap(repmat([1 1 1],64,1)-repmat(linspace(0,1,64),3,1)')
@@ -834,6 +864,8 @@ print(gcf,'SIg(MB)-ResponseMB-RG(red-High-MB)-(green-High-RG)-Color-Animal_1N)',
 %% Plot Z-scores
 MB = cell2mat(zscoreMB);
 RG = cell2mat(zscoreRG);
+SDGm = cell2mat(zscoreSDGm);
+SDGs = cell2mat(zscoreSDGs);
 
 eMB = cell2mat(EntropMB);
 eRG = cell2mat(EntropRG);
