@@ -9,8 +9,8 @@ plotexamplesMB =0;
 newTIC = 0;
 ResponseProfile=1; redoResp=1;
 Shuffling =0;
-Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =0;
+Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =1;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
@@ -39,7 +39,7 @@ Awake = [44:48];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  9%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -519,14 +519,14 @@ if ResponseProfile ==1
 
         NeuronVals(u,:,:) = NeuronRespProfile;
     end
-            if includeOnespeed && length(unique(speeds)) > 1
+            if includeOnespeed && length(unique(speeds) >1
                 save(sprintf('OneSpeed-%d-NeuronRespCat-%s',max(speeds),NP.recordingName),"NeuronVals")
             else
                 save(sprintf('NeuronRespCat-%s',NP.recordingName),"NeuronVals")
             end
     else
 
-        if includeOnespeed && length(unique(speeds)) > 1
+        if includeOnespeed
             NeuronVals = load(sprintf('OneSpeed-%d-NeuronRespCat-%s',max(speeds),NP.recordingName)).NeuronVals;
         else
             NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;

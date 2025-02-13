@@ -86,11 +86,6 @@ ZSonlySDGm = [];
 ZSonlyRG = [];
 ZSonlySDGs = [];
 
-%and color vectors:
-MBc =[];
-SDGmC = [];
-SDGsC = [];
-RGc =[];
 
 %%%What to plot?
 BrainPlots=0;
@@ -105,7 +100,6 @@ N_bootstrap = 1000;
 
 %
 j = 1;
-animal =1;
 
 for ex = SDGrecordingsA
 
@@ -536,15 +530,15 @@ for ex = SDGrecordingsA
     ZSonlySDGs = [ZSonlySDGs ZscoreNeuronsSDGs(respNeuronsMB>sign & respNeuronsRG > sign & respNeuronsSDGm > sign & respNeuronsSDGs <= sign)];
 
     %%%Ad color vectors accordying to animals
-    if string(data.Animal_ID{ex}) ~= string(data.Animal_ID{ex-1}) %wont work if you start with the first animal
+    if data.Animal_ID(ex) ~= data.Animal_ID(ex-1)
         MBc = [zeros(1,length(ZSonlyMB)) ...
             zeros(1,length(ZscoreNeuronsMB(respNeuronsMB<=sign & respNeuronsRG > sign & respNeuronsSDGm > sign & respNeuronsSDGs > sign)))] + animal;
-        SDGmC = [zeros(1,length(ZSonlySDGm)) ...
-            zeros(1,length(ZscoreNeuronsSDGm(respNeuronsMB<=sign & respNeuronsRG > sign & respNeuronsSDGm > sign & respNeuronsSDGs > sign)))] + animal;
-        SDGsC = [zeros(1,length(ZSonlySDGs)) ...
-            zeros(1,length(ZscoreNeuronsSDGs(respNeuronsMB<=sign & respNeuronsRG > sign & respNeuronsSDGm > sign & respNeuronsSDGs > sign)))] + animal;
-        RGc = [zeros(1,length(ZSonlyRG)) ...
-            zeros(1,length(ZscoreNeuronsRG(respNeuronsMB<=sign & respNeuronsRG > sign & respNeuronsSDGm > sign & respNeuronsSDGs > sign)))] + animal;      
+        MBc = [zeros(1,length(ZSonlySDGm)) ...
+            zeros(1,length(ZscoreNeuronsMB(respNeuronsMB<=sign & respNeuronsRG > sign & respNeuronsSDGm > sign & respNeuronsSDGs > sign)))] + animal;
+        MBc = [zeros(1,length(ZSonlyMB)) ...
+            zeros(1,length(ZscoreNeuronsMB(respNeuronsMB<=sign & respNeuronsRG > sign & respNeuronsSDGm > sign & respNeuronsSDGs > sign)))] + animal;
+        MBc = [zeros(1,length(ZSonlyMB)) ...
+            zeros(1,length(ZscoreNeuronsMB(respNeuronsMB<=sign & respNeuronsRG > sign & respNeuronsSDGm > sign & respNeuronsSDGs > sign)))] + animal;      
         
         animal = animal+1;
     end
