@@ -166,7 +166,6 @@ for ex =  51%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%sel
     containsMB = strcmp(Ordered_stims, 'MB');
     ttlInd = find(containsMB);
 
-    newDiode = 1;
 
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
