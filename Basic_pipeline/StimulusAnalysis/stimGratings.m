@@ -655,9 +655,7 @@ for ex = SDGrecordingsA%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 4
                 xlim([lims(1)*(binr/binr2) lims(2)*(binr/binr2)])
                 xticks([preR/binr2:static_time/binr2:nB2])
                 xticklabels([round(preR/100)*100:static_time:nB2*binr2])
-                try
-                    ylim([min(y)-std(y) max(y)+std(y)])
-                end
+                
                 ylabel('Spikes/sec')
                 xlabel('Time (ms)')
                 ylim([0 max(y)+1])

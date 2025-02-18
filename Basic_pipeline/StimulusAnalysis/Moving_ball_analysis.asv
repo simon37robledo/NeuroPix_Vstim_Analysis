@@ -5,7 +5,7 @@ data = readtable(excelFile);
 
 %Optionall
 summPlot = 0;
-plotexamplesMB =1;
+plotexamplesMB =0;
 newTIC = 0;
 ResponseProfile=1; redoResp=0;
 Shuffling =0;
@@ -14,8 +14,8 @@ repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
-ReceptiveFieldConvolutions =0;
-repeatConv =0;
+ReceptiveFieldConvolutions =1;
+repeatConv =1;
 plotRF =0;
 spatialTuning=0;
 calculateEntropy =0;
@@ -23,6 +23,7 @@ noEyeMoves = 0;
 includeOnespeed = 1;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
+N_bootstrap = 1000;
 
 
 %examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
@@ -39,7 +40,7 @@ Awake = [44:48];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  51%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  51%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -166,7 +167,6 @@ for ex =  51%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%sel
     containsMB = strcmp(Ordered_stims, 'MB');
     ttlInd = find(containsMB);
 
-    newDiode = 1;
 
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
@@ -1119,6 +1119,10 @@ for plotOp = plotexamplesMB %rstx
 
             %Sort directions:
 
+%             Co = C;
+
+%             C = C(C(:,4) == 200,:); %%Select size; PV139_1
+
             directimesSorted = C(:,1)';
 
             preBase = round(stimInter/4);
@@ -1131,7 +1135,11 @@ for plotOp = plotexamplesMB %rstx
 
              pvals = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse').pvalsResponse;
 
-             eNeuron = find(pvals<0.005);
+             %eNeuron = find(pvals<0.005);
+
+             eNeuron = 40;
+
+            sizeN=1;
 
             for u = eNeuron
 
@@ -1162,16 +1170,18 @@ for plotOp = plotexamplesMB %rstx
 
                 [nT,nB] = size(Mr2);
 
-                fig =  figure;
+                fig =  figure; 
+                
+                subplot(10,1,[1 6]);
                 pos1 = 0.1;
-                subplot('Position', [pos1, 0.1, 0.7, 0.8]);
+                %subplot('Position', [pos1, 0.1, 0.7, 0.8]);
 
                 imagesc(squeeze(Mr2).*(1000/bin2));colormap(flipud(gray(64)));
                 %Plot stim start:
                 xline(preBase/bin2,'k', LineWidth=1.5)
                 %Plot stim end:
                 xline(stimDur/bin2+preBase/bin2,'k',LineWidth=1.5)
-                ylabel('Trials');xlabel('Time (ms)');
+                ylabel(sprintf('%d Trials',nT));
                 title(sprintf('U.%d-Unit-phy-%d',u,GoodU_or(u)));
                 caxis([0 1])
 
@@ -1182,17 +1192,19 @@ for plotOp = plotexamplesMB %rstx
                 offStart = C(1,3);
                 for t = 1:nT*mergeTrials
                     if dirStart ~= C(t,2)
-                        yline(t/mergeTrials+0.5,'b',LineWidth=3);
+                        yline(t/mergeTrials+0.5,'k',LineWidth=3);
                         dirStart = C(t,2);
                     end
                     if offStart ~= C(t,3)
-                        yline(t/mergeTrials+0.5,'b',LineWidth=1);
+                        yline(t/mergeTrials+0.5,'k',LineWidth=1);
                         offStart = C(t,3);
                     end
 
                 end
 
                 yticks([trialDivision:trialDivision:nT])
+
+                yticklabels([repmat([trialDivision:trialDivision:(nT)/4],1,4)])
 
                 hold on
                 %Plot rectangle: *max window per unique trial.
@@ -1209,10 +1221,7 @@ for plotOp = plotexamplesMB %rstx
 
                 end
 
-                lims =xlim;
-                xt = xticks;
-                xticks([1 preBase/bin2:300/bin2:(stimDur+preBase*2)/bin2])
-                xticklabels([-(preBase) 0:300:(stimDur+preBase*2)])
+               
 
                 %%%Plot arrows
                 % Parameters for arrow plotting
@@ -1265,20 +1274,80 @@ for plotOp = plotexamplesMB %rstx
                     %plotArrow(ax, direction, arrowLength, startX, startY, headSize);
                 end
 
-                set(gcf, 'Color', 'w'); 
-                        
-                cd(NP.recordingDir)
-                if ~exist(path+"\Figs",'dir')
-                    mkdir Figs
-                end
-                cd(NP.recordingDir + "\Figs")
-                if noEyeMoves
-                    print(fig, sprintf('%s-MovBall-NoEyeMoves-%s-U%d-W%d-%dW-speed-500.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
+                xticklabels([])
+                xlim([0 round(stimDur+preBase*2)/bin2])
+                xticks([0 preBase/bin2:300/bin2:(stimDur+preBase*2)/bin2 (round((stimDur+preBase*2)/100)*100)/bin2])
+                xticklabels([]);
+  
+                
+                %%%%%% Plot PSTH
 
-                else
-                    print(fig, sprintf('%s-MovBall-%s-U%d-W%d-%dW-speed-500.png',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)),'-dpng');
-                end
+                subplot(10,1,[7 8])
 
+                MRhist = BuildBurstMatrix(goodU(:,eNeuron),round(p.t),round((directimesSorted(round(C(:,2)) == 3)-preBase)),round((stimDur+preBase*2)));
+
+
+                [nT2,nN2,nB2]= size(MRhist);
+
+                MRhist = squeeze(MRhist);
+
+                spikeTimes = repmat([1:nB2],nT2,1);
+
+                spikeTimes = spikeTimes(logical(MRhist));
+                % Define bin edges (adjust for resolution)
+                binWidth = 125; % 10 ms bins
+                edges = [1:binWidth:round((stimDur+preBase*2))]; % Adjust time window as needed
+
+                % Compute histogram
+                psthCounts = histcounts(spikeTimes, edges);
+
+                % Convert to firing rate (normalize by bin width)
+                psthRate = (psthCounts / (binWidth * nT2))*1000;
+
+
+                b=bar(edges(1:end-1), psthRate,'histc');
+                b.FaceColor = 'k';
+                b.FaceAlpha = 0.5;
+                b.MarkerEdgeColor = "none";
+                ylabel('Firing Rate (Hz)');
+                xlim([0 round((stimDur+preBase*2)/100)*100])
+
+                xticks([0 preBase:300:(stimDur+preBase*2) round((stimDur+preBase*2)/100)*100])
+                xticklabels([])
+                xline([preBase stimDur+preBase],'LineWidth',1.5)
+
+                %set(gca, 'XLim', [-0.5, 1]); % Match raster plot x-axis
+
+
+                 %%%%PLot several trials one channel:
+
+                chan = goodU(1,eNeuron);
+
+                startTimes = directimesSorted(round(C(:,2)) == 3)-preBase;
+
+                startTimes = startTimes(end-9:end);
+
+                window = round(stimDur+preBase*2);
+
+                freq = "AP"; %or "LFP"
+
+                type = "line"; %or heatmap
+
+                subplot(10,1,[9 10])
+
+                PlotRawData(fig,NP,chan,startTimes,window,freq,type,preBase);
+
+                xticklabels([]) %%%plot example PV139-local neurons
+                xlabel([])
+                %xlim([0 round(stimDur+preBase*2)])
+
+
+                xticklabels([-(preBase) 0:300:round((stimDur/100))*100 round((stimDur/100))*100 + preBase]./1000)
+
+
+                %
+                cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
+                print(gcf, sprintf('%s-MovBall-%s-U%d-W%d-%dW-speed-500.pdf',NP.recordingName,orderNames{k},u,window_size(1),window_size(2)), '-dpdf', '-r300', '-vector');
 
                 close
                 
@@ -1349,17 +1418,22 @@ for receptiveField=1 %%ReceptiveFieldMethod1 fixed delay
 
             % Calculate the receptive field by multiplying normalized spike rate in frame by the image of each frame.
 
-            goodNeurons = load(sprintf('pvalTime-%s',NP.recordingName)).pvalTi;
+            goodNeurons = load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
 
             goodNeurons = find(goodNeurons<0.05);
-
             [Mb] = BuildBurstMatrix(goodU(:,goodNeurons),round(p.t),round((stims-preBase)),round(preBase)); %Baseline matrix plus
 
             Mb = mean(Mb,3); %mean across time bins
 
             spkRateBM = mean(Mb);
 
-            A = [stimOn directions' offsets' speeds' orientations', sizes'];
+            %Original order
+           % A = [stimOn directions' offsets' sizes' speeds' orientations']; %
+
+            %Convolution order
+           % A = [stimOn directions' offsets' speeds' orientations', sizes'];
+
+            A = [A(:,1) A(:,2) A(:,3) A(:,5) A(:,6) A(:,2)]; % Reorganize matris
             [C indexS] = sortrows(A,[2 3 4 5 6]);
 
             %4. Sort directions:
@@ -1598,14 +1672,18 @@ for convNeuron = 1
             %%A. CONVOLUTION SETUP
             %%%%%%%%%%Load responsive neurons
 
-
             %%%%%%%%%%Load X and Y ball positions
+            nFrames = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'nFrames'))));
+            framesFast = min(unique(nFrames)); %Select number of frames from faster speed
+
             Xpos = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballTrajectoriesX'))));
+            Xpos = Xpos(2,:,:,1:framesFast); %Select number of frames from faster speed
 
             Ypos = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballTrajectoriesY'))));
+            Ypos = Ypos(2,:,:,1:framesFast);
 
             sizeN = length(unique(sizes));
-            sizeX = size(Xpos);
+            sizeX = size(Xpos());
             %%% X Y stucture = speed, offsets, directions, frames
             % A = [stimOn directions' offsets' sizes' speeds' orientations'] = Order of
             % categories (bigger divs to smaller divs.
@@ -1654,8 +1732,16 @@ for convNeuron = 1
 %             %4. Sort directions:
 %             directimesSorted = C(:,1)';
 
-            A = [stimOn directions' offsets' speeds' orientations', sizes'];
+%            %Original order
+           % A = [stimOn directions' offsets' sizes' speeds' orientations']; %
+
+            %Convolution order
+           % A = [stimOn directions' offsets' speeds' orientations', sizes'];
+
+            A = [A(:,1) A(:,2) A(:,3) A(:,5) A(:,6) A(:,4)]; % Reorganize matris
             [C indexS] = sortrows(A,[2 3 4 5 6]);
+
+            
 
             %4. Sort directions:
             directimesSorted = C(:,1)';
@@ -1725,7 +1811,13 @@ for convNeuron = 1
             else
 
             
-            A = [stimOn directions' offsets' speeds' orientations', sizes'];
+            %Original order
+           % A = [stimOn directions' offsets' sizes' speeds' orientations']; %
+
+            %Convolution order
+           % A = [stimOn directions' offsets' speeds' orientations', sizes'];
+
+            A = [A(:,1) A(:,2) A(:,3) A(:,5) A(:,6) A(:,4)]; % Reorganize matrix
             [C indexS] = sortrows(A,[2 3 4 5 6]);
 
             %4. Sort directions:
@@ -1782,7 +1874,7 @@ for convNeuron = 1
 %             spikeSum = (spikeSum.*(1000/msPerFarme)-substractor)./denominator; %convert into spike rate.
             spikeSum = (spikeSum./msPerFarme);%.*1000;
             end 
-
+%%
             %%%%Initialize 5D matrices
             RFu = zeros(redCoorY,redCoorX,sizeX(4),length(respU),"single");
 
@@ -1795,15 +1887,15 @@ for convNeuron = 1
             Udir = unique(directions);
             Usize = unique(sizes);
             NormVideo = zeros(redCoorY,redCoorX,sizeX(4),'single');
-
+            
             %%%Test convolution
             spikeSumArt = zeros(size(spikeSum));
-            spikeSumArt(1:15,7,end-20:end) =1;%
+            spikeSumArt([1:10 91:100 181:190 271:280],7,end-20:end)=1;%Spiking at the end of first offset
             %spikeSumArt(nT/4+1:nT/4+15,7,end-20:end) =1;%
-            %spikeSum = spikeSumArt;
-%              figure;imagesc(squeeze(spikeSum(:,7,:)));colormap(flipud(gray(64)));
-%             yline(trialDivision*sizeN:trialDivision*sizeN:size(spikeSumArt,1));
-%             yline(trialDivision*offsetN*sizeN:trialDivision*offsetN*sizeN:size(spikeSumArt,1)-1,'r','LineWidth',5)
+            spikeSum = spikeSumArt;
+            figure;imagesc(squeeze(spikeSum(:,7,:)));colormap(flipud(gray(64)));
+            yline(trialDivision*sizeN:trialDivision*sizeN:size(spikeSumArt,1));
+            yline(trialDivision*offsetN*sizeN:trialDivision*offsetN*sizeN:size(spikeSumArt,1)-1,'r','LineWidth',5)
 
             %%A. CONVOLUTION. Runs the spike train across the stimulus videos, to
             %%extract noisy receptive field (because spike responses are noise).
@@ -1874,7 +1966,7 @@ for convNeuron = 1
 % 
             %normMatrixMean = repmat(sum(NormVideo,3),[1,1,nN]);%.*reshape(mean(boot_means(:,respU)),[1,1,nN])+1/(N_bootstrap*trialDivision)
 %             
-
+%
             [Mb] = BuildBurstMatrix(goodU(:,respU),round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin));
 
             Nb2=  mean(Mb,3);
@@ -1957,9 +2049,9 @@ for convNeuron = 1
 
             else
                 save(sprintf('RFuNorm-%s',NP.recordingName),'RFuNorm','-v7.3')
-                save(sprintf('RFuSelecTime-%s',NP.recordingName),'RFuST','-v7.3')
+                save(sprintf('RFuSelecTime-%s',NP.recordingName),'RFuST','-v7.3') %%Not normalized
                 save(sprintf('RFuSelecTimeMask-%s',NP.recordingName),'RFuST','-v7.3')
-                save(sprintf('RFuSelecTimeD-%s',NP.recordingName),'RFuSTDir','-v7.3')
+                save(sprintf('RFuSelecTimeD-%s',NP.recordingName),'RFuSTDir','-v7.3') %%Normalized
                 save(sprintf('RFuSelecTimeMask-%s',NP.recordingName),'RFuSTmaskD','-v7.3')
                 save(sprintf('RFuC-%s',NP.recordingName),'RFu','-v7.3')
                 save(sprintf('RFuDirC-%s',NP.recordingName),'RFuDir','-v7.3')
