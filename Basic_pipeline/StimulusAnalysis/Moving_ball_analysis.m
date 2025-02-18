@@ -7,9 +7,9 @@ data = readtable(excelFile);
 summPlot = 0;
 plotexamplesMB =0;
 newTIC = 0;
-ResponseProfile=1; redoResp=0;
+ResponseProfile=1; redoResp=1;
 Shuffling =0;
-Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
+Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
 repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
@@ -40,7 +40,7 @@ Awake = [44:48];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  51%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  49:55%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -812,9 +812,6 @@ for Shuffle =1
         save(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')
         
         end
-
-        find(pvalsResponse <0.05)
-        
 
     end
 
@@ -1677,10 +1674,16 @@ for convNeuron = 1
             framesFast = min(unique(nFrames)); %Select number of frames from faster speed
 
             Xpos = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballTrajectoriesX'))));
-            Xpos = Xpos(2,:,:,1:framesFast); %Select number of frames from faster speed
-
             Ypos = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballTrajectoriesY'))));
-            Ypos = Ypos(2,:,:,1:framesFast);
+           
+            
+            if size(Xpos,1) >1
+                Xpos = Xpos(2,:,:,1:framesFast); %Select number of frames from faster speed
+                Ypos = Ypos(2,:,:,1:framesFast);
+                %%2 speeds
+            end
+
+            
 
             sizeN = length(unique(sizes));
             sizeX = size(Xpos());
@@ -1887,15 +1890,15 @@ for convNeuron = 1
             Udir = unique(directions);
             Usize = unique(sizes);
             NormVideo = zeros(redCoorY,redCoorX,sizeX(4),'single');
-            
-            %%%Test convolution
-            spikeSumArt = zeros(size(spikeSum));
-            spikeSumArt([1:10 91:100 181:190 271:280],7,end-20:end)=1;%Spiking at the end of first offset
-            %spikeSumArt(nT/4+1:nT/4+15,7,end-20:end) =1;%
-            spikeSum = spikeSumArt;
-            figure;imagesc(squeeze(spikeSum(:,7,:)));colormap(flipud(gray(64)));
-            yline(trialDivision*sizeN:trialDivision*sizeN:size(spikeSumArt,1));
-            yline(trialDivision*offsetN*sizeN:trialDivision*offsetN*sizeN:size(spikeSumArt,1)-1,'r','LineWidth',5)
+%             
+%             %%%Test convolution
+%             spikeSumArt = zeros(size(spikeSum));
+%             spikeSumArt([1:10 91:100 181:190 271:280],7,end-20:end)=1;%Spiking at the end of first offset
+%             %spikeSumArt(nT/4+1:nT/4+15,7,end-20:end) =1;%
+%             spikeSum = spikeSumArt;
+%             figure;imagesc(squeeze(spikeSum(:,7,:)));colormap(flipud(gray(64)));
+%             yline(trialDivision*sizeN:trialDivision*sizeN:size(spikeSumArt,1));
+%             yline(trialDivision*offsetN*sizeN:trialDivision*offsetN*sizeN:size(spikeSumArt,1)-1,'r','LineWidth',5)
 
             %%A. CONVOLUTION. Runs the spike train across the stimulus videos, to
             %%extract noisy receptive field (because spike responses are noise).
