@@ -5,8 +5,9 @@
 sign = 0.05;
 j = 1;
 
+%43 PV35_4 is empty
 
-for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex = 15%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
@@ -131,9 +132,11 @@ for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRe
 %     label = string(p.label');
 %     goodU = p.ic(:,label == 'good');
 % 
-%     respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+    respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
 
     respU = find(respNeuronsMB<sign);
+
+    %respU = 40;
     
 %     bin =1;
 % 
@@ -153,7 +156,7 @@ for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRe
 %     RFuNorm = (RFu - RFuNormVidMean)./RFuNormVidSTD;
 
 
-    if respU <= 10
+    if length(respU) <= 10
 
         tiles1 = length(respU);
 
@@ -166,33 +169,43 @@ for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRe
 
     end
 
+    if numel(respU) ==1
+        tiles1 = 1;
+        tiles2 =1;
 
 
+    end
+
+
+%%
     % %%%%%%Plot receptive fields
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    fig = figure;
+    fig = figure('Units', 'normalized', 'OuterPosition', [0 0 1 1]); % Full screen figure;
     InsertionLayout = tiledlayout(tiles1,tiles2,"TileSpacing","compact","Padding","none");
     %InsertionLayout.Layout.Tile = j;
+
     
-    for u = 1:length(respU)
+    
+    for u = 1%1:length(respU)
 
       
         %DirLayout = tiledlayout(direcN/2,direcN/2,"TileSpacing","tight");
-        DirLayout=tiledlayout(InsertionLayout,direcN/2,direcN/2,"TileSpacing","tight");
+        DirLayout=tiledlayout(InsertionLayout,direcN/2,direcN/2,"TileSpacing","tight","Padding","none");
         DirLayout.Layout.Tile = u;
+       
         for d = 1:direcN
             
-            nexttile(DirLayout)
+           nexttile(DirLayout);
             
             if d ==1 || d==3
-               imagesc(rot90(squeeze(RFuSTDir(d,:,:,u)),2));caxis([0 max(RFuSTDir(:,:,:,u),[],'all')]);%c = colorbar;
+               imagesc(rot90(squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,u)),2));caxis([0 max(RFuSTDirFilt(:,:,:,u),[],'all')]);%c = colorbar;
             else
-                imagesc((squeeze(RFuSTDir(d,:,:,u))));caxis([0 max(RFuSTDir(:,:,:,u),[],'all')]);%c = colorbar;
+                imagesc((squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,u))));caxis([0 max(RFuSTDirFilt(:,:,:,u),[],'all')]);%c = colorbar;
             end
-            %colormap('jet')
+            colormap('turbo')
             %title(string(uDir(d)))
             %title(c,'Z-score')
-            xlim([(redCoorX-redCoorY)/2 (redCoorX-redCoorY)/2+redCoorY])
+            %xlim([(redCoorX-redCoorY)/2 (redCoorX-redCoorY)/2+redCoorY])
             %xt = xticks;%(linspace((redCoorX-redCoorY)/2,(redCoorX-redCoorY)/2+redCoorY,offsetN*2));
             %xticklabels(round(theta_x(1,xt)))
             %yt = yticks;
@@ -202,19 +215,25 @@ for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRe
 
             xticks([])
             yticks([])
+
+            axis equal tight
             
 
         end
+       
         title(DirLayout,string(respU(u)),'FontSize',6)
+       
 
     end
 
     title(InsertionLayout,NP.recordingName)
-    cd('\\sil3\data\Large_scale_mapping_NP\Figs paper')
+    cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\Receptive fields all neurons\')
+   
 
-    fig.Position = [680    42   550   954];
+   % fig.Position = [ 0.506770833333333         0.037962962962963                 0.0734375         0.883333333333333];
+    
 
-    print(gcf, sprintf('Dir-RFs-%s.pdf',strrep(NP.recordingName,'_','-')), '-dpdf', '-r300', '-vector');
+    print(gcf, sprintf('Filt_Dir-RFs-%s.pdf',strrep(NP.recordingName,'_','-')), '-dpdf', '-r300', '-vector');
 
     j = j+1;
 

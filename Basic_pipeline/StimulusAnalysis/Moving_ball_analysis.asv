@@ -850,12 +850,12 @@ for Shuffle =1
                 % Compute the mean using 2D convolution
                 sliceK = conv2(slice, kernel,'same'); % 'valid' ensures the window fits within bounds
 
-                ZScoreU = (sliceK-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
+                ZScoreU = (sliceK(:,1:length(slice))-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
                 
                 ZscoreRaster(:, ui, :) = ZScoreU;
         end
 
-         save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster','-v7.3')
+         save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster')
 
         end
 
