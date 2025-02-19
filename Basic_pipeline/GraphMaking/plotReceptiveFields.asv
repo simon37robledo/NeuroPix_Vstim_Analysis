@@ -1,8 +1,13 @@
 %%%Plot all receptive fields 
 
 
+% fig = tiledlayout(length(GoodRecordingsPV),1);
 sign = 0.05;
+j = 1;
+
+
 for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+    
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -32,64 +37,188 @@ for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRe
     end
     NP = NPAPRecording(path);
 
-    RFuNormD = load(sprintf('RFuSelecTimeD-%s',NP.recordingName)).RFuSTDir;
 
-    RFu = load(sprintf('RFuSelecTime-%s',NP.recordingName)).RFuST;
+    %%%%%%%%%%Load stim statistics:
 
-    RFuNormVid = load(sprintf('NormVideo-%s',NP.recordingName)).NormVideo;
 
-    p = NP.convertPhySorting2tIc(NP.recordingDir);
-    label = string(p.label');
-    goodU = p.ic(:,label == 'good');
+    %2. Extract moving ball statistics
+    patternIndex = strfind(string(NP.recordingDir), "\catgt");
 
-    respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+    endIndex = patternIndex(1)-1;
+    stimDir = string(NP.recordingDir);
+    stimDir = extractBetween(stimDir,1,endIndex);
 
-    eNeuron = find(respNeuronsMB<sign);
+    file = dir (stimDir);
+    filenames = {file.name};
+
+    file = dir (stimDir);
+    filenames = {file.name};
+    ballFiles = filenames(contains(filenames,"linearlyMovingBall"));
+
     
-    bin =1;
+        if isempty(ballFiles)
+            %disp()
+            w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
+            warning(w)
+            continue
+        end
 
-    [Mb] = BuildBurstMatrix(goodU(:,eNeuron),round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin));
+    directions = [];
+    offsets = [];
+    sizes = [];
+    speeds = [];
+    orientations = [];
 
-    [nT,nN,nB] = size(Mb);
-    Nb2=  mean(Mb,3);
+    j =1;
 
-    Nbase = mean(Mb,[1 3]);
+    if size(ballFiles) ~= [0 0]
 
-    normMatrixMean =reshape(Nbase,[1,1,nN]);
-    normMatrixSTD = reshape(std(Nb2),[1,1,nN])+eps;
+        for i = ballFiles %Extract stim properties
+            ball= load(stimDir+"\"+string(i));
 
-    RFuNormVidSTD = sum(RFuNormVid,3).*normMatrixSTD;
-    RFuNormVidMean = sum(RFuNormVid,3).*normMatrixMean;
+            if ~isempty(find(strcmp(ball.VSMetaData.allPropName,'orientations'))) %Check if orientations are present (grid inside moving object).
+                orientations = [orientations cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'orientations'))))];
+            else %No orientations property exist
+                orientations = [orientations zeros(1,cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'nTotTrials')))))];
+            end
+            if isempty(orientations) %orientations property exists but is empty
+                orientations = [orientations zeros(1,cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'nTotTrials')))))];
+            end
+
+            directions = [directions cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'directions'))))];
+
+            offsets = [offsets cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'offsets'))))];
+
+            sizes = [sizes cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'ballSizes'))))];
+
+            speeds = [speeds cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'speeds'))))];
+
+            interStimStats = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'interTrialDelay'))))*1000;
+
+            j = j+1;
+        end
+        disp('Visual stats extracted!')
+    else
+        disp('Directory does not exist!');
+    end
+
+    if ~isempty(find(strcmp(ball.VSMetaData.allPropName,'orientationFreq')))
+        Freq = [ cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'orientationFreq'))))];
+    end
+
+    uDir = unique(directions);
+
+    direcN = length(uDir);
+
+    coorRect = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
+
+    sizeV = sizes(speeds == max(speeds))';
+    reduceFactor = min([20 min(sizeV)]); %has to be bigger than the smallest ball size
+
+    redCoorX = round(coorRect(3)/reduceFactor);
+    redCoorY = round(coorRect(4)/reduceFactor);
+   
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Load Receptive fields %%%%%%%%%%%%%%%%
+
+    RFuSTDir = load(sprintf('RFuSelecTimeD-%s',NP.recordingName)).RFuSTDir;
+
+%     RFu = load(sprintf('RFuSelecTime-%s',NP.recordingName)).RFuST;
+% 
+%     RFuNormVid = load(sprintf('NormVideo-%s',NP.recordingName)).NormVideo;
+% 
+%     p = NP.convertPhySorting2tIc(NP.recordingDir);
+%     label = string(p.label');
+%     goodU = p.ic(:,label == 'good');
+% 
+%     respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+
+    respU = find(respNeuronsMB<sign);
+    
+%     bin =1;
+% 
+%     [Mb] = BuildBurstMatrix(goodU(:,respU),round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin));
+% 
+%     [nT,nN,nB] = size(Mb);
+%     Nb2=  mean(Mb,3);
+% 
+%     Nbase = mean(Mb,[1 3]);
+% 
+%     normMatrixMean =reshape(Nbase,[1,1,nN]);
+%     normMatrixSTD = reshape(std(Nb2),[1,1,nN])+eps;
+% 
+%     RFuNormVidSTD = sum(RFuNormVid,3).*normMatrixSTD;
+%     RFuNormVidMean = sum(RFuNormVid,3).*normMatrixMean;
+% 
+%     RFuNorm = (RFu - RFuNormVidMean)./RFuNormVidSTD;
 
 
-    RFuNorm = (RFu - )
+    if respU <= 10
 
-
-  
-
-
-    if eNeuron <= 10
-
-        tiles1 = eNeuron;
+        tiles1 = length(respU);
 
         tiles2 = 1;
 
     else
 
         tiles1 = 10;
-        tiles2 = ceil(length(eNeuron)/10);
+        tiles2 = ceil(length(respU)/10);
 
     end
 
-    fig = tiledlayout(tiles1,tiles2,"TileSpacing","tight");
 
-    for u =1:length(eNeuron)
 
-        nexttile;
-        imagesc(RFuNorm(:,:,u))
-        title(sprintf('unit-%d-%s',eNeuron(u),string(data.Animal_ID(ex))+string(data.Insertion(ex))));
-
-    end
+    % %%%%%%Plot receptive fields
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    fig = figure;
+    InsertionLayout = tiledlayout(tiles1,tiles2,"TileSpacing","compact");
+    %InsertionLayout.Layout.Tile = j;
     
+    for u = 1:length(respU)
+
+      
+        %DirLayout = tiledlayout(direcN/2,direcN/2,"TileSpacing","tight");
+        DirLayout=tiledlayout(InsertionLayout,direcN/2,direcN/2,"TileSpacing","tight");
+        DirLayout.Layout.Tile = u;
+        for d = 1:direcN
+            
+            nexttile(DirLayout)
+            
+            if d ==1 || d==3
+               imagesc(rot90(squeeze(RFuSTDir(d,:,:,u)),2));caxis([0 max(RFuSTDir(:,:,:,u),[],'all')]);%c = colorbar;
+            else
+                imagesc((squeeze(RFuSTDir(d,:,:,u))));caxis([0 max(RFuSTDir(:,:,:,u),[],'all')]);%c = colorbar;
+            end
+            %colormap('jet')
+            %title(string(uDir(d)))
+            %title(c,'Z-score')
+            xlim([(redCoorX-redCoorY)/2 (redCoorX-redCoorY)/2+redCoorY])
+            %xt = xticks;%(linspace((redCoorX-redCoorY)/2,(redCoorX-redCoorY)/2+redCoorY,offsetN*2));
+            %xticklabels(round(theta_x(1,xt)))
+            %yt = yticks;
+            %yticklabels(round(theta_y(yt,1)))
+            %             xlabel('X degrees')
+            %             ylabel('Y degrees')
+
+            xticks([])
+            yticks([])
+            
+
+        end
+        title(DirLayout,string(respU(u)))
+
+    end
+
+    title(InsertionLayout,NP.recordingName)
+    cd('\\sil3\data\Large_scale_mapping_NP\Figs paper')
+
+    fig.Position = [680    42   550   954];
+
+    print(gcf, sprintf('Dir-RFs-%s.pdf',strrep(NP.recordingName,'_','-')), '-dpdf', '-r300', '-vector');
+
+    j = j+1;
+
+    close
+
 
 end

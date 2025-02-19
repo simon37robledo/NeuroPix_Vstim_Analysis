@@ -7,9 +7,9 @@ data = readtable(excelFile);
 summPlot = 0;
 plotexamplesMB =0;
 newTIC = 0;
-ResponseProfile=1; redoResp=1;
+ResponseProfile=1; redoResp=0;
 Shuffling =0;
-Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
 repeatShuff =0;
 ReceptiveFieldFixedDelay = 0;
 tuning =0;
@@ -31,7 +31,7 @@ N_bootstrap = 1000;
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
-GoodRecordingsPV =[8:21,40:43,50:54];
+GoodRecordingsPV =[15:21,40:43,50:54];
 GoodRecordingsRF = [15:20,40:48];
 Awake = [44:48];
 %Plot specific neurons
@@ -40,7 +40,7 @@ Awake = [44:48];
 %%%and MB
 %%
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  49:55%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
