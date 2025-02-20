@@ -198,9 +198,7 @@ for k = 1
 
         trialsHigherSpiking = find(mZscoreRaster>mean(mZscoreRaster)+std(mZscoreRaster));
 
-        randTrials = trialsHigherSpiking(sort(randperm(length(trialsHigherSpiking),10)));
-
-        %%Mark trials and plot raw data of trials
+        randTrials = 
 
 
         %%%%%% Plot PSTH
