@@ -83,8 +83,48 @@ p = NP.convertPhySorting2tIc(NP.recordingDir);
 label = string(p.label');
 goodU = p.ic(:,label == 'good');
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% plot raster MB %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Load Triggers (diode)
+Ordered_stims= strsplit(data.VS_ordered{ex},',');
+%containsMB = cellfun(@(x) contains(x,'MB'),Ordered_stims);
+containsMB = strcmp(Ordered_stims, 'MB');
+ttlInd = find(containsMB);
+
+
+[stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
+[stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
+
+
+%When dealing with different speeds, save different stim durs, and create M for each speed
+A = [stimOn directions' offsets' sizes' speeds' orientations'];
+[C indexS] = sortrows(A,[2 3 4 5 6]);
+
+B = [stimOff directions' offsets' sizes' speeds' orientations'];
+[Coff indexSo] = sortrows(B,[2 3 4 5 6]);
+
+stimInter= mean(stimOn(2:end)-stimOff(1:end-1));
+
+includeOnespeed=1;
+if includeOnespeed
+
+    A =  A(A(:,5) == max(A(:,5)),:);
+
+    B =  B(B(:,5) == max(B(:,5)),:);
+
+    [C indexS] = sortrows(A,[2 3 4 5 6]);
+
+    [Coff indexSo] = sortrows(B,[2 3 4 5 6]);
+
+    stimOn = A(:,1);
+    stimOff = B(:,1);
+
+    %digon  =onDigital(A(:,5) == max(A(:,5)));
+
+    stimInter = interStimStats;
+
+end
 
 NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
 
@@ -190,7 +230,7 @@ for k = 1
         xticks([0 preBase/bin2:300/bin2:(stimDur+preBase*2)/bin2 (round((stimDur+preBase*2)/100)*100)/bin2])
         xticklabels([]);
 
-        %%Select 10 random trials where Z-score is above the average
+        %%%%Select 10 random trials where Z-score is above the average
 
         ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
 
@@ -199,6 +239,22 @@ for k = 1
         trialsHigherSpiking = find(mZscoreRaster>mean(mZscoreRaster)+std(mZscoreRaster));
 
         randTrials = trialsHigherSpiking(sort(randperm(length(trialsHigherSpiking),10)));
+
+        %%%%%Plot eye movements colorcoded for these selected trials:
+
+        %%%%%% Construct stimType matrix for eye movement plot.
+        stimType = zeros(length(A),5); %3 plus number of example neuron
+        stimType(:,1) = A(:,1);
+        stimType(:,2) = A(:,1)+stimDur;
+        stimType(:,3) = A(:,2);
+        stimType(:,4) = A(:,3);
+
+        %Get response strenght of specific neurons and save it in stimType
+        [MrNoSort] = BuildBurstMatrix(goodU(:,eNeuron),round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+        ResponseStrength= mean(MrNoSort(:,eNeuron,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+        stimType(:,end) = ResponseStrength;
+
+        EyePositionAnalysis(NP,data.Eye_video_dir{ex},11,1,stimType,0,1)
 
         %%Mark trials and plot raw data of trials
 

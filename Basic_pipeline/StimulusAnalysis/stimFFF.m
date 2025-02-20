@@ -14,6 +14,7 @@ plotin3D=0;
 processLFP=0;
 Shuffling_baseline = 1;
 repeatShuff = 1;
+trialThres = 0.6;
 
 plotRasters = 0;
 
@@ -205,7 +206,7 @@ for ex =SDGrecordingsA%size(data,1)
                 pvalsResponse(u) = mean(boot_means(:,u)>respVal(u));
                 ZScoreU(u) = (respVal(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*nT));
 
-                if emptyRows/nT > 0.6
+                if emptyRows/nT >= trialThres
                     pvalsResponse(u) = 1;
                 end
 

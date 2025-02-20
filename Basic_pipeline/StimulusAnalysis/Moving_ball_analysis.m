@@ -12,6 +12,7 @@ ResponseProfile=1; redoResp=0;
 Shuffling =0;
 Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
 repeatShuff =0;
+trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
 
@@ -817,7 +818,7 @@ for Shuffle =1
             ZScoreU(u) = (respVal(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
 
 
-            if emptyRows/trialDivision >= 0.5
+            if emptyRows/trialDivision >= trialThres
                 pvalsResponse(u) = 1;
             end
 

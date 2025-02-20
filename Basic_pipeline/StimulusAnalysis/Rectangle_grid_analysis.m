@@ -431,7 +431,7 @@ for ex = SDGrecordingsA%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:
                     pvalsResponse(u) = mean(boot_means(:,u)>respVal(u));
                     ZScoreU(u) = (respVal(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
 
-                    if emptyRows/trialDivision > 0.6
+                    if emptyRows/trialDivision >= trialThres
                         pvalsResponse(u) = 1;
                     end
 

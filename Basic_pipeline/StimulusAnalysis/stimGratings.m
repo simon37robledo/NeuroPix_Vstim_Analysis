@@ -548,11 +548,11 @@ for ex = SDGrecordingsA%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 4
                 pvalsResponseM(u) = mean(boot_means(:,u)>respValM(u));
                 ZScoreUM(u) = (respValM(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
 
-                if emptyRowsS/nT > trialThres
+                if emptyRowsS/nT >= trialThres
                     pvalsResponseS(u) = 1;
                 end
 
-                if emptyRowsM/nT > trialThres
+                if emptyRowsM/nT >= trialThres
                     pvalsResponseM(u) = 1;
                 end 
 
