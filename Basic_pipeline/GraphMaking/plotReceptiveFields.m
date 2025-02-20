@@ -7,7 +7,7 @@ j = 1;
 
 %43 PV35_4 is empty
 
-for ex = 15%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex = GoodRecordingsRF%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
@@ -124,6 +124,8 @@ for ex = 15%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%sele
 
     RFuSTDir = load(sprintf('RFuSelecTimeD-%s',NP.recordingName)).RFuSTDir;
 
+    RFuSTDirFilt = load(sprintf('RFuSTDirFilt-%s',NP.recordingName)).RFuSTDirFilt;
+
 %     RFu = load(sprintf('RFuSelecTime-%s',NP.recordingName)).RFuST;
 % 
 %     RFuNormVid = load(sprintf('NormVideo-%s',NP.recordingName)).NormVideo;
@@ -177,7 +179,7 @@ for ex = 15%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%sele
     end
 
 
-%%
+%
     % %%%%%%Plot receptive fields
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fig = figure('Units', 'normalized', 'OuterPosition', [0 0 1 1]); % Full screen figure;
@@ -186,7 +188,7 @@ for ex = 15%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%sele
 
     
     
-    for u = 1%1:length(respU)
+    for u = 1:length(respU)
 
       
         %DirLayout = tiledlayout(direcN/2,direcN/2,"TileSpacing","tight");
@@ -233,7 +235,7 @@ for ex = 15%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%sele
    % fig.Position = [ 0.506770833333333         0.037962962962963                 0.0734375         0.883333333333333];
     
 
-    print(gcf, sprintf('Filt_Dir-RFs-%s.pdf',strrep(NP.recordingName,'_','-')), '-dpdf', '-r300', '-vector');
+    print(gcf, sprintf('Filt_Dir-RFs-%s.pdf',strrep(NP.recordingName,'_','-')), '-dpdf', '-r300', '-vector','-fillpage');
 
     j = j+1;
 
