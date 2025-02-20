@@ -10,7 +10,7 @@ newTIC = 0;
 ResponseProfile=1; redoResp=0;
 
 Shuffling =0;
-Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
 repeatShuff =0;
 
 ReceptiveFieldFixedDelay = 0;
@@ -1982,6 +1982,7 @@ for convNeuron = 1
             RFuSpeed = zeros(speedN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
             RFuDir = zeros(direcN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
             RFuSize = zeros(sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
+            RFuDirSize = zeros(direcN,sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
 
 
             Uspeed = unique(speeds);
@@ -2041,9 +2042,9 @@ for convNeuron = 1
 
                 %     figure;imagesc(squeeze(Co(:,:,80,3)))
                 %%Select same size per direction
-                %if  C(i,6) == uSize(ceil(sizeN/2))
+
                 RFuDir(Udir == C(i,2),:,:,:,:) = squeeze(RFuDir(Udir == C(i,2),:,:,:,:))+Co./(nT/direcN/trialDivision);
-                %end
+                RFuDirSize(Udir == C(i,2),Usize == C(i,6),:,:,:,:) = squeeze(RFuDirSize(Udir == C(i,2),Usize == C(i,6),:,:,:,:))+Co./(nT/direcN/trialDivision);
                 RFuSize(Usize == C(i,6),:,:,:,:) = squeeze(RFuSize(Usize == C(i,6),:,:,:,:))+Co./(nT/sizeN/trialDivision);
                 RFuSpeed(Uspeed == C(i,4),:,:,:,:) = squeeze(RFuSpeed(Uspeed == C(i,4),:,:,:,:))+Co./(nT/speedN/trialDivision);
 
@@ -2089,77 +2090,84 @@ for convNeuron = 1
             %%%%%RFuSTDir = squeeze(RFuNormDir(:,:,:,time_zero_index+round(delay/msPerFarme),:));
             RFuSTDir =  squeeze(RFuDir(:,:,:,time_zero_index+round(delay/msPerFarme),:)); 
 
-        %  
-            radius = uSize(ceil(sizeN/2))/2/reduceFactor;
-            TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDir,2)/offsetN),radius); 
+            RFuSTDirSize =  reshape(RFuDirSize(:,:,:,:,time_zero_index+round(delay/msPerFarme),:),... %Reshape to eliminate frame component. 
+                [size(RFuDirSize,1),size(RFuDirSize,2),size(RFuDirSize,3),size(RFuDirSize,4),size(RFuDirSize,6)]);
 
-            RFuSTDirFilt = zeros(size(RFuSTDir));
+        %  
+            %radius = uSize(ceil(sizeN/2))/2/reduceFactor;
+            TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDir,2)/9),5); 
+
+            %RFuSTDirFilt = zeros(size(RFuSTDir));
+%
+            RFuSTDirSizeFilt = zeros(size(RFuSTDirSize));
 
             for d = 1:size(RFuSTDir,1)
-                parfor ui =1:size(RFuSTDir,4)
+                for s = 1:size(RFuSTDirSize,2)
+                    parfor ui =1:size(RFuSTDir,5)
 
-                    slice = squeeze(RFuSTDir(d,:,:,ui));
+                        slice = squeeze(RFuSTDirSize(d,s,:,:,ui));
 
-                    slicek = conv2(slice,TwoDGaussian,'same');
+                        slicek = conv2(slice,TwoDGaussian,'same');
 
-                    RFuSTDirFilt(d,:,:,ui) =slicek;
+                        RFuSTDirSizeFilt(d,s,:,:,ui) =slicek;
 
+                    end
                 end
 
             end
 
 
-            %select specific delay;
-            radius = uSize(ceil(sizeN/2))/2/reduceFactor;
-
-            % Create a circular mask
-            [x, y] = meshgrid(-radius:radius, -radius:radius);
-            circleMask = (x.^2 + y.^2) <= radius^2;
-
-            % Normalize the mask to make it a mean filter
-            circleMask = circleMask / sum(circleMask(:));
-
-            % Preallocate the result matrix
-            RFuSTmask = zeros(size(RFuST));
-
-            % Apply the circular mask to each slice in the third dimension
-            for i = 1:size(RFuSTmask, 3)
-                currentSlice = RFuST(:, :, i);
-
-                nanMask = ~isnan(currentSlice); % Logical mask for valid (non-NaN) values
-                currentSlice(isnan(currentSlice)) = 0; % Replace NaN with 0
-
-                % Apply convolution to the matrix
-                numerator = conv2(currentSlice, circleMask, 'same'); % Weighted sum
-                denominator = conv2(nanMask, circleMask, 'same'); % Normalization factor
-
-                % Avoid division by zero and calculate the mean
-                RFuSTmask(:, :, i) = numerator ./ max(denominator, eps);
-                %RFuSTmask(:, :, i) =conv2(currentSlice, circleMask, 'same');
-            end
-
-            % Apply the circular mask to each slice in the third dimension
-            % Preallocate the result matrix
-            RFuSTmaskD = zeros(size(RFuSTDir));
-            for d =1:direcN
-                for u = 1:size(RFuSTmaskD, 4)
-                    currentSlice = squeeze(RFuSTDir(d,:, :, i));
-
-                    nanMask = ~isnan(currentSlice); % Logical mask for valid (non-NaN) values
-                    currentSlice(isnan(currentSlice)) = 0; % Replace NaN with 0
-
-                    % Apply convolution to the matrix
-                    numerator = conv2(currentSlice, circleMask, 'same'); % Weighted sum
-                    denominator = conv2(nanMask, circleMask, 'same'); % Normalization factor
-
-                    % Avoid division by zero and calculate the mean
-                    RFuSTmaskD(d,:, :, u) = numerator ./ max(denominator, eps);
-                    %RFuSTmask(:, :, i) =conv2(currentSlice, circleMask, 'same');
-                end
-            end
+%             %select specific delay;
+%             radius = uSize(ceil(sizeN/2))/2/reduceFactor;
+% 
+%             % Create a circular mask
+%             [x, y] = meshgrid(-radius:radius, -radius:radius);
+%             circleMask = (x.^2 + y.^2) <= radius^2;
+% 
+%             % Normalize the mask to make it a mean filter
+%             circleMask = circleMask / sum(circleMask(:));
+% 
+%             % Preallocate the result matrix
+%             RFuSTmask = zeros(size(RFuST));
+% 
+%             % Apply the circular mask to each slice in the third dimension
+%             for i = 1:size(RFuSTmask, 3)
+%                 currentSlice = RFuST(:, :, i);
+% 
+%                 nanMask = ~isnan(currentSlice); % Logical mask for valid (non-NaN) values
+%                 currentSlice(isnan(currentSlice)) = 0; % Replace NaN with 0
+% 
+%                 % Apply convolution to the matrix
+%                 numerator = conv2(currentSlice, circleMask, 'same'); % Weighted sum
+%                 denominator = conv2(nanMask, circleMask, 'same'); % Normalization factor
+% 
+%                 % Avoid division by zero and calculate the mean
+%                 RFuSTmask(:, :, i) = numerator ./ max(denominator, eps);
+%                 %RFuSTmask(:, :, i) =conv2(currentSlice, circleMask, 'same');
+%             end
+% 
+%             % Apply the circular mask to each slice in the third dimension
+%             % Preallocate the result matrix
+%             RFuSTmaskD = zeros(size(RFuSTDir));
+%             for d =1:direcN
+%                 for u = 1:size(RFuSTmaskD, 4)
+%                     currentSlice = squeeze(RFuSTDir(d,:, :, i));
+% 
+%                     nanMask = ~isnan(currentSlice); % Logical mask for valid (non-NaN) values
+%                     currentSlice(isnan(currentSlice)) = 0; % Replace NaN with 0
+% 
+%                     % Apply convolution to the matrix
+%                     numerator = conv2(currentSlice, circleMask, 'same'); % Weighted sum
+%                     denominator = conv2(nanMask, circleMask, 'same'); % Normalization factor
+% 
+%                     % Avoid division by zero and calculate the mean
+%                     RFuSTmaskD(d,:, :, u) = numerator ./ max(denominator, eps);
+%                     %RFuSTmask(:, :, i) =conv2(currentSlice, circleMask, 'same');
+%                 end
+%             end
 
             if noEyeMoves
-                save(sprintf('NEM-RFuNorm-%s',NP.recordingName),'RFuNorm','-v7.3')
+                save(sprintf('NEM-RFuSTDirSizeFilt-%s',NP.recordingName),'RFuSTDirSizeFilt','-v7.3')
                 save(sprintf('NEM-RFuSelecTime-%s',NP.recordingName),'RFuST','-v7.3')
                 save(sprintf('NEM-RFuSelecTimeMask-%s',NP.recordingName),'RFuST','-v7.3')
                 save(sprintf('NEM-RFuSelecTimeD-%s',NP.recordingName),'RFuSTDir','-v7.3')
@@ -2172,6 +2180,8 @@ for convNeuron = 1
                 save(sprintf('NormVideo-%s',NP.recordingName),'NormVideo','-v7.3')
 
             else
+                save(sprintf('RFuSTDirSizeFilt-%s',NP.recordingName),'RFuSTDirSizeFilt','-v7.3')
+                save(sprintf('RFuNorm-%s',NP.recordingName),'RFuNorm','-v7.3')
                 save(sprintf('RFuNorm-%s',NP.recordingName),'RFuNorm','-v7.3')
                 save(sprintf('RFuSelecTime-%s',NP.recordingName),'RFuST','-v7.3') %%Not normalized
                 save(sprintf('RFuSelecTimeMask-%s',NP.recordingName),'RFuST','-v7.3')

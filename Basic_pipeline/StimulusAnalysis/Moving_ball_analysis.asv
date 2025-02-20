@@ -10,7 +10,7 @@ newTIC = 0;
 ResponseProfile=1; redoResp=0;
 
 Shuffling =0;
-Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
 repeatShuff =0;
 
 ReceptiveFieldFixedDelay = 0;
@@ -850,12 +850,12 @@ for Shuffle =1
                 % Compute the mean using 2D convolution
                 sliceK = conv2(slice, kernel,'same'); % 'valid' ensures the window fits within bounds
 
-                ZScoreU = (sliceK(:,1:length(slice))-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
+                ZScoreU = (sliceK-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
                 
                 ZscoreRaster(:, ui, :) = ZScoreU;
         end
 
-         save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster')
+         save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster','-v7.3')
 
         end
 
@@ -1982,6 +1982,7 @@ for convNeuron = 1
             RFuSpeed = zeros(speedN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
             RFuDir = zeros(direcN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
             RFuSize = zeros(sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
+            RFuDirSize = zeros(direcN,sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
 
 
             Uspeed = unique(speeds);
@@ -2044,6 +2045,7 @@ for convNeuron = 1
                 %if  C(i,6) == uSize(ceil(sizeN/2))
                 RFuDir(Udir == C(i,2),:,:,:,:) = squeeze(RFuDir(Udir == C(i,2),:,:,:,:))+Co./(nT/direcN/trialDivision);
                 %end
+                
                 RFuSize(Usize == C(i,6),:,:,:,:) = squeeze(RFuSize(Usize == C(i,6),:,:,:,:))+Co./(nT/sizeN/trialDivision);
                 RFuSpeed(Uspeed == C(i,4),:,:,:,:) = squeeze(RFuSpeed(Uspeed == C(i,4),:,:,:,:))+Co./(nT/speedN/trialDivision);
 
@@ -2090,8 +2092,8 @@ for convNeuron = 1
             RFuSTDir =  squeeze(RFuDir(:,:,:,time_zero_index+round(delay/msPerFarme),:)); 
 
         %  
-            radius = uSize(ceil(sizeN/2))/2/reduceFactor;
-            TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDir,2)/offsetN),radius); 
+            %radius = uSize(ceil(sizeN/2))/2/reduceFactor;
+            TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDir,2)/9),5); 
 
             RFuSTDirFilt = zeros(size(RFuSTDir));
 
