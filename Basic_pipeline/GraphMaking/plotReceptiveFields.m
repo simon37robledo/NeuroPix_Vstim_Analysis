@@ -126,6 +126,21 @@ for ex = GoodRecordingsRF%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRec
 
     RFuSTDirFilt = load(sprintf('RFuSTDirFilt-%s',NP.recordingName)).RFuSTDirFilt;
 
+    RFuSTDirSizeFilt = load(sprintf('RFuSTDirSizeFilt-%s',NP.recordingName)).RFuSTDirSizeFilt; %Size and dir
+
+    if size(RFuSTDirSizeFilt,2) >1 %If there is more than on size
+
+        %%Select size closest to 120
+        [minS indx] = min(abs(unique(sizeV)-120));
+
+        RFuSTDirFilt = RFuSTDirSize(:,indx,:,:,:);
+
+    else
+
+        RFuSTDirFilt = squeeze(RFuSTDirSize);
+
+    end
+
 %     RFu = load(sprintf('RFuSelecTime-%s',NP.recordingName)).RFuST;
 % 
 %     RFuNormVid = load(sprintf('NormVideo-%s',NP.recordingName)).NormVideo;
@@ -188,7 +203,7 @@ for ex = GoodRecordingsRF%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRec
 
     
     
-    for u = 1:length(respU)
+    for u = 1:length(respU) %%%%problem with filtering. 
 
       
         %DirLayout = tiledlayout(direcN/2,direcN/2,"TileSpacing","tight");

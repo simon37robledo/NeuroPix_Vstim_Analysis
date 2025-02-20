@@ -1180,7 +1180,7 @@ for plotOp = plotexamplesMB %rstx
 
              %eNeuron = find(pvals<0.005);
 
-             eNeuron = 40;
+             eNeuron = 18;
 
             sizeN=1;
 
@@ -2101,9 +2101,9 @@ for convNeuron = 1
 %
             RFuSTDirSizeFilt = zeros(size(RFuSTDirSize));
 
-            for d = 1:size(RFuSTDir,1)
-                for s = 1:size(RFuSTDirSize,2)
-                    parfor ui =1:size(RFuSTDir,5)
+            for d = 1:size(RFuSTDir,1) %dirs
+                for s = 1:size(RFuSTDirSize,2) %Size
+                    parfor ui =1:size(RFuSTDir,4) %units
 
                         slice = squeeze(RFuSTDirSize(d,s,:,:,ui));
 
