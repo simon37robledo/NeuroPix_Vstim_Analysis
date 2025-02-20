@@ -133,7 +133,7 @@ for ex = GoodRecordingsRF%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRec
         %%Select size closest to 120
         [minS indx] = min(abs(unique(sizeV)-120));
 
-        RFuSTDirFilt = RFuSTDirSize(:,indx,:,:,:);
+        RFuSTDirFilt = squeeze(RFuSTDirSize(:,indx,:,:,:));
 
     else
 

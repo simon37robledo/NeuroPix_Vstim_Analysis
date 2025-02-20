@@ -7,7 +7,7 @@ data = readtable(excelFile);
 summPlot = 0;
 plotexamplesMB =0;
 newTIC = 0;
-ResponseProfile=1; redoResp=0;
+ResponseProfile=0; redoResp=0;
 
 Shuffling =0;
 Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
@@ -19,9 +19,9 @@ ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
 
-ReceptiveFieldConvolutions =1;
-repeatConv =1;
-useZscore = 1;
+ReceptiveFieldConvolutions =0;
+repeatConv =0;
+useZscore = 0;
 plotRF =0;
 
 spatialTuning=0;
@@ -39,15 +39,16 @@ pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
 GoodRecordingsPV =[15:21,40:42,49:55];
-GoodRecordingsRF = [15:20,40:42,49:55];
+GoodRecordingsRF = [8:20,40:43,49:55];
 Awake = [44:48];
 %Plot specific neurons
  
 %%%In shuffling make sure that response cat is selected equally between SDG
 %%%and MB
 %%
+%r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  GoodRecordingsRF%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  51%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -153,6 +154,11 @@ for ex =  GoodRecordingsRF%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%Good
     if ~isempty(find(strcmp(ball.VSMetaData.allPropName,'orientationFreq')))
         Freq = [ cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'orientationFreq'))))];
     end
+
+    
+%     rectcheck{r} = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))))';
+% 
+%     r=r+1;
 
     
     uDir = unique(directions);
@@ -2232,9 +2238,9 @@ for convNeuron = 1
  
         if plotRF
 
-            eNeuron = find(ismember(respU,[29]));%respU(respU == selecN{1}(2,selecN{1}(1,:)==ex));
-            %figure;imagesc(squeeze(RFu(:,:,88,2)))
-            eNeuron =7;
+%             eNeuron = find(ismember(respU,[29]));%respU(respU == selecN{1}(2,selecN{1}(1,:)==ex));
+%             %figure;imagesc(squeeze(RFu(:,:,88,2)))
+            eNeuron =40;
             %Parameters
             eye_to_monitor_distance = 21.5; % Distance from eye to monitor in cm
             pixel_size = 33/(1080/reduceFactor); % Size of one pixel in cm (e.g., 25 micrometers)

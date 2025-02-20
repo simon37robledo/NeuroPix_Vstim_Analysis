@@ -157,7 +157,7 @@ for k = 1
 
     sizeN=1;
 
-    for u = eNeuron
+    for u = length(eNeuron)
 
         j=1;
 
@@ -214,21 +214,74 @@ for k = 1
         end
 
         hold on
-        %Plot rectangle: *max window per unique trial.
-        [respVal respVali]= max(NeuronVals(:,:,1),[],2);
-        for d = 1:size(NeuronVals,2)
-
-            if posX(u,d) == NeuronVals(u,respVali(u),3) & posY(u,d) == NeuronVals(u,respVali(u),2)
-                rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision)/mergeTrials+0.5, window_size(2)/(bin2), trialDivision/mergeTrials],...
-                    'EdgeColor', 'r', 'LineWidth', 1,'LineStyle','-.');
-            end
-
-        end
+      
 
         xticklabels([])
         xlim([0 round(stimDur+preBase*2)/bin2])
         xticks([0 preBase/bin2:300/bin2:(stimDur+preBase*2)/bin2 (round((stimDur+preBase*2)/100)*100)/bin2])
         xticklabels([]);
+
+        %%%%Plot receptive field per direction
+        
+        %Parameters
+        %check receptive field neurons first
+        respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+
+        respU = find(respNeuronsMB<0.05);
+
+        ru = find(respU == eNeuron);
+        %
+        reduceFactor =20;
+        eye_to_monitor_distance = 21.5; % Distance from eye to monitor in cm
+        pixel_size = 33/(1080/reduceFactor); % Size of one pixel in cm (e.g., 25 micrometers)
+        monitor_resolution = [redCoorX, redCoorY]; % Width and height in pixels
+        [theta_x,theta_y] = pixels2eyeDegrees(eye_to_monitor_distance,pixel_size,monitor_resolution);
+
+        coorRect = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
+        redCoorX = round(coorRect(3)/reduceFactor);
+        redCoorY = round(coorRect(4)/reduceFactor);
+
+        theta_x = theta_x(:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY);
+
+
+        RFuSTDirSizeFilt = load(sprintf('RFuSTDirSizeFilt-%s',NP.recordingName)).RFuSTDirSizeFilt; %Size and dir
+
+        if size(RFuSTDirSizeFilt,2) >1 %If there is more than on size
+            %%Select size closest to 120
+            [minS indx] = min(abs(unique(sizeV)-120));
+            RFuSTDirFilt = squeeze(RFuSTDirSizeFilt(:,indx,:,:,:));
+        else
+            RFuSTDirFilt = squeeze(RFuSTDirSizeFilt);
+        end
+
+        DirLayout=tiledlayout(direcN/2,direcN/2,"TileSpacing","tight","Padding","none");
+
+        for d = 1:direcN
+
+            nexttile(DirLayout);
+
+            if d ==1 || d==3
+                imagesc(rot90(squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,ru)),2));caxis([0 max(RFuSTDirFilt(:,:,:,ru),[],'all')]);c = colorbar;
+            else
+                imagesc((squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,ru))));caxis([0 max(RFuSTDirFilt(:,:,:,ru),[],'all')]);c = colorbar;
+            end
+            colormap('turbo')
+            title(string(uDir(d)))
+            title(c,'Z-score')
+            %xlim([(redCoorX-redCoorY)/2 (redCoorX-redCoorY)/2+redCoorY])
+            xt = xticks;%(linspace((redCoorX-redCoorY)/2,(redCoorX-redCoorY)/2+redCoorY,offsetN*2));
+            xticklabels(round(theta_x(1,xt)))
+            yt = yticks;
+            yticklabels(round(theta_y(yt,1)))
+            xlabel('X degrees')
+            ylabel('Y degrees')
+
+            axis equal tight
+
+
+        end
+
+        title(DirLayout,string(respU(ru)),'FontSize',6)
 
         %%%%Select 10 random trials where Z-score is above the average
 
