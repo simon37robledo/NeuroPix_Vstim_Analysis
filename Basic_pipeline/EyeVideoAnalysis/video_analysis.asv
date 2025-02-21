@@ -108,7 +108,7 @@ for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
 
     
 %     frameRateReptilearn = readtable(filenames{contains(filenames,".json") &  contains(filenames,"_"+string(data.Insertion(ex))+"_")})
-    if mean(diffTS)>20 %%%Problem in PV97
+
 
 
 
@@ -116,15 +116,22 @@ for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
     figure;
     plot([1:size(VideoTS,1)-1],diffTS)
 
-    MissingInd = find(diffTS>15); %find indexes where there is a frame-miss event (could be one or several).
+    if mean(diffTS)>20 %%%Problem in PV97, where one frame taken every two triggers
+        
+        mMissingInd = find(diffTS>25);
+        vidTTLs = vidTTLs(1:2:end);
+    
+    else
+        
+        MissingInd = find(diffTS>15);
+    end %find indexes where there is a frame-miss event (could be one or several).
 
     %Exclude missing frames in rec time stamps from TTLs
 
     mFrames= [];
 
     TTL2FrameI = 1:length(vidTTLs);
-
-    
+  
 
     for m = 1:length(MissingInd)
 
@@ -140,13 +147,15 @@ for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
     vidTTLsR = vidTTLs;
     vidTTLsR(mFrames) = [];
 
+   
+
     TTL2Frame = setdiff(TTL2FrameI,mFrames); %%TTL index number to index number of frame
 
     lengthVideoTS = length(VideoTS.timestamp);
 
     lengthTTLsR = length(vidTTLsR);
     %
-    figure;plot(vidTTLs(1:2:200)-vidTTLs(1),ones(1,100),'*')
+    figure;plot(vidTTLsR(1:2:200)-vidTTLs(1),ones(1,100),'*')
     xline(timestampsRecF(1:100));
 
     framesInsec = sum(timestampsRecF >= timestampsRecF(1) & timestampsRecF<=timestampsRecF(1)+1000);
