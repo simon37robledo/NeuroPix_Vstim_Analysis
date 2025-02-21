@@ -96,6 +96,7 @@ ttlInd = find(containsMB);
 [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
 [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
+stimDur = mean(-stimOn+stimOff);
 
 %When dealing with different speeds, save different stim durs, and create M for each speed
 A = [stimOn directions' offsets' sizes' speeds' orientations'];
@@ -230,7 +231,7 @@ for k = 1
         respU = find(respNeuronsMB<0.05);
 
         ru = find(respU == eNeuron);
-        %%
+        %
         reduceFactor =20;
         eye_to_monitor_distance = 21.5; % Distance from eye to monitor in cm
         pixel_size = 33/(1080/reduceFactor); % Size of one pixel in cm (e.g., 25 micrometers)
@@ -293,6 +294,8 @@ for k = 1
 
         randTrials = trialsHigherSpiking(sort(randperm(length(trialsHigherSpiking),10)));
 
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%Plot eye movements colorcoded for these selected trials:
 
         %%%%%% Construct stimType matrix for eye movement plot.
@@ -307,7 +310,9 @@ for k = 1
         ResponseStrength= mean(MrNoSort(:,eNeuron,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
         stimType(:,end) = ResponseStrength;
 
-        EyePositionAnalysis(NP,data.Eye_video_dir{ex},11,1,stimType,0,1)
+        timesnips = [directimesSorted(randTrials);directimesSorted(randTrials)+stimDur];
+
+        EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,0,1)
 
         %%Mark trials and plot raw data of trials
 

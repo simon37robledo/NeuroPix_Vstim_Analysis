@@ -579,9 +579,7 @@ else
 
     else
 
-        for i = 1:size(timestamps,2)
-            dataSelec = Data(frameTimes>=timestamps(1,i) & frameTimes<=timestamps(2,i),:);
-        end
+        
         
 
     end

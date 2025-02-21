@@ -108,11 +108,7 @@ for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
 
     
 %     frameRateReptilearn = readtable(filenames{contains(filenames,".json") &  contains(filenames,"_"+string(data.Insertion(ex))+"_")})
-    if mean(diffTS)>20 %%%Problem in PV97, where one frame taken every two triggers
-
-        vidTTLs = vidTTLs(1:2:end);
-
-    end
+    if mean(diffTS)>20 %%%Problem in PV97
 
 
 

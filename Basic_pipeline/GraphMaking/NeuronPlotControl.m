@@ -97,6 +97,7 @@ ttlInd = find(containsMB);
 [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MB",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
 
 
+
 %When dealing with different speeds, save different stim durs, and create M for each speed
 A = [stimOn directions' offsets' sizes' speeds' orientations'];
 [C indexS] = sortrows(A,[2 3 4 5 6]);
@@ -125,6 +126,11 @@ if includeOnespeed
     stimInter = interStimStats;
 
 end
+
+stimDur = mean(-stimOn+stimOff);
+
+directimesSorted = C(:,1)';
+directimesSortedOff = Coff(:,1)';
 
 NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
 
@@ -293,6 +299,8 @@ for k = 1
 
         randTrials = trialsHigherSpiking(sort(randperm(length(trialsHigherSpiking),10)));
 
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%Plot eye movements colorcoded for these selected trials:
 
         %%%%%% Construct stimType matrix for eye movement plot.
@@ -303,11 +311,13 @@ for k = 1
         stimType(:,4) = A(:,3);
 
         %Get response strenght of specific neurons and save it in stimType
-        [MrNoSort] = BuildBurstMatrix(goodU(:,eNeuron),round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
-        ResponseStrength= mean(MrNoSort(:,eNeuron,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+        [MrNoSort] = BuildBurstMatrix(goodU(:,u),round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+        ResponseStrength= mean(MrNoSort(:,u,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
         stimType(:,end) = ResponseStrength;
 
-        EyePositionAnalysis(NP,data.Eye_video_dir{ex},11,1,stimType,0,1)
+        timesnips = [directimesSorted(randTrials);directimesSorted(randTrials)+stimDur];
+
+        EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,timesnips,1)
 
         %%Mark trials and plot raw data of trials
 
