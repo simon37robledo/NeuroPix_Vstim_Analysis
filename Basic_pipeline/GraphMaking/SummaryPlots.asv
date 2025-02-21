@@ -160,7 +160,7 @@ for ex = GoodRecordings
         ZscoreNeuronsMB = load(sprintf('MovBall-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName)).ZScoreU;
         ZscoreNeuronsRG = load(sprintf('RectGrid-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName)).ZScoreU;
 
-        allZscore = allZscore + mean(respNeuronsMB>sign);
+        allZscore = allZscore + mean(ZscoreNeuronsMB);
         
 
         if MBsig || MBsigAnd
@@ -621,6 +621,9 @@ for ex = GoodRecordings
     end
 
 
+
+
+
     MB = [MB ZscoreNeuronsMB(respNeuronsMB<=sign)];
     RG = [RG ZscoreNeuronsRG(respNeuronsMB<=sign)];
 
@@ -633,13 +636,9 @@ for ex = GoodRecordings
 end
 %% Plot bar plot MB vs all neurons
 
-fig = figure;bar([totalN,length(MBc)],'FaceColor','k','FaceAlpha',0.7)
+figure;bar([totalN,length(MBc)])
 ylabel('Number of neurons')
 xticklabels({'Total neurons','Responsive to MB'})
-
-fig.Position = [680   182   137   175];
-cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
-print(fig, 'barPlot.pdf', '-dpdf', '-r300', '-vector');
 
 
 mean(MB)
