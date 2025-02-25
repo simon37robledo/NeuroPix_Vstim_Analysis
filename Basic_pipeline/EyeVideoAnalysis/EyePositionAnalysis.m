@@ -20,6 +20,10 @@ function EyePositionAnalysis(NP,vidDir,divisions,varargin)%plots,newRun)
 % stimType = false;
 % newRun = false;
 
+shuffle ='shuffle4';
+
+thres = 'thr_0.3';
+
 % Assign optional inputs if provided
 if nargin > 3
     plots = varargin{1};
@@ -75,8 +79,8 @@ filenames = {file.name};
 % file = dir (ellipseDir);
 % filenames = {file.name};
 
-ellipseName = filenames(contains(filenames,"Eye_ellipse_thr_") & contains(filenames,"_"+NP.recordingName(end)+"_")); %%Contains insertion number?
-goodFrames = filenames(contains(filenames, "good_frames_thr_") & contains(filenames,"_"+NP.recordingName(end)+"_"));
+ellipseName = filenames(contains(filenames,"Eye_ellipse_thr_") & contains(filenames,"_"+NP.recordingName(end)+"_") & contains(filenames,shuffle) & contains(filenames,thres)); %%Contains insertion number?
+goodFrames = filenames(contains(filenames, "good_frames_thr_") & contains(filenames,"_"+NP.recordingName(end)+"_") & contains(filenames,shuffle) & contains(filenames,thres));
 
 if numel(ellipseName) > 1
     ellipseName = ellipseName{1};
