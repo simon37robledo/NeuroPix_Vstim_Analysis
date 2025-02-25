@@ -19,14 +19,17 @@ ReceptiveFieldFixedDelay = 0;
 tuning =0;
 depthPlot =0;
 
-ReceptiveFieldConvolutions =0;
-repeatConv =0;
-useZscore = 0;
+ReceptiveFieldConvolutions =1;
+repeatConv =1;
+useZscore = 1;
+noEyeMoves = 1;
+ModeQuadrant = 0;
+XYdivision =1;
 plotRF =0;
 
 spatialTuning=0;
 calculateEntropy =0;
-noEyeMoves = 0;
+
 includeOnespeed = 1;
 x=1;
 examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
@@ -299,25 +302,25 @@ for ex =  51%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%Goo
     bin = 1;
     preBase = round(stimInter-200);%round(3*interStimStats/4);
 
-    if noEyeMoves
-
-        %%%%%% Construct stimType matrix for eye movement plot.
-        stimType = zeros(length(A),6); %3 plus number of example neurons
-        stimType(:,1) = A(:,1);
-        stimType(:,2) = A(:,1)+stimDur;
-        stimType(:,3) = A(:,2);
-        stimType(:,4) = A(:,3);
-
-        %Get response strenght of specific neurons and save it in stimType
-        [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
-        ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
-        ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
-        stimType(:,end-1) = ResponseStrengthU34;
-        stimType(:,end) = ResponseStrengthU8;
-
-        EyePositionAnalysis(NP,data.Eye_video_dir{ex},11,1,0,1)
-
-    end
+%     if noEyeMoves
+% 
+%         %%%%%% Construct stimType matrix for eye movement plot.
+%         stimType = zeros(length(A),6); %3 plus number of example neurons
+%         stimType(:,1) = A(:,1);
+%         stimType(:,2) = A(:,1)+stimDur;
+%         stimType(:,3) = A(:,2);
+%         stimType(:,4) = A(:,3);
+% 
+%         %Get response strenght of specific neurons and save it in stimType
+%         [MrNoSort] = BuildBurstMatrix(goodU,round(p.t/bin),round((stimOn'-preBase)/bin),round((stimDur+preBase*2)/bin)); %response matrix
+%         ResponseStrengthU34 = mean(MrNoSort(:,34,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+%         ResponseStrengthU8 =  mean(MrNoSort(:,8,round(preBase/bin):round((preBase+stimDur)/bin)),3); %For PV35_3
+%         stimType(:,end-1) = ResponseStrengthU34;
+%         stimType(:,end) = ResponseStrengthU8;
+% 
+%         EyePositionAnalysis(NP,data.Eye_video_dir{ex},11,1,0,1)
+% 
+%     end
     
 
 
@@ -1430,7 +1433,7 @@ end
 
 for receptiveField=1 %%ReceptiveFieldMethod1 fixed delay
 
-        if ReceptiveFieldFixedDelay ==1
+        if ReceptiveFieldFixedDelay ==1 
             %%%
 
             %Get X and Y positions
@@ -1765,7 +1768,7 @@ for convNeuron = 1
                 end
             end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             if noEyeMoves %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                   % EyePositionAnalysis
                   % Create spike Sums with NaNs when the eye is not present.
@@ -1776,8 +1779,22 @@ for convNeuron = 1
             files= filenames(contains(filenames,"timeSnipsNoMov"));
             cd(NP.recordingDir)
             %Run eyePosition Analysis to find no movement timeSnips
-            timeSnips = load(files{2}).timeSnips;
-            timeSnipsMode = timeSnips(:,timeSnips(3,:) == mode(timeSnips(3,:)));
+            if XYdivision %%%Add time snips for x division and for y division (for loop 1:4)
+                xfiles = filenames(contains(filenames,"timeSnipsNoMov")& contains(filenames,"X-change"));
+                timeSnipsX = load(xfiles{numel(xfiles)}).timeSnips;
+                Times{1} = timeSnipsX;
+                
+                yfiles = filenames(contains(filenames,"timeSnipsNoMov")& contains(filenames,"Y-change"));
+                timeSnipsY = load(yfiles{numel(yfiles)}).timeSnips;
+                Times{2} = timeSnipsY;
+                
+
+            else
+
+                timeSnips = load(files{numel(files)}).timeSnips;
+                timeSnipsMode = timeSnips(:,timeSnips(3,:) == mode(timeSnips(3,:)));
+                Times{1} = timeSnips;
+            end
 % 
 %             A = [stimOn directions' offsets' sizes' speeds' orientations'];
 %             [C indexS] = sortrows(A,[2 3 4 5 6]);
@@ -1791,103 +1808,158 @@ for convNeuron = 1
 %            %Original order
            % A = [stimOn directions' offsets' sizes' speeds' orientations']; %
 
-            %Convolution order
-           % A = [stimOn directions' offsets' speeds' orientations', sizes'];
+           %When dealing with different speeds, save different stim durs, and create M for each speed
 
-            A = [A(:,1) A(:,2) A(:,3) A(:,5) A(:,6) A(:,4)]; % Reorganize matris
-            [C indexS] = sortrows(A,[2 3 4 5 6]);
+           %[C indexS] = sortrows(A,[2 3 4 5 6]);
 
-            
+           %Convolution order
+            %A = [stimOn directions' offsets' speeds' orientations', sizes'];
 
-            %4. Sort directions:
-            directimesSorted = C(:,1)';
-            sizeV = C(:,6);
+           A = [A(:,1) A(:,2) A(:,3) A(:,5) A(:,6) A(:,4)]; % Reorganize matrix
+           [C indexS] = sortrows(A,[2 3 4 5 6]);
 
-         
-            selecInd = [];
-            for i = 1:size(timeSnipsMode,2)
+           %4. Sort directions:
+           directimesSorted = C(:,1)';
+           sizeV = C(:,6);
 
-                %Find stimOns and offs that are between each timeSnip
-                selecInd = [selecInd find(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
-            end
+           %%%%% Asign trial index accordying to pressence of trial within
+           %%%%% eye timesnip:
 
-            coorRect = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
+           if ModeQuadrant %%I can make times for each bin, if the time of each bin is within the quadrant, then assign.
+               selecInd = [];
+               for i = 1:size(timeSnipsMode,2)
 
-            reduceFactor = min([20 min(sizeV)]); %has to be bigger than the smallest ball size
+                   %Find stimOns and offs that are between each timeSnip
+                   selecInd = [selecInd find(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
+               end
 
-            redCoorX = round(coorRect(3)/reduceFactor);
-            redCoorY = round(coorRect(4)/reduceFactor);
+               IndexQ{1} = selecInd;
+               IndexDiv{1} = IndexQ;
 
-            [x, y] = meshgrid(1:redCoorX,1:redCoorY);
+           else %%%%%%% get indexes of directed times sorted for
 
-            sizesU = unique(sizeV);
+               for t = 1:numel(Times)
 
-            x = fliplr(x);
-            
+                   timeSnips = Times{t};
+                   for j = unique(timeSnips(3,:))
+                       selecInd = [];
+                       timeSnipsQ = timeSnips(:,timeSnips(3,:) ==j);
+                       for i = 1:size(timeSnipsQ,2)
 
-            spikeSum = nan(size(Mr,1),length(respU),sizeX(4),'single');
-            %spikeSumBase = mean(Mbase,3);
+                           %Find stimOns and offs that are between each timeSnip
+                           selecInd = [selecInd find(directimesSorted>=timeSnipsQ(1,i) & directimesSorted<(timeSnipsQ(2,i)-stimDur))];
+
+                       end
+
+                       IndexQ{j} = selecInd;
+                   end
+                   IndexDiv{t} = IndexQ;
+               end
+
+           end
+
+           coorRect = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))));
+           reduceFactor = min([20 min(sizeV)]); %has to be bigger than the smallest ball size
+           redCoorX = round(coorRect(3)/reduceFactor);
+           redCoorY = round(coorRect(4)/reduceFactor);
+
+           [x, y] = meshgrid(1:redCoorX,1:redCoorY);
+
+           sizesU = unique(sizeV);
+
+           x = fliplr(x);
 
             %%%%%% Add spikes accordying to number of frames.
-            msPerFarme= round(stimDur/sizeX(4));
-            [Mr] = BuildBurstMatrix(goodU,round(p.t),round((directimesSorted)),round((stimDur)));
-            binFrame = msPerFarme;
-            [Mbase] = BuildBurstMatrix(goodU,round(p.t/binFrame),round((directimesSorted-preBase)/binFrame),round((preBase)/binFrame));
-
-            [trials neurons bins] = size(Mr());
-
-
-            for u = 1:length(respU)
-
-                Mu = squeeze(Mr(:,respU(u),:));
-
-                j= 1;
-
-                for f = 1:sizeX(4)
-
-                    spikeSum(selecInd,u,f) = sum(Mu(selecInd,1*j:min(f*msPerFarme,length(Mu))),2);
-
-                    j = f*msPerFarme;
-                end
+            
+            if useZscore %%%%%Select correct timestamps.
+                Mr = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
+            else
+                [Mr] = BuildBurstMatrix(goodU,round(p.t),round((directimesSorted)),round((stimDur)));
+                [Mbase] = BuildBurstMatrix(goodU,round(p.t/binFrame),round((directimesSorted-preBase)/binFrame),round((preBase)/binFrame));
             end
+
+            msPerFarme= round(stimDur/sizeX(4));
+            binFrame = msPerFarme;
+            [trials neurons bins] = size(Mr());
+            
+            spikeSumsDiv = cell(1,numel(IndexDiv));
+            spikeSumsQ = cell(1,numel(IndexQ));
+
+            for t = 1:numel(IndexDiv)
+
+                for i = 1:numel(IndexQ)
+
+                    spikeSum = zeros(size(Mr,1),length(respU),sizeX(4),'single');
+
+                    for u = 1:length(respU)
+
+                        Mu = squeeze(Mr(:,respU(u),:));
+
+                        j= 1;
+
+                        for f = 1:sizeX(4)
+
+                            spikeSum(IndexDiv{t}{i},u,f) = mean(Mu(IndexDiv{t}{i},1*j:min(f*msPerFarme,length(Mu))),2);
+
+                            j = f*msPerFarme;
+                        end
+                    end
+
+                    spikeSumsQ{i} = spikeSum;
+                end
+
+                spikeSumsDiv{t} = spikeSumsQ;
+            end
+
             cd(NP.recordingDir)
-   %         boot_means = load(sprintf('MovBall-Base-Boot-1000-%s',NP.recordingName)).boot_means;
+            %         boot_means = load(sprintf('MovBall-Base-Boot-1000-%s',NP.recordingName)).boot_means;
+
+            %spikeSum = spikeSums{2};
+
+%             eNspkS = squeeze(spikeSum(:,ru,:));
+%             figure;imagesc(eNspkS);colormap(flipud(gray(64)));
+%             rowsWithNaN = find(any(isnan(eNspkS), 2));
+%             yline(rowsWithNaN,'g')
+%             yline(trialDivision*sizeN:trialDivision*sizeN:size(spikeSums{q},1));
+%             yline(trialDivision*offsetN*sizeN:trialDivision*offsetN*sizeN:size(spikeSums{q},1)-1,'r','LineWidth',5)
+%             title(string(q))
 
             %%%Zscore of spikes per frame. Convert everything to spikes per
-            %%%second beforehand. 
-%             meanBase = mean(Mbase(:,respU,:),[1 3]);
-%             N_bootstrap = 1000;
-%             nN= length(respU);
-%             substractor = reshape(mean(boot_means(:,respU)*(1000/duration)),[1, nN, 1]); 
-%             denominator = reshape(std(boot_means(:,respU)*(1000/duration))+1/(N_bootstrap*trialDivision),[1,nN,1]);
-%             spikeSum = (spikeSum.*(1000/msPerFarme)-substractor)./denominator; %convert into spike rate.
-            spikeSum = (spikeSum./msPerFarme);%.*1000;
+            %%%second beforehand.
+            %             meanBase = mean(Mbase(:,respU,:),[1 3]);
+            %             N_bootstrap = 1000;
+            %             nN= length(respU);
+            %             substractor = reshape(mean(boot_means(:,respU)*(1000/duration)),[1, nN, 1]);
+            %             denominator = reshape(std(boot_means(:,respU)*(1000/duration))+1/(N_bootstrap*trialDivision),[1,nN,1]);
+            %             spikeSum = (spikeSum.*(1000/msPerFarme)-substractor)./denominator; %convert into spike rate.
+            %spikeSum = (spikeSum./msPerFarme);%.*1000;
+            %
+            %             if useZscore %%%%%Select correct timestamps.
+            %
+            %                 ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
+            %
+            %                 %bin Z-score accordying to frame number:
+            %                 spikeSum = nan(size(Mr,1),length(respU),sizeX(4),'single');
+            %
+            %
+            %                 for u = 1:length(respU)
+            %
+            %                     Mu = squeeze(ZscoreRaster(:,respU(u),:));
+            %
+            %                     j= 1;
+            %
+            %                     for f = 1:sizeX(4)
+            %
+            %                         spikeSum(selecInd,u,f) = mean(Mu(selecInd,1*j:min(f*msPerFarme,length(Mu))),2);
+            %
+            %                         j = f*msPerFarme;
+            %                     end
+            %                 end
+            %
+            %             end
 
-            if useZscore %%%%%Select correct timestamps. 
-
-                ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
-
-                %bin Z-score accordying to frame number:
 
 
-                for u = 1:length(respU)
-
-                    Mu = squeeze(ZscoreRaster(:,respU(u),:));
-
-                    j= 1;
-
-                    for f = 1:sizeX(4)
-
-                        spikeSum(:,u,f) = mean(Mu(:,1*j:min(f*msPerFarme,length(Mu))),2);
-
-                        j = f*msPerFarme;
-                    end
-                end
-
-            end
-
-           
-            
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             else %%%%%%%%%%% Eye moves: %%%%%%%%%%%%%%%%%%%%%%
@@ -1981,21 +2053,9 @@ for convNeuron = 1
 
              end
 
-            end 
+            end %%%%%%%%%%%%%%%%%%%%%%%%%%%%% end eyeMovement initialization
 %
-            %%%%Initialize 5D matrices
-            RFu = zeros(redCoorY,redCoorX,sizeX(4),length(respU),"single");
-
-            RFuSpeed = zeros(speedN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
-            RFuDir = zeros(direcN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
-            RFuSize = zeros(sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
-            RFuDirSize = zeros(direcN,sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
-
-
-            Uspeed = unique(speeds);
-            Udir = unique(directions);
-            Usize = unique(sizes);
-            NormVideo = zeros(redCoorY,redCoorX,sizeX(4),'single');
+          
 %             
 %             %%%Test convolution
 %             spikeSumArt = zeros(size(spikeSum));
@@ -2008,7 +2068,35 @@ for convNeuron = 1
 
             %%A. CONVOLUTION. Runs the spike train across the stimulus videos, to
             %%extract noisy receptive field (because spike responses are noise).
+            if noEyeMoves
+
+                Q = unique(timeSnips(3,:));
+            else
+                Q = 1;
+            end
+                
             tic
+         % 
+        
+            for t = 1:numel(IndexDiv)
+
+                for q = 1:numel(IndexQ)
+
+                %%%%Initialize 5D matrices
+                RFu = zeros(redCoorY,redCoorX,sizeX(4),length(respU),"single");
+
+                RFuSpeed = zeros(speedN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
+                RFuDir = zeros(direcN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
+                RFuSize = zeros(sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
+                RFuDirSize = zeros(direcN,sizeN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
+
+
+                Uspeed = unique(speeds);
+                Udir = unique(directions);
+                Usize = unique(sizes);
+                NormVideo = zeros(redCoorY,redCoorX,sizeX(4),'single');
+
+                spikeSum = spikeSumsDiv{t}{q};
             for i = 1:trialDivision:trials
 
                 videoTrials = zeros(redCoorY,redCoorX,sizeX(4),'single');
@@ -2047,8 +2135,13 @@ for convNeuron = 1
 %                 figure;imagesc(exam)
 
 
+
                 %     figure;imagesc(squeeze(Co(:,:,80,3)))
                 %%Select same size per direction
+
+                if C(i,2) == uDir(3)
+                    2+2
+                end
 
                 RFuDir(Udir == C(i,2),:,:,:,:) = squeeze(RFuDir(Udir == C(i,2),:,:,:,:))+Co./(nT/direcN/trialDivision);
                 RFuDirSize(Udir == C(i,2),Usize == C(i,6),:,:,:,:) = squeeze(RFuDirSize(Udir == C(i,2),Usize == C(i,6),:,:,:,:))+Co./(nT/direcN/trialDivision);
@@ -2059,6 +2152,8 @@ for convNeuron = 1
 
                 RFu = RFu+Co./(nT/trialDivision);
             end
+                
+            
             toc
             %implay(squeeze(RFu(:,:,:,1)));
             %implay(videoTrials)
@@ -2066,6 +2161,8 @@ for convNeuron = 1
             %%%%%%%%%% Normalization parameters
             L = size(spikeSum,3);
             time_zero_index = ceil(L / 2);
+
+           
             
 
             nN =length(respU);
@@ -2076,14 +2173,14 @@ for convNeuron = 1
             %normMatrixMean = repmat(sum(NormVideo,3),[1,1,nN]);%.*reshape(mean(boot_means(:,respU)),[1,1,nN])+1/(N_bootstrap*trialDivision)
 %             
 %
-            [Mb] = BuildBurstMatrix(goodU(:,respU),round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin));
-
-            Nb2=  mean(Mb,3);
-
-            Nbase = mean(Mb,[1 3]);
-
-            normMatrixMean =reshape(Nbase,[1,1,1,1,nN]);
-            normMatrixSTD = reshape(std(Nb2),[1,1,1,1,nN])+eps;
+%             [Mb] = BuildBurstMatrix(goodU(:,respU),round(p.t/bin),round((directimesSorted-preBase)/bin),round(preBase/bin));
+% 
+%             Nb2=  mean(Mb,3);
+% 
+%             Nbase = mean(Mb,[1 3]);
+% 
+%             normMatrixMean =reshape(Nbase,[1,1,1,1,nN]);
+%             normMatrixSTD = reshape(std(Nb2),[1,1,1,1,nN])+eps;
 
            % normMatrixMean = repmat(sum(NormVideo,3),[1,1,nN]);
 %             normMatrixSTD = reshape(std(Nb2),[1,1,1,nN])+eps;
@@ -2091,11 +2188,11 @@ for convNeuron = 1
             %%%%%% Normalize abd select delay
             delay = 250;
 
-            RFuNorm = RFu;%squeeze(RFuSize(ceil(sizeN/2),:,:,:,:))./reshape(normMatrixMean,[size(normMatrixMean,1) size(normMatrixMean,2) 1 nN]);
-            RFuST = squeeze(RFuNorm(:,:,time_zero_index+round(delay/msPerFarme),:));
-            RFuNormDir = (RFuDir-normMatrixMean)./normMatrixSTD;
-            %%%%%RFuSTDir = squeeze(RFuNormDir(:,:,:,time_zero_index+round(delay/msPerFarme),:));
-            RFuSTDir =  squeeze(RFuDir(:,:,:,time_zero_index+round(delay/msPerFarme),:)); 
+%             RFuNorm = RFu;%squeeze(RFuSize(ceil(sizeN/2),:,:,:,:))./reshape(normMatrixMean,[size(normMatrixMean,1) size(normMatrixMean,2) 1 nN]);
+%             RFuST = squeeze(RFuNorm(:,:,time_zero_index+round(delay/msPerFarme),:));
+%             RFuNormDir = (RFuDir-normMatrixMean)./normMatrixSTD;
+%             %%%%%RFuSTDir = squeeze(RFuNormDir(:,:,:,time_zero_index+round(delay/msPerFarme),:));
+%             RFuSTDir =  squeeze(RFuDir(:,:,:,time_zero_index+round(delay/msPerFarme),:)); 
 
             RFuSTDirSize =  reshape(RFuDirSize(:,:,:,:,time_zero_index+round(delay/msPerFarme),:),... %Reshape to eliminate frame component. 
                 [size(RFuDirSize,1),size(RFuDirSize,2),size(RFuDirSize,3),size(RFuDirSize,4),size(RFuDirSize,6)]);
@@ -2122,7 +2219,7 @@ for convNeuron = 1
                 end
 
             end
-
+           
 
 %             %select specific delay;
 %             radius = uSize(ceil(sizeN/2))/2/reduceFactor;
@@ -2172,29 +2269,29 @@ for convNeuron = 1
 %                     %RFuSTmask(:, :, i) =conv2(currentSlice, circleMask, 'same');
 %                 end
 %             end
-
+            names = {'X','Y'};
             if noEyeMoves
-                save(sprintf('NEM-RFuSTDirSizeFilt-%s',NP.recordingName),'RFuSTDirSizeFilt','-v7.3')
-                save(sprintf('NEM-RFuSelecTime-%s',NP.recordingName),'RFuST','-v7.3')
-                save(sprintf('NEM-RFuSelecTimeMask-%s',NP.recordingName),'RFuST','-v7.3')
-                save(sprintf('NEM-RFuSelecTimeD-%s',NP.recordingName),'RFuSTDir','-v7.3')
-                save(sprintf('NEM-RFuSTDirFilt-%s',NP.recordingName),'RFuSTDirFilt','-v7.3')
-                save(sprintf('NEM-RFuSelecTimeMask-%s',NP.recordingName),'RFuSTmaskD','-v7.3')
-                save(sprintf('NEM-RFuC-%s',NP.recordingName),'RFu','-v7.3')
-                save(sprintf('NEM-RFuDirC-%s',NP.recordingName),'RFuDir','-v7.3')
-                save(sprintf('NEM-RFuSizeC-%s',NP.recordingName),'RFuSize','-v7.3')
-                save(sprintf('NEM-RFuSpeedC-%s',NP.recordingName),'RFuSpeed','-v7.3')
-                save(sprintf('NormVideo-%s',NP.recordingName),'NormVideo','-v7.3')
+                save(sprintf('NEM-RFuSTDirSizeFilt-Q%d-Div-%s-%s',q,names{t},NP.recordingName),'RFuSTDirSizeFilt','-v7.3')
+                save(sprintf('NEM-spikeSums-%s',NP.recordingName),'spikeSums','-v7.3')
+%                 save(sprintf('NEM-RFuSelecTime-%s',NP.recordingName),'RFuST','-v7.3')
+%                 save(sprintf('NEM-RFuSelecTimeMask-%s',NP.recordingName),'RFuST','-v7.3')
+%                 save(sprintf('NEM-RFuSelecTimeD-%s',NP.recordingName),'RFuSTDir','-v7.3')
+%                 save(sprintf('NEM-RFuSTDirFilt-%s',NP.recordingName),'RFuSTDirFilt','-v7.3')
+%                 save(sprintf('NEM-RFuSelecTimeMask-%s',NP.recordingName),'RFuSTmaskD','-v7.3')
+%                 save(sprintf('NEM-RFuC-%s',NP.recordingName),'RFu','-v7.3')
+%                 save(sprintf('NEM-RFuDirC-%s',NP.recordingName),'RFuDir','-v7.3')
+%                 save(sprintf('NEM-RFuSizeC-%s',NP.recordingName),'RFuSize','-v7.3')
+%                 save(sprintf('NEM-RFuSpeedC-%s',NP.recordingName),'RFuSpeed','-v7.3')
+%                 save(sprintf('NormVideo-%s',NP.recordingName),'NormVideo','-v7.3')
 
             else
                 save(sprintf('RFuSTDirSizeFilt-%s',NP.recordingName),'RFuSTDirSizeFilt','-v7.3')
-                save(sprintf('RFuNorm-%s',NP.recordingName),'RFuNorm','-v7.3')
                 save(sprintf('RFuNorm-%s',NP.recordingName),'RFuNorm','-v7.3')
                 save(sprintf('RFuSelecTime-%s',NP.recordingName),'RFuST','-v7.3') %%Not normalized
                 save(sprintf('RFuSelecTimeMask-%s',NP.recordingName),'RFuST','-v7.3')
                 save(sprintf('RFuSelecTimeD-%s',NP.recordingName),'RFuSTDir','-v7.3') %%Normalized
                 save(sprintf('RFuSTDirFilt-%s',NP.recordingName),'RFuSTDirFilt','-v7.3')
-                save(sprintf('RFuSelecTimeMask-%s',NP.recordingName),'RFuSTmaskD','-v7.3')
+                %save(sprintf('RFuSelecTimeMask-%s',NP.recordingName),'RFuSTmaskD','-v7.3')
                 save(sprintf('RFuC-%s',NP.recordingName),'RFu','-v7.3')
                 save(sprintf('RFuDirC-%s',NP.recordingName),'RFuDir','-v7.3')
                 save(sprintf('RFuSizeC-%s',NP.recordingName),'RFuSize','-v7.3')
@@ -2202,6 +2299,8 @@ for convNeuron = 1
                 save(sprintf('NormVideo-%s',NP.recordingName),'NormVideo','-v7.3')
 
             end
+        end
+    end
 
 
 % %Test with figures:

@@ -49,6 +49,14 @@ else
     newRun = 0;
 end
 
+if nargin >7
+    divideCenters = varargin{6};
+
+else
+    divideCenters = 0;
+
+end
+
 if mod(divisions,2)~=1
     disp('Divisions can not be even in order to obtain a central quadrant')
     return;
@@ -168,19 +176,41 @@ end
 
 %%%Get indexes of frames in which the center of the eye that falls in different subdivisions of the screen. 
 
-%EyeLoc =cell(2,divisions*divisions);
 grids = linspace(0, maxSquareSize, divisions + 1);
-j=1;
-indFrames= zeros(1, length(Data.center_x),'single');
-for x = 1:divisions
-    for y =1:divisions
-        xIndx = find((Data.center_x > rectNew(1)+grids(x)) & (Data.center_x < (rectNew(1) + grids(x) + mean(diff(grids)))));
-        yIndx = find((Data.center_y > rectNew(2)+grids(y)) & (Data.center_y < (rectNew(2) + grids(y) + mean(diff(grids)))));
-        %EyeLoc{1,j} =  intersect(xIndx, yIndx);
-        indFrames(intersect(xIndx, yIndx)) = zeros(1,length(intersect(xIndx, yIndx)))+j;
-        j =j+1;
+if divideCenters ==0
+   
+    j=1;
+    indFrames= zeros(1, length(Data.center_x),'single');
+    for x = 1:divisions
+        for y =1:divisions
+            xIndx = find((Data.center_x > rectNew(1)+grids(x)) & (Data.center_x < (rectNew(1) + grids(x) + mean(diff(grids)))));
+            yIndx = find((Data.center_y > rectNew(2)+grids(y)) & (Data.center_y < (rectNew(2) + grids(y) + mean(diff(grids)))));
+            %EyeLoc{1,j} =  intersect(xIndx, yIndx);
+            indFrames(intersect(xIndx, yIndx)) = zeros(1,length(intersect(xIndx, yIndx)))+j;
+            j =j+1;
+        end
     end
+
+else
+    centerGrid = [mean(Data.center_x) mean(Data.center_y)];
+
+    indFramesX= zeros(1, length(Data.center_x),'single');
+    indFramesX(Data.center_x >= mean(Data.center_x)) = 1;
+    indFramesX(Data.center_x < mean(Data.center_x)) = 2;
+    
+    indFramesXY{1} = indFramesX;
+    
+    indFramesY= zeros(1, length(Data.center_x),'single');
+    indFramesY(Data.center_y >= mean(Data.center_y)) = 1;
+    indFramesY(Data.center_y < mean(Data.center_y)) = 2;
+
+    indFramesXY{2} = indFramesY;
+
 end
+% 
+% figure;
+% plot(1:length(Data.center_x),)
+
 
 %%%Ephys sync times to frames
 cd(NP.recordingDir)
@@ -189,20 +219,60 @@ frameTimes = frameTimes(goodFrames.Values);
 
 %%%%Within a square id, find time intervals
 
-indexesChange=find(diff(indFrames)~=0)+1;
-timeSnips = zeros(3,length(indexesChange)+1);
+if divideCenters
 
-%%Asign start and end timeSnip
-timeSnips(:,1) = [0;frameTimes(indexesChange(1));indFrames(1)];
-timeSnips(:,end) = [frameTimes(indexesChange(end));frameTimes(end);indFrames(end)];
+    names = {'X-change','Y-change'};
 
-for i = 1:length(indexesChange)-1
-    timeSnips(1:2,i+1) = [frameTimes(indexesChange(i));frameTimes(indexesChange(i+1))];
-    timeSnips(3,i+1) = indFrames(indexesChange(i));
+    for n =1:2
+        
+        indFrames = indFramesXY{n};
+
+        indexesChange=find(diff(indFrames)~=0)+1;
+        timeSnips = zeros(3,length(indexesChange)+1);
+
+        %%Asign start and end timeSnip
+        timeSnips(:,1) = [0;frameTimes(indexesChange(1));indFrames(1)];
+        timeSnips(:,end) = [frameTimes(indexesChange(end));frameTimes(end);indFrames(end)];
+
+        for i = 1:length(indexesChange)-1
+            timeSnips(1:2,i+1) = [frameTimes(indexesChange(i));frameTimes(indexesChange(i+1))];
+            timeSnips(3,i+1) = indFrames(indexesChange(i));
+        end
+
+
+        save(sprintf('timeSnipsNoMov-%d-quadrants-%s',divisions,names{n}),'timeSnips')
+
+    end
+
+     GraphMultiplier = 2;
+
+
+else %%%No center division
+
+    indexesChange=find(diff(indFrames)~=0)+1;
+    timeSnips = zeros(3,length(indexesChange)+1);
+
+    %%Asign start and end timeSnip
+    timeSnips(:,1) = [0;frameTimes(indexesChange(1));indFrames(1)];
+    timeSnips(:,end) = [frameTimes(indexesChange(end));frameTimes(end);indFrames(end)];
+
+    for i = 1:length(indexesChange)-1
+        timeSnips(1:2,i+1) = [frameTimes(indexesChange(i));frameTimes(indexesChange(i+1))];
+        timeSnips(3,i+1) = indFrames(indexesChange(i));
+    end
+
+    GraphMultiplier = 1;
+    save(sprintf('timeSnipsNoMov-%d-quadrants',divisions),'timeSnips')
 end
 
 
-save(sprintf('timeSnipsNoMov-%d-quadrants',divisions),'timeSnips')
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Plot Eye movements
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+for gr = 1:GraphMultiplier
+
+    indFrames = indFramesXY{gr};
 
 if plots ==1
 
@@ -226,28 +296,30 @@ if plots ==1
         yticks(grids)
         axis equal;
 
-        % Parameters of the ellipse
-        a = Data.width(indEC); % Semi-major axis
-        b = Data.height(indEC); % Semi-minor axis
-        h = Data.center_x(indEC)-rectNew(1); % X-coordinate of the center
-        k = Data.center_y(indEC)-rectNew(2); % Y-coordinate of the center
-        phi =  Data.phi(indEC); % Rotation angle in radians (45 degrees)
+        if timestamps ==0
+            % Parameters of the ellipse
+            a = Data.width(indEC); % Semi-major axis
+            b = Data.height(indEC); % Semi-minor axis
+            h = Data.center_x(indEC)-rectNew(1); % X-coordinate of the center
+            k = Data.center_y(indEC)-rectNew(2); % Y-coordinate of the center
+            phi =  Data.phi(indEC); % Rotation angle in radians (45 degrees)
 
-        theta = 0:0.01:2*pi; % Angle range for the ellipse
+            theta = 0:0.01:2*pi; % Angle range for the ellipse
 
-        % Parametric equations for the ellipse with rotation
-        x = h + a * cos(theta) * cos(phi) - b * sin(theta) * sin(phi);
-        y = k + a * cos(theta) * sin(phi) + b * sin(theta) * cos(phi);
-        % Plot the ellipse
-        plot(x, y, 'r', 'LineWidth', 2);
-        axis equal;
-        legend('off')
-        xt = xticks;
-        xticklabels(round(xt));
-        yt = yticks;
-        xticklabels(round(yt));
-        set(gcf,'Color','w')
-        print(gcf, sprintf('%s-Eye-Movs-summary.png',NP.recordingName),'-dpng');
+            % Parametric equations for the ellipse with rotation
+            x = h + a * cos(theta) * cos(phi) - b * sin(theta) * sin(phi);
+            y = k + a * cos(theta) * sin(phi) + b * sin(theta) * cos(phi);
+            % Plot the ellipse
+            plot(x, y, 'r', 'LineWidth', 2);
+            axis equal;
+            legend('off')
+            xt = xticks;
+            xticklabels(round(xt));
+            yt = yticks;
+            xticklabels(round(yt));
+            set(gcf,'Color','w')
+            print(gcf, sprintf('%s-Eye-Movs-summary.png',NP.recordingName),'-dpng');
+        end
 
     else %find outlier centers and plot 4 of them (2 x and 2 y)
 
@@ -268,35 +340,40 @@ if plots ==1
         yticks(grids)
         axis equal;
 
-        % Parameters of the ellipse
-        a = Data.width(xMaxind); % Semi-major axis
-        b = Data.height(xMaxind); % Semi-minor axis
-        h = Data.center_x(xMaxind)-rectNew(1); % X-coordinate of the center
-        k = Data.center_y(xMaxind)-rectNew(2); % Y-coordinate of the center
-        phi =  Data.phi(xMaxind); % Rotation angle in radians (45 degrees)
+        if timestamps ==0
+            % Parameters of the ellipse
+            a = Data.width(xMaxind); % Semi-major axis
+            b = Data.height(xMaxind); % Semi-minor axis
+            h = Data.center_x(xMaxind)-rectNew(1); % X-coordinate of the center
+            k = Data.center_y(xMaxind)-rectNew(2); % Y-coordinate of the center
+            phi =  Data.phi(xMaxind); % Rotation angle in radians (45 degrees)
 
-        theta = 0:0.01:2*pi; % Angle range for the ellipse
+            theta = 0:0.01:2*pi; % Angle range for the ellipse
 
-        % Parametric equations for the ellipse with rotation
-        x = h + a * cos(theta) * cos(phi) - b * sin(theta) * sin(phi);
-        y = k + a * cos(theta) * sin(phi) + b * sin(theta) * cos(phi);
-        % Plot the ellipse
-        plot(x, y, 'r', 'LineWidth', 2);
-        axis equal;
-        legend('off')
-        xt = xticks;
-        xticklabels(round(xt));
-        yt = yticks;
-        xticklabels(round(yt));
-        set(gcf,'Color','w')
-        print(gcf, sprintf('%s-Eye-Movs-summary.png',NP.recordingName),'-dpng');
+            % Parametric equations for the ellipse with rotation
+            x = h + a * cos(theta) * cos(phi) - b * sin(theta) * sin(phi);
+            y = k + a * cos(theta) * sin(phi) + b * sin(theta) * cos(phi);
+            % Plot the ellipse
+
+            plot(x, y, 'r', 'LineWidth', 2);
+            axis equal;
+            legend('off')
+            xt = xticks;
+            xticklabels(round(xt));
+            yt = yticks;
+            xticklabels(round(yt));
+            set(gcf,'Color','w')
+            print(gcf, sprintf('%s-Eye-Movs-summary.png',NP.recordingName),'-dpng');
+        end
 
 
     end
 
 
-for StimEnabled = 1
+
 if length(stimType)> 1
+
+    for StimEnabled = 1
 
     if nameStim == "OB"
 
@@ -572,23 +649,84 @@ if length(stimType)> 1
     ylabel('Y Coordinate');
     axis equal;
 
+    end
 
 else
     if timestamps == 0
+       
         gscatter(Data.center_x-rectNew(1), Data.center_y-rectNew(2),indFrames);
-
+       
     else
+        
+        dataSelec = [];
+        inframesTsnip =[];
+        j = 0;
+        for i = 1:size(timestamps,2)
+            dataSelec = [dataSelec;Data(frameTimes>=timestamps(1,i) & frameTimes<=timestamps(2,i),:)];
+            inframesTsnip = [inframesTsnip ones(1,sum(frameTimes>=timestamps(1,i) & frameTimes<=timestamps(2,i)))+j]; %#ok<AGROW> 
 
+            j = j+1;
+        end
+
+        %%%Adopt color scheme lines(10)
         
-        
+        colors = turbo(size(timestamps,2));
+
+        gscatter(dataSelec.center_x-rectNew(1), dataSelec.center_y-rectNew(2),inframesTsnip,colors);
+
+        %         a= zeros(1,numel(unique(inframesTsnip)));
+        %         b= zeros(1,numel(unique(inframesTsnip)));
+        %         h= zeros(1,numel(unique(inframesTsnip)));
+        %         k= zeros(1,numel(unique(inframesTsnip)));
+        %         phi= zeros(1,numel(unique(inframesTsnip)));
+        theta = 0:0.01:2*pi; % Angle range for the ellipse
+        for i = unique(inframesTsnip)
+            % Parameters of the ellipse
+            a = mean(dataSelec.width(inframesTsnip==i)); % Semi-major axis
+            b = mean(dataSelec.height(inframesTsnip==i)); % Semi-minor axis
+            h = mean(dataSelec.center_x(inframesTsnip==i)-rectNew(1)); % X-coordinate of the center
+            k = mean(dataSelec.center_y(inframesTsnip==i)-rectNew(2)); % Y-coordinate of the center
+            phi =  mean(dataSelec.phi(inframesTsnip==i)); % Rotation angle in radians (45 degrees)   
+
+            % Parametric equations for the ellipse with rotation
+            x = h + a*cos(theta).*cos(phi) - b*sin(theta)*sin(phi);
+            y = k + a*cos(theta).*sin(phi) + b*sin(theta)*cos(phi);
+            % Plot the ellipse
+            plot(x, y, 'LineWidth', 2,'Color',[colors(i,:) 0.4]);
+            axis equal;
+            legend('off')
+           
+            hold on
+        end
+
+        c = colorbar;
+        colormap("turbo")
+        c.Limits =[0 1];
+        c.Ticks = linspace(c.Limits(1),c.Limits(2),size(timestamps,2));
+
+        c.TickLabels = 1:size(timestamps,2);      
 
     end
     title(sprintf('Eye Movements %s',NP.recordingName));
-    xlabel('X Coordinate');
-    ylabel('Y Coordinate');
+    xlabel('X (mm)');
+    ylabel('Y (mm)');
+    xticklabels([])
+    yticklabels([])
+    
     axis equal;
+    cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
+    if timestamps > 0
+        print(gcf,sprintf('%s-eyeMov-%d-trials',NP.recordingName,length(timestamps)),'-dpdf', '-r300', '-vector')
+
+    elseif divideCenters >0
+        %%%Legend: right(blue) > xmean | left(orange) < xmean
+        graphN = names{gr};
+        
+        print(gcf,sprintf('%s-eyeMov-%d-%s',NP.recordingName,length(timestamps),graphN),'-dpdf', '-r300', '-vector')
+    end
+  
 end
-end
+
 
 scatter(meanCenter(1)-rectNew(1),meanCenter(2)-rectNew(2),25, 'filled','MarkerFaceColor','r')
 axis equal;
@@ -599,11 +737,15 @@ axis equal;
 
 end
 
+end
+
 else
 
     fprintf('Analysis done! saved in: timeSnipsNoMov-%d-quadrants.mat',divisions)
 
 end
+
+
 
 %end
 

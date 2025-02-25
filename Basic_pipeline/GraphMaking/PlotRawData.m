@@ -49,7 +49,7 @@ xlim([0 length(raw_signal)/NP.samplingFrequency]);
 lims = xlim;
 
 limsY = ylim;
-ylim([-300 limsY(2)-200]);
+ylim([limsY(1)-10 limsY(2)-10]);
 
 stimDur = window-2*preBase;
 
