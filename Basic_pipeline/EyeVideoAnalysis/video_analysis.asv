@@ -112,10 +112,10 @@ for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
 
 
 
-%     %Plot missing frames
-%     figure;
-%     plot([1:size(VideoTS,1)-1],diffTS)
-%     ylim([10 23])
+    %Plot missing frames
+    figure;
+    plot([1:size(VideoTS,1)-1],diffTS)
+    ylim([10 23])
 
     msPerFarme = mean(diffTS);
 
@@ -124,7 +124,7 @@ for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
         MissingInd = find(diffTS>25);
         vidTTLs = vidTTLs(1:2:end);
 
-        extraInd = find(diffTS<11);
+        extraInd = find(diffTS<10);
 
         fprintf('extraInd = %d',length(extraInd))
 

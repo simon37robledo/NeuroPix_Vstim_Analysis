@@ -17,7 +17,12 @@ NeuronPlotMovingBall(data,ex,respU,...
     'savePlot',1,'saveDir','W:\Large_scale_mapping_NP\Figs paper\receptiveFieldExamples','ReField',1,'noEyeMoves',1,'DivisionType', 'XY')
 
 
-%%%%Plot several examples PV97 & PV35
+%% %%Plot several examples PV97 & PV35
+cd('D:\Mark_S13\Desktop\receptiveFieldExamples');
+file = dir ('D:\Mark_S13\Desktop\receptiveFieldExamples');
+filenames = {file.name};
+
+append_pdfs(sprintf('RF-%s',NP.recordingName),filenames{:})
 
 
 

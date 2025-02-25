@@ -215,7 +215,13 @@ end
 %%%Ephys sync times to frames
 cd(NP.recordingDir)
 frameTimes = load('videoTimeStampsSynced.mat').vidTTLsR;
+
+
 frameTimes = frameTimes(goodFrames.Values);
+
+
+
+
 
 %%%%Within a square id, find time intervals
 
@@ -725,16 +731,15 @@ else
         savedView = load('savedViewEye').savedView;
         axis(savedView)
         print(gcf,sprintf('%s-eyeMov-%d-%s',strrep(NP.recordingName,'_','-'),length(timestamps),graphN),'-dpdf', '-r300', '-vector')
+    else
+        scatter(meanCenter(1)-rectNew(1),meanCenter(2)-rectNew(2),25, 'filled','MarkerFaceColor','r')
+        axis equal;
+        %scatter(Data.center_x(indEC)-rectNew(1),Data.center_y(indEC)-rectNew(2),25, 'filled','MarkerFaceColor','w')
+        axis equal;
+
     end
   
 end
-
-
-scatter(meanCenter(1)-rectNew(1),meanCenter(2)-rectNew(2),25, 'filled','MarkerFaceColor','r')
-axis equal;
-%scatter(Data.center_x(indEC)-rectNew(1),Data.center_y(indEC)-rectNew(2),25, 'filled','MarkerFaceColor','w')
-axis equal;
-
 
 
 end

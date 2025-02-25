@@ -51,7 +51,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  51%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [54:55]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -302,7 +302,7 @@ for ex =  51%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%Goo
     bin = 1;
     preBase = round(stimInter-200);%round(3*interStimStats/4);
 
-%     if noEyeMoves
+     if noEyeMoves
 % 
 %         %%%%%% Construct stimType matrix for eye movement plot.
 %         stimType = zeros(length(A),6); %3 plus number of example neurons
@@ -318,9 +318,9 @@ for ex =  51%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%Goo
 %         stimType(:,end-1) = ResponseStrengthU34;
 %         stimType(:,end) = ResponseStrengthU8;
 % 
-%         EyePositionAnalysis(NP,data.Eye_video_dir{ex},11,1,0,1)
+           EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,0,1,1)
 % 
-%     end
+     end
     
 
 
@@ -2192,14 +2192,14 @@ for convNeuron = 1
 %             RFuST = squeeze(RFuNorm(:,:,time_zero_index+round(delay/msPerFarme),:));
 %             RFuNormDir = (RFuDir-normMatrixMean)./normMatrixSTD;
 %             %%%%%RFuSTDir = squeeze(RFuNormDir(:,:,:,time_zero_index+round(delay/msPerFarme),:));
-%             RFuSTDir =  squeeze(RFuDir(:,:,:,time_zero_index+round(delay/msPerFarme),:)); 
+             RFuSTDir =  squeeze(RFuDir(:,:,:,time_zero_index+round(delay/msPerFarme),:)); 
 
             RFuSTDirSize =  reshape(RFuDirSize(:,:,:,:,time_zero_index+round(delay/msPerFarme),:),... %Reshape to eliminate frame component. 
                 [size(RFuDirSize,1),size(RFuDirSize,2),size(RFuDirSize,3),size(RFuDirSize,4),size(RFuDirSize,6)]);
 
         %  
             %radius = uSize(ceil(sizeN/2))/2/reduceFactor;
-            TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDir,2)/9),5); 
+            TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDirSize,3)/9),5); 
 
             %RFuSTDirFilt = zeros(size(RFuSTDir));
 %
@@ -2272,7 +2272,7 @@ for convNeuron = 1
             names = {'X','Y'};
             if noEyeMoves
                 save(sprintf('NEM-RFuSTDirSizeFilt-Q%d-Div-%s-%s',q,names{t},NP.recordingName),'RFuSTDirSizeFilt','-v7.3')
-                save(sprintf('NEM-spikeSums-%s',NP.recordingName),'spikeSums','-v7.3')
+                %save(sprintf('NEM-spikeSums-%s',NP.recordingName),'spikeSums','-v7.3')
 %                 save(sprintf('NEM-RFuSelecTime-%s',NP.recordingName),'RFuST','-v7.3')
 %                 save(sprintf('NEM-RFuSelecTimeMask-%s',NP.recordingName),'RFuST','-v7.3')
 %                 save(sprintf('NEM-RFuSelecTimeD-%s',NP.recordingName),'RFuSTDir','-v7.3')
@@ -2768,6 +2768,7 @@ for spatun =1
     end
 
 end
+close all
 end
 
 
