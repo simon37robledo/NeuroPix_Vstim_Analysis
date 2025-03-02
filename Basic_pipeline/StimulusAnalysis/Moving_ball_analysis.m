@@ -928,6 +928,7 @@ end
 %     figure;
 %     plot(rad2deg(uDir), meanZScores(1,:), 'LineWidth', 2);
 %
+%
 for tuningIndex = 1
 if tuning ==1
 
@@ -936,9 +937,11 @@ if tuning ==1
 
     cd(NP.recordingDir)
 
+    N_bootstrap = 1000;
+
     if ZscoreMethod
 
-        if isfile(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName))
+        if isfile(sprintf('ZscoreRaster-%d-%s.mat',N_bootstrap,NP.recordingName))
             
             ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
 
@@ -979,7 +982,6 @@ if tuning ==1
 
             end
 
-
             save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster','-v7.3')
 
         end
@@ -987,11 +989,22 @@ if tuning ==1
         pvals= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
         sigma = 0.05;
         goodNeurons =  find(pvals <sigma);
-
+%
         % Initialize arrays to store spike rates and SEM for each angle
         tuningValZS = zeros(length(goodNeurons), direcN); % 4 angles (0, 90, 180, 270)
         sem_values_Tuning = zeros(length(goodNeurons), direcN);   % 4 SEM values
         duration = 300;
+
+        if sizeN>1
+
+            %%Select size closest to 120 (120 is used in PV35 & PV97)
+            [minS indx] = min(abs(unique(sizes)-120));
+            
+            selecSize = uSize(indx);
+
+            ZscoreRaster = ZscoreRaster(C(:,4) == selecSize,:,:);
+
+        end
 
         ui = 1;
         for u = goodNeurons
@@ -999,7 +1012,7 @@ if tuning ==1
 
             [nT,nB] = size(ZscoreRasterU);
 
-            trialsPerOffset = trialDivision*sizeN;
+            trialsPerOffset = trialDivision;
 
             maxZ = zeros(1,nT/trialsPerOffset);
             maxZpos = zeros(1,nT/trialsPerOffset);
@@ -1021,14 +1034,15 @@ if tuning ==1
 
                 j =j+1;
             end
-
+%
+            trials_for_angle = nT/direcN;
 
             % Loop through each angle and calculate the max ZS and SEM
             for i = 1:direcN
-                trials_for_angle = find(uDir(i) == C(:,2)); % Find trials for each angle (0, 90, 180, 270)
+                 % Find trials for each angle (0, 90, 180, 270)
 
                 %Calculate max z-score per offsets within a direction
-                [tuningValZS(ui,i) trPosition]= max(maxZ(i*offsetN-(offsetN-1):max(trials_for_angle)/trialDivision));
+                [tuningValZS(ui,i) trPosition]= max(maxZ(i*offsetN-(offsetN-1):i*offsetN));
 
                 %%Obtain trialDivision (e.g. 10) trials from bin position of max
                 %%Z-score within direction
