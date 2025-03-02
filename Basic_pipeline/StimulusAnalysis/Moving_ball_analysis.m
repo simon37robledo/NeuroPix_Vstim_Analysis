@@ -22,9 +22,9 @@ takeMedian = 0;
 
 depthPlot =0;
 
-ReceptiveFieldConvolutions =1;
-repeatConv =1;
-useZscore = 1;
+ReceptiveFieldConvolutions =0;
+repeatConv =0;
+useZscore = 0;
 noEyeMoves = 0;
 ModeQuadrant = 0;
 XYdivision =1;
@@ -44,7 +44,7 @@ N_bootstrap = 1000;
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
-GoodRecordingsPV =[15:21,40:42,49:55];
+GoodRecordingsPV =[8:21,40:43,49:55];
 GoodRecordingsRF = [8:20,40:43,49:55];
 Awake = [44:48];
 %Plot specific neurons
@@ -54,7 +54,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -938,43 +938,47 @@ if tuning ==1
 
     if ZscoreMethod
 
-        if ~isfile(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName))
+        if isfile(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName))
+            
             ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
 
         else
-
-
             %%%%%%%Compute Z-score raster to use later in convolution
             try
                 boot_means = load(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName)).boot_means;
+
+                Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
+
+                [nT,nN,nB] = size(Mr);
+
+                duration = 300; %%Standard kernel duration used. 
+
+                kernel = ones(1, duration); % Normalize for mean
+
+                sigma = 5;  % Standard deviation
+                % Kernel size (should be odd for symmetry)
+                kernel = fspecial('gaussian', [1 duration], sigma);
+
+                kernel = ones(1, duration) / (1 * duration); %Kernel that takes the mean
+
+                ZscoreRaster = zeros(size(Mr));
+                for ui = 1:nN
+                    % Extract the slice for the current unit (t x b matrix)
+                    slice = squeeze(Mr(:, ui, :));
+
+                    % Compute the mean using 2D convolution
+                    sliceK = conv2(slice, kernel,'same'); % 'valid' ensures the window fits within bounds
+
+                    ZScoreU = (sliceK-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
+
+                    ZscoreRaster(:, ui, :) = ZScoreU;
+                end
 
             catch
                 error('Bootstrapping not done for this recording')
 
             end
 
-            Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
-
-            kernel = ones(1, duration); % Normalize for mean
-
-            sigma = 5;  % Standard deviation
-            % Kernel size (should be odd for symmetry)
-            kernel = fspecial('gaussian', [1 duration], sigma);
-
-            kernel = ones(1, duration) / (1 * duration);
-
-            ZscoreRaster = zeros(size(Mr));
-            for ui = 1:nN
-                % Extract the slice for the current unit (t x b matrix)
-                slice = squeeze(Mr(:, ui, :));
-
-                % Compute the mean using 2D convolution
-                sliceK = conv2(slice, kernel,'same'); % 'valid' ensures the window fits within bounds
-
-                ZScoreU = (sliceK-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
-
-                ZscoreRaster(:, ui, :) = ZScoreU;
-            end
 
             save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster','-v7.3')
 

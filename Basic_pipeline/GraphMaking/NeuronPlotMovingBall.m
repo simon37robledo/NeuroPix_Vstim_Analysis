@@ -43,7 +43,7 @@ saveDir = p.Results.saveDir;
 SelectRand = p.Results.SelectRand;
 noEyeMoves = p.Results.noEyeMoves;
 DivisionType  =p.Results.DivisionType;
-polarPlot = p.Results.polarPlot;
+tuningPlot = p.Results.tuningPlot;
 
 % Loop through varargin as Name-Value pairs
 for i = 1:2:length(varargin)
@@ -704,76 +704,45 @@ for u = eNeuron
 
     end
 
-    if polarPlot
+    if tuningPlot
 
-        %         cd(NP.recordingDir)
-        %         tuningCurve = (load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve)*1000; %convert to spikes/sec
-        %         theta = deg2rad(uDir); %linspace(0, 2*pi, size(tuningCurve,2)+1);  % 9 points for 8 bars (because it's circular)
-        %         % Remove the last value to avoid duplication of the first
-        %         pf = figure;mr =
-        %         % Create the polar plot
-        %         polarplot([theta, theta(1)], [tuningCurve(eNeuron,:), tuningCurve(eNeuron,1)], '-o')
-        %         set(pf,"Color",'w')
-        %         ax = gca;
-        %         ax.ThetaTick = uDir;
-        %         title(sprintf('PolarPlot-U.%d-Unit-phy-%d',u,GoodU_or(u)));
-        %         cd(NP.recordingDir + "\Figs")
-        %         if savePlot
-        %             cd(saveDir)
-        %             print(fig, sprintf('%s-MovBall-polarPlot-U%d.png',NP.recordingName,eNeuron),'-dpng');
-        %         end
+        DSI = load(sprintf('Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
+        OSI = load(sprintf('Orientation-Tuning-Index-%s',NP.recordingName)).L;
 
-        mr = squeeze(BuildBurstMatrix(goodU(:,u),round(p.t),round(directimesSorted),round(stimDur)));
-
-        trialsPerAngle = trialDivision*offsetN*speedN*sizeN*orientN;
+        try 
+            tuningCurve = load('MedianTuningValZS').tuningValZS;
+            SEM = load('MedianSem_values_Tuning').sem_values;
+        catch
+            tuningCurve = load('MeanTuningValZS').tuningValZS;
+            SEM = load('MeanSem_values_Tuning').sem_values;
+        end
         
-        ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
+        respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
 
-        mr = max(squeeze(ZscoreRaster(:,u,:)),[],2); %%Take mean per offset, then take max offset as result to plot
-        [nT,nB] = size(mr);
-        trialsPerOffset = trialDivision*sizeN; 
+        respU = find(respNeuronsMB<0.05);
 
-        maxZ = zeros(1,nT/trialsPerOffset);
-        maxZpos = zeros(1,nT/trialsPerOffset);
-        j=1;
-       
-        for i =1:trialsPerOffset:nT
-            meanZSperOffset = mean(mr(i:i+trialsPerOffset-1,:),1);
-
-            [maxZ(j) maxZpos(j)] = max(meanZSperOffset);
-
-            j =j+1;
-        end
-
-        % Example: 1 represents a spike, 0 represents no spike
-        % Specify the angles for each set of 50 trials (0, 90, 180, 270)
-        % 200 trials in total, grouped by 50 for each angle
-
-        % Initialize arrays to store spike rates and SEM for each angle
-        spike_rates = zeros(1, direcN); % 4 angles (0, 90, 180, 270)
-        sem_values = zeros(1, direcN);   % 4 SEM values
-
-        %Take mean across trial div, and then tak max across offsets
-        % Loop through each angle and calculate the spike rate (spikes per second) and SEM
-        for i = 1:direcN
-            trials_for_angle = find(uDir(i) == C(:,2)); % Find trials for each angle (0, 90, 180, 270)
-
-            % Calculate spike rate for each trial
-            trial_spike_rates = max(mr(trials_for_angle, :), 2) / (stimDur/1000); % Spike rate per trial (spikes per second)
-
-            % Calculate the mean spike rate and SEM
-            spike_rates(i) = mean(trial_spike_rates);
-            sem_values(i) = std(trial_spike_rates) / sqrt(length(trials_for_angle));
-        end
+        ru = find(respU == u);
 
         % Plot the tuning curve with error bars
         fig = figure;
         angles_deg = rad2deg(uDir); % Angles in degrees
-        bar(angles_deg, spike_rates, 'FaceColor', 'k','FaceAlpha',0.5); % Bar plot for spike rates
+        bar(angles_deg, tuningCurve, 'FaceColor', 'k','FaceAlpha',0.5); % Bar plot for spike rates
         hold on;
-        errorbar(angles_deg, spike_rates, sem_values, 'k', 'LineStyle', 'none', 'LineWidth', 1.5); % Error bars
+        errorbar(angles_deg, tuningtuningCurveValZS, SEM, 'k', 'LineStyle', 'none', 'LineWidth', 1.5); % Error bars
         xlabel('Stimulus Angle (degrees)');
         ylabel('Z-score');
+
+        % Add text outside the figure to the right
+        ax = gca;
+        xlim_vals = xlim; % Get x-axis limits
+        ylim_vals = ylim; % Get y-axis limits
+        x_text = xlim_vals(2) + 0.1 * range(xlim_vals); % Place text slightly to the right of the figure
+        y_text_1 = ylim_vals(2) - 0.1 * range(ylim_vals); % Adjust vertical position
+        y_text_2 = ylim_vals(2) - 0.2 * range(ylim_vals);
+
+        text(x_text, y_text_1, sprintf('OSI = %d', round(OSI(ru))), 'FontSize', 12, 'HorizontalAlignment', 'left');
+        text(x_text, y_text_2, 'DSI = 0.2', 'FontSize', 12, 'HorizontalAlignment', 'left');
+
 
         if savePlot
             cd(saveDir)

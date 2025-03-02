@@ -10,21 +10,21 @@ newTIC = 0;
 ResponseProfile=0; redoResp=0;
 
 Shuffling =0;
-Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
+Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
 repeatShuff =0;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
 
-tuning =1;
-ZscoreMethod = 1;
+tuning =0;
+ZscoreMethod = 0;
 takeMedian = 0;
 
 depthPlot =0;
 
-ReceptiveFieldConvolutions =1;
-repeatConv =1;
-useZscore = 1;
+ReceptiveFieldConvolutions =0;
+repeatConv =0;
+useZscore = 0;
 noEyeMoves = 0;
 ModeQuadrant = 0;
 XYdivision =1;
@@ -54,7 +54,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  8:20%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -939,42 +939,44 @@ if tuning ==1
     if ZscoreMethod
 
         if ~isfile(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName))
+            
             ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
 
         else
-
-
             %%%%%%%Compute Z-score raster to use later in convolution
             try
                 boot_means = load(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName)).boot_means;
+
+                nN = 
+
+                Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
+
+                kernel = ones(1, duration); % Normalize for mean
+
+                sigma = 5;  % Standard deviation
+                % Kernel size (should be odd for symmetry)
+                kernel = fspecial('gaussian', [1 duration], sigma);
+
+                kernel = ones(1, duration) / (1 * duration);
+
+                ZscoreRaster = zeros(size(Mr));
+                for ui = 1:nN
+                    % Extract the slice for the current unit (t x b matrix)
+                    slice = squeeze(Mr(:, ui, :));
+
+                    % Compute the mean using 2D convolution
+                    sliceK = conv2(slice, kernel,'same'); % 'valid' ensures the window fits within bounds
+
+                    ZScoreU = (sliceK-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
+
+                    ZscoreRaster(:, ui, :) = ZScoreU;
+                end
 
             catch
                 error('Bootstrapping not done for this recording')
 
             end
 
-            Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
-
-            kernel = ones(1, duration); % Normalize for mean
-
-            sigma = 5;  % Standard deviation
-            % Kernel size (should be odd for symmetry)
-            kernel = fspecial('gaussian', [1 duration], sigma);
-
-            kernel = ones(1, duration) / (1 * duration);
-
-            ZscoreRaster = zeros(size(Mr));
-            for ui = 1:nN
-                % Extract the slice for the current unit (t x b matrix)
-                slice = squeeze(Mr(:, ui, :));
-
-                % Compute the mean using 2D convolution
-                sliceK = conv2(slice, kernel,'same'); % 'valid' ensures the window fits within bounds
-
-                ZScoreU = (sliceK-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
-
-                ZscoreRaster(:, ui, :) = ZScoreU;
-            end
 
             save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster','-v7.3')
 
@@ -1060,14 +1062,14 @@ if tuning ==1
 
     nN = size(tuningCurve,1);
     
-    %%%%% Tuning index
+    %%%%% Tuning indexes (OSI, DSI, Prefered angle)
     % Calculate tuning direction and strength for all neurons then plot it across depth and in 3D
-    uDirDeg = unique(rad2deg(directions));
-    uDirDeg = deg2rad(uDir);
-    %%% method one
-    OI = sqrt(sum(tuningCurve.*sin(2*uDirRad),2).^2 + sum(tuningCurve.*cos(2*uDirRad),2).^2)./sum(tuningCurve,2); % OI calculated as in Dragoi and Swindale.
+    uDirDeg = rad2deg(uDir);
+    
+    %%% method one OSI
+    OI = sqrt(sum(tuningCurve.*sin(2*uDir),2).^2 + sum(tuningCurve.*cos(2*uDir),2).^2)./sum(tuningCurve,2); % OI calculated as in Dragoi and Swindale.
 
-    %Preferred orientation
+    %%%% Preferred orientation
     oneSideCurve = zeros(nN,direcN/2);
   
     %     for u = 1:nN
@@ -1079,9 +1081,10 @@ if tuning ==1
     %         end
     %     end
 
-    a = sum(tuningCurve.*cos(2*uDirRad),2);
-    b = sum(tuningCurve.*sin(2*uDirRad),2);
+    a = sum(tuningCurve.*cos(2*uDir),2);
+    b = sum(tuningCurve.*sin(2*uDir),2);
 
+    %%%Calculate prefered angle
     Theta = zeros(1,nN);
     for u = 1:nN
         if a(u)>0
@@ -1091,15 +1094,20 @@ if tuning ==1
         end
     end
 
+    %%% method 2 OSI
     L = sqrt(a.^2+b.^2)./sum(tuningCurve,2); %Tuning Strength
+
+
 
     [preferDir pI] = max(tuningCurve,[],2);
 
     nonPreferDir = zeros(nN,1);
     for u = 1:nN
-        npI = find(uDir == mod(uDir(pI(u)) + 180, 360));
+        npI = find(uDirDeg == mod(uDirDeg(pI(u)) + 180, 360));
         nonPreferDir(u) = tuningCurve(u,npI);
     end
+
+
     DSI = 1- nonPreferDir./preferDir;
     DSI(isnan(DSI))=0;
     L(isnan(L))=0;
