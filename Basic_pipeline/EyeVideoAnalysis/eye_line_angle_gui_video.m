@@ -1,4 +1,4 @@
-function [angle, length, midpoint] = eye_line_angle_gui_video(video_file)
+function [angle, lengthEye, midpoint] = eye_line_angle_gui_video(video_file)
     % Input: video_file (string) - Path to the video file
     % Outputs:
     %   angle (double) - Final angle of the line
@@ -32,7 +32,7 @@ function [angle, length, midpoint] = eye_line_angle_gui_video(video_file)
 
     % Initialize outputs
     angle = NaN;
-    length = NaN;
+    lengthEye = NaN;
     midpoint = [NaN, NaN];
     is_selected = false; % To check if the line is finalized
     
@@ -77,14 +77,14 @@ function [angle, length, midpoint] = eye_line_angle_gui_video(video_file)
         angle = atan2d(dy, dx); % Angle in degrees
         
         % Calculate the length of the line
-        length = sqrt(dx^2 + dy^2);
+        lengthEye = sqrt(dx^2 + dy^2);
         
         % Calculate the midpoint of the line
         midpoint = [(x1 + x2) / 2, (y1 + y2) / 2];
 
         % Update the details display
         details_display.String = sprintf('Angle: %.2f° | Length: %.2f | Midpoint: [%.2f, %.2f]', ...
-                                         angle, length, midpoint(1), midpoint(2));
+                                         angle, lengthEye, midpoint(1), midpoint(2));
     end
 
     % Callback to finalize the line

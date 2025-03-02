@@ -100,8 +100,38 @@ Data = readtable(string(vidDir)+filesep+string(ellipseName)); %Check which rows 
 video = VideoReader(string(vidDir)+filesep+string(videoFile));
 goodFrames = readtable(string(vidDir)+filesep+string(goodFrames{1}));
 
-%Run angle correction
-%angleCorrect = eye_line_angle_gui_video(ellipseDir+filesep+videoFile);
+
+if ~exist(sprintf('CorrectionAngle-%s.mat',NP.recordingName), 'file')
+    cd(string(vidDir))
+    %Run angle correction %%place first point in the left vertice
+    [angleCorrect lengthEye midpoint] = eye_line_angle_gui_video(videoFile);
+    cd(NP.recordingDir)
+
+    CorrectionAngle = struct('angleCorrect',angleCorrect,'lengthEye', lengthEye,'midpoint', midpoint);
+
+    save(sprintf('CorrectionAngle-%s',NP.recordingName),'CorrectionAngle');
+
+end
+
+theta = deg2rad(CorrectionAngle.angleCorrect);  % Rotation angle in radians
+R = [cos(theta), -sin(theta); sin(theta), cos(theta)]; % Rotation matrix
+
+% Example ellipse centers and phi angles
+ellipse_centers = [x1, y1; x2, y2; x3, y3]; 
+ellipse_phi = [phi1, phi2, phi3]; % Ellipse angles
+
+% Translate to central coordinate (xc, yc)
+translated = ellipse_centers - [xc, yc];
+
+% Rotate centers
+rotated_centers = (R * translated')';
+rotated_centers = rotated_centers + [xc, yc];
+
+% Rotate ellipse angles
+rotated_phi = ellipse_phi + rad2deg(theta); % Convert back to degrees if needed
+
+
+
 
 
 %%Calculate the mean of the center of the eye and then calculate a

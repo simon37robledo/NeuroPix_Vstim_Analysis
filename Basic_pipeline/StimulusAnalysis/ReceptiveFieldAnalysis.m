@@ -9,7 +9,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-for ex =  [49 50 52 53 54]
+for ex =  49 
     %%%%%%%%%%%% Load data and data paremeters
 
     %1. Load NP class
@@ -48,7 +48,11 @@ for ex =  [49 50 52 53 54]
     respU = find(respNeuronsMB<sign);
 
     NeuronPlotMovingBall(data,ex,respU,...
-    'savePlot',1,'saveDir','W:\Large_scale_mapping_NP\Figs paper\receptiveFieldExamples','ReField',1,'noEyeMoves',1,'DivisionType', 'XY')
+    'savePlot',1,'saveDir','W:\Large_scale_mapping_NP\Figs paper\receptiveFieldExamples','ReField',0,'noEyeMoves',1,'DivisionType', 'XY','EyeMovements',1)
+
+NeuronPlotMovingBall(data,ex,respU,...
+    'savePlot',1,'saveDir','W:\Large_scale_mapping_NP\Figs paper\receptiveFieldExamples','polarPlot',1)
+
 
 end
 %% %%Plot several examples PV97 & PV35

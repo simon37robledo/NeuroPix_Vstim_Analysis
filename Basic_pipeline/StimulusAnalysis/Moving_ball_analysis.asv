@@ -16,13 +16,16 @@ trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
 
-tuning =0;
+tuning =1;
+ZscoreMethod = 1;
+takeMedian = 0;
+
 depthPlot =0;
 
 ReceptiveFieldConvolutions =1;
 repeatConv =1;
 useZscore = 1;
-noEyeMoves = 1;
+noEyeMoves = 0;
 ModeQuadrant = 0;
 XYdivision =1;
 plotRF =0;
@@ -51,7 +54,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [52 53 54 55]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -836,6 +839,34 @@ for Shuffle =1
         save(sprintf('MovBall-ZscoreBoot-%d-%s',N_bootstrap,NP.recordingName),'ZScoreU')
         save(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName),'boot_means')
 
+        %%%%%%%Compute Z-score raster to use later in convolution
+        boot_means = load(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName)).boot_means;
+
+        Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
+
+        kernel = ones(1, duration); % Normalize for mean
+
+        sigma = 5;  % Standard deviation
+        % Kernel size (should be odd for symmetry)
+        kernel = fspecial('gaussian', [1 duration], sigma);
+
+        kernel = ones(1, duration) / (1 * duration);
+
+        ZscoreRaster = zeros(size(Mr));
+        for ui = 1:nN
+            % Extract the slice for the current unit (t x b matrix)
+            slice = squeeze(Mr(:, ui, :));
+
+            % Compute the mean using 2D convolution
+            sliceK = conv2(slice, kernel,'same'); % 'valid' ensures the window fits within bounds
+
+            ZScoreU = (sliceK-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
+
+            ZscoreRaster(:, ui, :) = ZScoreU;
+        end
+
+        save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster','-v7.3')
+
         else
 
 
@@ -867,6 +898,7 @@ for Shuffle =1
 
          save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster','-v7.3')
 
+
         end
 
     end
@@ -895,26 +927,149 @@ end
 % 
 %     figure;
 %     plot(rad2deg(uDir), meanZScores(1,:), 'LineWidth', 2);
-
+%
 for tuningIndex = 1
 if tuning ==1
 
-    cd(NP.recordingDir)
-    %pvalTr=  load(sprintf('pvalTrials-%s',NP.recordingName)).pvalTr;
-    %pvalTi= load(sprintf('pvalTime-%s',NP.recordingName)).pvalTi;
-    %tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
-    %NeuronVals = load(sprintf('NeuronRespCat-%s',NP.recordingName)).NeuronVals;
 
-    %Tuning index
+    % Z-score method
+
+    cd(NP.recordingDir)
+
+    if ZscoreMethod
+
+        if ~isfile(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName))
+            ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
+
+        else
+
+
+            %%%%%%%Compute Z-score raster to use later in convolution
+            try
+                boot_means = load(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName)).boot_means;
+
+            catch
+                error('Bootstrapping not done for this recording')
+
+            end
+
+            Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
+
+            kernel = ones(1, duration); % Normalize for mean
+
+            sigma = 5;  % Standard deviation
+            % Kernel size (should be odd for symmetry)
+            kernel = fspecial('gaussian', [1 duration], sigma);
+
+            kernel = ones(1, duration) / (1 * duration);
+
+            ZscoreRaster = zeros(size(Mr));
+            for ui = 1:nN
+                % Extract the slice for the current unit (t x b matrix)
+                slice = squeeze(Mr(:, ui, :));
+
+                % Compute the mean using 2D convolution
+                sliceK = conv2(slice, kernel,'same'); % 'valid' ensures the window fits within bounds
+
+                ZScoreU = (sliceK-mean(boot_means(:,ui)))/(std(boot_means(:,ui))+1/(N_bootstrap));
+
+                ZscoreRaster(:, ui, :) = ZScoreU;
+            end
+
+            save(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName),'ZscoreRaster','-v7.3')
+
+        end
+
+        pvals= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
+        sigma = 0.05;
+        goodNeurons =  find(pvals <sigma);
+
+        % Initialize arrays to store spike rates and SEM for each angle
+        tuningValZS = zeros(length(goodNeurons), direcN); % 4 angles (0, 90, 180, 270)
+        sem_values_Tuning = zeros(length(goodNeurons), direcN);   % 4 SEM values
+        duration = 300;
+
+        ui = 1;
+        for u = goodNeurons
+            ZscoreRasterU = squeeze(ZscoreRaster(:,u,:));
+
+            [nT,nB] = size(ZscoreRasterU);
+
+            trialsPerOffset = trialDivision*sizeN;
+
+            maxZ = zeros(1,nT/trialsPerOffset);
+            maxZpos = zeros(1,nT/trialsPerOffset);
+            j=1;
+
+            for i =1:trialsPerOffset:nT
+
+                %take median or mean per offset to obtain a nT/nOffsets x bins
+                %matrix
+
+                if takeMedian
+                    meanZSperOffset = median(ZscoreRasterU(i:i+trialsPerOffset-1,:),1);
+                else
+                    meanZSperOffset = mean(ZscoreRasterU(i:i+trialsPerOffset-1,:),1);
+                end
+
+                %Take max across bins
+                [maxZ(j) maxZpos(j)] = max(meanZSperOffset);
+
+                j =j+1;
+            end
+
+
+            % Loop through each angle and calculate the max ZS and SEM
+            for i = 1:direcN
+                trials_for_angle = find(uDir(i) == C(:,2)); % Find trials for each angle (0, 90, 180, 270)
+
+                %Calculate max z-score per offsets within a direction
+                [tuningValZS(ui,i) trPosition]= max(maxZ(i*offsetN-(offsetN-1):max(trials_for_angle)/trialDivision));
+
+                %%Obtain trialDivision (e.g. 10) trials from bin position of max
+                %%Z-score within direction
+                TrialValsOfMaxZS = ZscoreRaster(trPosition*trialDivision-(trialDivision-1):trPosition*trialDivision,maxZpos(trPosition));
+
+                %             % Calculate
+                %             trial_spike_rates = max(mr(trials_for_angle, :), 2) / (stimDur/1000); % Spike rate per trial (spikes per second)
+                %
+                % Calculate the mean spike rate and SEM
+                sem_values_Tuning(ui,i) = std(TrialValsOfMaxZS) / sqrt(length(TrialValsOfMaxZS));
+            end
+
+            ui = ui+1;
+
+        end
+
+        if takeMedian
+            save('MedianTuningValZS','tuningValZS')
+            save('MedianSem_values_Tuning','sem_values')
+        else
+            save('MeanTuningValZS','tuningValZS')
+            save('MeanSem_values_Tuning','sem_values')
+        end
+
+        tuningCurve = tuningValZS;
+
+    else %%% spike rate tuning curve
+
+        tuningCurve = load(sprintf('tuningC-%s',NP.recordingName)).tuningCurve;
+        tuningCurve = tuningCurve(goodNeurons,:);
+
+    end
+
+    nN = size(tuningCurve,1);
+    
+    %%%%% Tuning index
     % Calculate tuning direction and strength for all neurons then plot it across depth and in 3D
-    uDir = unique(rad2deg(directions));
-    uDirRad = deg2rad(uDir);
+    uDirDeg = unique(rad2deg(directions));
+    uDirDeg = deg2rad(uDir);
+    %%% method one
     OI = sqrt(sum(tuningCurve.*sin(2*uDirRad),2).^2 + sum(tuningCurve.*cos(2*uDirRad),2).^2)./sum(tuningCurve,2); % OI calculated as in Dragoi and Swindale.
 
     %Preferred orientation
     oneSideCurve = zeros(nN,direcN/2);
-   
-
+  
     %     for u = 1:nN
     %         NeuronD = squeeze(NeuronVals(u,:,[1 5]));
     %         NeuronD(:,2)=rad2deg(NeuronD(:,2));
