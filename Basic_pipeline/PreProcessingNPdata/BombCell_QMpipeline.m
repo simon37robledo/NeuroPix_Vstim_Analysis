@@ -151,12 +151,18 @@ data = readtable(excelFile);
 
 
  %%
-allGoodRec = [1:21, 28:36, 40:54];
+allGoodRec = [8:21, 28:36, 40:54];
+GoodRecordingsPV =[8:21,40:43,49:54];
 % %path = '\\sil3\data\\Large_scale_mapping_NP\lizards\PV139\PV139_Experiment_6_2_24\Insertion1\catgt_PV139_Experiment_6_2_24_1_g0';
 % path = '\\132.66.45.127\data\Large_scale_mapping_NP\Mice_experiments\mouse1\Mice_exp_28_11_23\Insertion1\catgt_Mice_exp_28_11_23_1_g0';
+cd('\\sil3\data\Large_scale_mapping_NP')
+excelFile = 'Experiment_Excel.xlsx';
+
+data = readtable(excelFile);
+
 
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  54%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -188,7 +194,7 @@ for ex =  54%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN
 
     NP = NPAPRecording(path);
 
-    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,1);
+    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,0,1);
     close all
 
 end
