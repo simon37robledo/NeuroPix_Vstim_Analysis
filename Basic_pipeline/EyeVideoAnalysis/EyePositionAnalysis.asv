@@ -111,60 +111,35 @@ if ~exist(sprintf('CorrectionAngle-%s.mat',NP.recordingName), 'file')
 
     save(sprintf('CorrectionAngle-%s',NP.recordingName),'CorrectionAngle');
 
-else
-
-    CorrectionAngle = load(sprintf('CorrectionAngle-%s.mat',NP.recordingName)).CorrectionAngle;
-
 end
 
-meanCenter = [mean(Data.center_x), mean(Data.center_y)];
+theta = deg2rad(CorrectionAngle.angleCorrect);  % Rotation angle in radians
+R = [cos(theta), -sin(theta); sin(theta), cos(theta)]; % Rotation matrix
 
-Rotate = 1
-if Rotate
-%%%%%%% Rotate ellipse centers and phy angle. 
-% Convert angle to radians (assuming CorrectionAngle.angleCorrect is in degrees)
-theta = deg2rad(CorrectionAngle.angleCorrect);
+xc = mean(Data.center_x);
+yc =mean(Data.center_y);
+% Example ellipse centers and phi angles
+ellipse_centers = [Data.center_x;Data.center_y]; 
+ellipse_phi = Data.phi; % Ellipse angles
 
-% Create rotation matrix
-R = [cos(theta), -sin(theta); sin(theta), cos(theta)];
+% Translate to central coordinate (xc, yc)
+translated = ellipse_centers - [xc, yc];
 
-% Calculate center of all ellipses
-xc = meanCenter(1);
-yc = meanCenter(2);
+% Rotate centers
+rotated_centers = (R * translated')';
+rotated_centers = rotated_centers + [xc, yc];
 
-% Get all ellipse centers
-ellipse_centers = [Data.center_x, Data.center_y];
+% Rotate ellipse angles
+rotated_phi = ellipse_phi + theta; % Convert back to degrees if needed
 
-% Get ellipse angles (already in radians)
-ellipse_phi = Data.phi; 
 
-% Initialize array for rotated centers
-rotated_centers = zeros(size(ellipse_centers));
-
-% Rotate each center point
-for i = 1:size(ellipse_centers, 1)
-    % Translate to origin
-    translated = ellipse_centers(i,:) - [xc, yc];
-    
-    % Rotate point
-    rotated = (R * translated')';
-    
-    % Translate back
-    rotated_centers(i,:) = rotated + [xc, yc];
-end
-
-% Update the Data structure with rotated values
-Data.center_x = rotated_centers(:,1);
-Data.center_y = rotated_centers(:,2);
-
-% Rotate ellipse angles (phi) - add theta directly since both are in radians
-Data.phi = ellipse_phi + theta;
-
-end
 
 %%Calculate the mean of the center of the eye and then calculate a
 %%rectangle for cropping whose center square contains the mean center of
 %%the eye
+
+meanCenter = [mean(Data.center_x), mean(Data.center_y)];
+
 
 
 %%% Find frame number that is closest to mean:
@@ -175,13 +150,6 @@ frameNumber = goodFrames.Values(indEC); % Example frame number
 
 video.CurrentTime = (frameNumber - 1) / video.FrameRate;
 frame = readFrame(video);
-
-%%%% Rotate frame
-if Rotate
-
-frame = rotateMatrix(frame,meanCenter,theta);
-
-end
 
 maxSizeX = size(frame,2)/2;
 maxSizeY = size(frame,1)/2;
