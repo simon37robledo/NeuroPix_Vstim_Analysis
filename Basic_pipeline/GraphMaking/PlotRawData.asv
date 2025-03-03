@@ -26,9 +26,6 @@ figure(fig)
 
 if type == "line"
 
-    mx = -inf;
-    mn = inf;
-
 for tr = 1:size(raw_signal,1)
 
     if freq == "AP"
@@ -45,11 +42,11 @@ for tr = 1:size(raw_signal,1)
     plot(t, signal+offset*(j), 'LineWidth',0.5,'Color','k');
  
     if max(signal) > mx
-        mx = max(signal);
+        mx = max(signal+offset*(j));
     end
 
-    if min(signal) < mn
-        mn = min(signal);
+    if tr == size(raw_signal,1)
+        mn = min(signal+offset*(j));
     end
     hold on
 end

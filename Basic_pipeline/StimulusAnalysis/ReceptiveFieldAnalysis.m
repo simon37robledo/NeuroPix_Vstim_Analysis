@@ -50,8 +50,6 @@ for ex =  49
     NeuronPlotMovingBall(data,ex,respU,...
     'savePlot',1,'saveDir','W:\Large_scale_mapping_NP\Figs paper\receptiveFieldExamples','ReField',0,'noEyeMoves',1,'DivisionType', 'XY','EyeMovements',1)
 
-NeuronPlotMovingBall(data,ex,respU,...
-    'savePlot',1,'saveDir','W:\Large_scale_mapping_NP\Figs paper\receptiveFieldExamples','polarPlot',1)
 
 
 end

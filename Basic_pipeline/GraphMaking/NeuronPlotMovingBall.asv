@@ -28,7 +28,7 @@ addParameter(p, 'saveDir', '\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFig
 addParameter(p, 'SelectRand', 0);
 addParameter(p, 'noEyeMoves', 0);
 addParameter(p, 'DivisionType', 'XY');
-addParameter(p, 'polarPlot',0)
+addParameter(p, 'tuningPlot',0)
 
 
 % Parse inputs
@@ -256,9 +256,11 @@ pvals = [eNeuron;pvals(eNeuron)];
 
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% plot raster MB %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+ur = 1;
 
 for u = eNeuron
+
+    
 
 
     if Raster
@@ -279,7 +281,7 @@ for u = eNeuron
 
             for i = 1:mergeTrials:nT
 
-                meanb = mean(squeeze(Mr(i:min(i+mergeTrials-1, end),u,:)),1);
+                meanb = mean(squeeze(Mr(i:min(i+mergeTrials-1, end),ur,:)),1);
 
                 Mr2(j,:) = meanb;
 
@@ -287,11 +289,10 @@ for u = eNeuron
 
             end
         else
-            Mr2 = Mr(:,u,:);
+            Mr2 = Mr(:,ur,:);
         end
 
         [nT,nB] = size(Mr2);
-
 
 
         fig =  figure;
@@ -326,6 +327,17 @@ for u = eNeuron
         xlim([0 round(stimDur+preBase*2)/bin2])
         xticks([0 preBase/bin2:300/bin2:(stimDur+preBase*2)/bin2 (round((stimDur+preBase*2)/100)*100)/bin2])
         xticklabels([]);
+
+        yt =[0];
+        for d = 1:direcN
+            yt = [yt [1:trialDivision*2*sizeN:(nT/direcN)-1+trialDivision*sizeN]+max(yt)+trialDivision-1];
+
+        end
+
+        yt = yt(2:end);
+        yticks(yt)
+
+        yticklabels(repmat([trialDivision:trialDivision*2*sizeN:(nT/direcN)-1+trialDivision*sizeN],1,direcN))
 
 
         %%%%Select 10 random trials where Z-score is above the average
@@ -430,14 +442,17 @@ for u = eNeuron
 
         subplot(10,1,[9 10])
 
-        PlotRawData(fig,NP,chan,startTimes,window,freq,type,preBase);
+        [fig, mx, mn] = PlotRawData(fig,NP,chan,startTimes,window,freq,type,preBase);
 
         xticklabels([]) %%%plot example PV139-local neurons
         xlabel([])
         %xlim([0 round(stimDur+preBase*2)])
 
         xticklabels([-(preBase) 0:300:round((stimDur/100))*100 round((stimDur/100))*100 + preBase]./1000)
-        fig.Position = [680    42   560   954];
+        fig.Position = [680     5   296   9734];
+
+        limsY = ylim;
+        ylim([limsY(1)-mx limsY(2)+mx]); %%%Set limits using max and min spike values
 
         if savePlot
             cd(saveDir)
@@ -706,37 +721,36 @@ for u = eNeuron
 
     if tuningPlot
 
-        DSI = load(sprintf('Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
-        OSI = load(sprintf('Orientation-Tuning-Index-%s',NP.recordingName)).L;
+        takeMedian = 1;
 
-        try 
+        if takeMedian 
             tuningCurve = load('MedianTuningValZS').tuningValZS;
-            SEM = load('MedianSem_values_Tuning').sem_values;
-        catch
+            SEM = load('MedianSem_values_Tuning').sem_values_Tuning;
+            DSI = load(sprintf('Median-Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
+            OSI = load(sprintf('Median-Orientation-Tuning-Index-%s',NP.recordingName)).L;
+        else
             tuningCurve = load('MeanTuningValZS').tuningValZS;
-            SEM = load('MeanSem_values_Tuning').sem_values;
+            SEM = load('MeanSem_values_Tuning').sem_values_Tuning;
+            DSI = load(sprintf('Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
+            OSI = load(sprintf('Orientation-Tuning-Index-%s',NP.recordingName)).L;
         end
+        
+        respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+
+        respU = find(respNeuronsMB<0.05);
+
+        ru = find(respU == u);
 
         % Plot the tuning curve with error bars
         fig = figure;
         angles_deg = rad2deg(uDir); % Angles in degrees
-        bar(angles_deg, tuningCurve, 'FaceColor', 'k','FaceAlpha',0.5); % Bar plot for spike rates
+        bar(angles_deg, tuningCurve(ru,:), 'FaceColor', 'k','FaceAlpha',0.5); % Bar plot for spike rates
         hold on;
-        errorbar(angles_deg, tuningtuningCurveValZS, SEM, 'k', 'LineStyle', 'none', 'LineWidth', 1.5); % Error bars
-        xlabel('Stimulus Angle (degrees)');
-        ylabel('Z-score');
+        errorbar(angles_deg, tuningCurve(ru,:), SEM(ru,:), 'k', 'LineStyle', 'none', 'LineWidth', 1.5); % Error bars
+        ylabel('Absolute Z-score');
+        fig.Position = [1395         260         185         194];
 
-        % Add text outside the figure to the right
-        ax = gca;
-        xlim_vals = xlim; % Get x-axis limits
-        ylim_vals = ylim; % Get y-axis limits
-        x_text = xlim_vals(2) + 0.1 * range(xlim_vals); % Place text slightly to the right of the figure
-        y_text_1 = ylim_vals(2) - 0.1 * range(ylim_vals); % Adjust vertical position
-        y_text_2 = ylim_vals(2) - 0.2 * range(ylim_vals);
-
-        text(x_text, y_text_1, sprintf('OSI = %d', ), 'FontSize', 12, 'HorizontalAlignment', 'left');
-        text(x_text, y_text_2, 'DSI = 0.2', 'FontSize', 12, 'HorizontalAlignment', 'left');
-
+        title(sprintf('OSI = %.2f / DSI = %.2f',OSI(ru),DSI(ru)))
 
         if savePlot
             cd(saveDir)
@@ -746,7 +760,7 @@ for u = eNeuron
 
     end
 
-
+ur = ur+1;
 
 end %%%%End for loop over good neurons
 
