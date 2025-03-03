@@ -18,7 +18,7 @@ ReceptiveFieldFixedDelay = 0;
 
 tuning =1;
 ZscoreMethod = 1;
-takeMedian = 0;
+takeMedian = 1;
 
 depthPlot =0;
 
@@ -54,7 +54,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  49%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -287,6 +287,9 @@ for ex =  49%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%Goo
         movefile sorting_tIc.mat oldTIC
         movefile sorting_tIc_All.mat oldTIC
     end
+
+    if
+    p = NP.convertPhySorting2tIc(NP.recordingDir,0,1);
 
     p = NP.convertPhySorting2tIc(NP.recordingDir);
     label = string(p.label');
@@ -1006,6 +1009,9 @@ if tuning ==1
 
         end
 
+        ZscoreRaster = abs(ZscoreRaster); %%Use only absolute values of z-score. 
+
+
         ui = 1;
         for u = goodNeurons
             ZscoreRasterU = squeeze(ZscoreRaster(:,u,:));
@@ -1061,10 +1067,10 @@ if tuning ==1
 
         if takeMedian
             save('MedianTuningValZS','tuningValZS')
-            save('MedianSem_values_Tuning','sem_values')
+            save('MedianSem_values_Tuning','sem_values_Tuning')
         else
             save('MeanTuningValZS','tuningValZS')
-            save('MeanSem_values_Tuning','sem_values')
+            save('MeanSem_values_Tuning','sem_values_Tuning')
         end
 
         tuningCurve = tuningValZS;
@@ -1128,11 +1134,16 @@ if tuning ==1
     DSI(isnan(DSI))=0;
     L(isnan(L))=0;
 
-    
 
-    save(sprintf('Angle-prefer-%s',NP.recordingName),'Theta')
-    save(sprintf('Orientation-Tuning-Index-%s',NP.recordingName),'L')
-    save(sprintf('Direction-Selectivity-Index-%s',NP.recordingName),'DSI')
+    if takeMedian
+        save(sprintf('Median-Angle-prefer-%s',NP.recordingName),'Theta')
+        save(sprintf('Median-Orientation-Tuning-Index-%s',NP.recordingName),'L')
+        save(sprintf('Median-Direction-Selectivity-Index-%s',NP.recordingName),'DSI')
+    else
+        save(sprintf('Mean-Angle-prefer-%s',NP.recordingName),'Theta')
+        save(sprintf('Mean-Orientation-Tuning-Index-%s',NP.recordingName),'L')
+        save(sprintf('Mean-Direction-Selectivity-Index-%s',NP.recordingName),'DSI')
+    end
 
 
 

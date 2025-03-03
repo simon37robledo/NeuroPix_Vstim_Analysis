@@ -4,14 +4,16 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optional
+bombcelled = 1;
+
 summPlot = 0;
 plotexamplesMB =0;
-newTIC = 0;
-ResponseProfile=0; redoResp=0;
+newTIC = 1;
+ResponseProfile=1; redoResp=1;
 
 Shuffling =0;
-Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =0;
+Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =1;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
@@ -27,7 +29,7 @@ repeatConv =0;
 useZscore = 0;
 noEyeMoves = 0;
 ModeQuadrant = 0;
-XYdivision =1;
+XYdivision =0;
 plotRF =0;
 
 spatialTuning=0;
@@ -44,8 +46,8 @@ N_bootstrap = 1000;
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
-GoodRecordingsPV =[8:21,40:43,49:54];
-GoodRecordingsRF = [8:20,40:43,49:54];
+GoodRecordingsPV =[15:21,40:43,49:54];
+GoodRecordingsRF = [15:20,40:43,49:54];
 Awake = [44:48];
 %Plot specific neurons
  
@@ -288,9 +290,15 @@ for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRe
         movefile sorting_tIc_All.mat oldTIC
     end
 
-    p = NP.convertPhySorting2tIc(NP.recordingDir);
+    if bombcelled
+        p = NP.convertPhySorting2tIc(NP.recordingDir,0,1);
+    else
+        p = NP.convertPhySorting2tIc(NP.recordingDir);
+    end
+    
     label = string(p.label');
     goodU = p.ic(:,label == 'good');
+    
     if isempty(goodU)
         %disp()
         w= sprintf('No somatic neurons in %s. Skipping into next experiment.',NP.recordingName);

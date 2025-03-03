@@ -5,7 +5,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-bombcellUnits = 0;
+bombcelled = 1;
 newTIC = 0;
 rasters = 0;
 shuffling = 0;
@@ -26,13 +26,15 @@ examplesSDGA = [8:14 29 30 31 32 40 41 42 43 44 49:54];
 % MovingResponses = cell(1,length(examplesSDG));
 % trialThres = 0.6;
 
+GoodRecordingsPV =[15:21,40:43,49:54];
+
 
 %examplesSDG = [8 9 10 11 12 13 14 29 30 31 32];
 %%
 %SA5_1,PV103_7,PV27_1
 
 k=0;
-for ex = SDGrecordingsA%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
+for ex = GoodRecordingsPV%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 42 43
 
    
     %%%%%%%%%%%% Load data and data paremeters
@@ -179,10 +181,6 @@ for ex = SDGrecordingsA%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 4
     uSpatFR = unique(spatFR);nSpatFR = length(uSpatFR);
     
 
-    if bombcellUnits
-        [qMetric,unitType]=NP.getBombCell(NP.recordingDir);
-    end
-
     %5. Load data to select good units
     cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
     GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
@@ -200,7 +198,12 @@ for ex = SDGrecordingsA%examplesSDGA%SDGrecordingsA%1:size(data,1) 7 6 5 40 41 4
         movefile sorting_tIc_All.mat oldTIC
     end
 
-    p = NP.convertPhySorting2tIc(NP.recordingDir);
+    if bombcelled
+        p = NP.convertPhySorting2tIc(NP.recordingDir,0,1);
+    else
+        p = NP.convertPhySorting2tIc(NP.recordingDir);
+    end
+
     label = string(p.label');
     goodU = p.ic(:,label == 'good');
     if isempty(goodU)

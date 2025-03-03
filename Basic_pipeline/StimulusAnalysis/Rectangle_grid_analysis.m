@@ -7,6 +7,7 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
+bombcelled = 1;
 plotRasters =0;
 heatMap = 0;
 plotHeatMap =0;
@@ -19,14 +20,17 @@ newDiode =0;
 
 Shuffling_baseline=1;
 repeatShuff =1;
+trialThres =0.6;
 
 %GoodRecordingsPV =[15:20,40:43];
 SpatialTuning = 0;
 
 Awake = [44:48];
 
+GoodRecordingsPV =[15:21,40:43,49:54];
+
 %%
-for ex = SDGrecordingsA%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
+for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -181,7 +185,11 @@ for ex = SDGrecordingsA%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:
 
     GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
 
-    p = NP.convertPhySorting2tIc(NP.recordingDir);
+    if bombcelled
+        p = NP.convertPhySorting2tIc(NP.recordingDir,0,1);
+    else
+        p = NP.convertPhySorting2tIc(NP.recordingDir);
+    end
 
     %Select good units
     label = string(p.label');
