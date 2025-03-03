@@ -119,7 +119,7 @@ end
 
 meanCenter = [mean(Data.center_x), mean(Data.center_y)];
 
-Rotate = 1
+Rotate = 1;
 if Rotate
 %%%%%%% Rotate ellipse centers and phy angle. 
 % Convert angle to radians (assuming CorrectionAngle.angleCorrect is in degrees)
