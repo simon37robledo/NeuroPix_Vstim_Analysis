@@ -26,7 +26,8 @@ examplesSDGA = [8:14 29 30 31 32 40 41 42 43 44 49:54];
 % MovingResponses = cell(1,length(examplesSDG));
 % trialThres = 0.6;
 
-GoodRecordingsPV =[15:21,40:43,49:54];
+
+%GoodRecordingsPV =[1:21,40:43,49:54];
 
 
 %examplesSDG = [8 9 10 11 12 13 14 29 30 31 32];

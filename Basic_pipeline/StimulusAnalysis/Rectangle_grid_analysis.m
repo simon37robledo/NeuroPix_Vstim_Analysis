@@ -27,7 +27,8 @@ SpatialTuning = 0;
 
 Awake = [44:48];
 
-GoodRecordingsPV =[15:21,40:43,49:54];
+
+%GoodRecordingsPV =[1:21,40:43,49:54];
 
 %%
 for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)

@@ -17,7 +17,6 @@ repeatShuff =1;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
-Y
 tuning =1;cd
 ZscoreMethod = 1;
 takeMedian = 1;
@@ -56,7 +55,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  51%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  15%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -290,7 +289,7 @@ for ex =  51%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%Goo
         movefile sorting_tIc_All.mat oldTIC
     end
 
-    if bombcelled
+    if Bombcelled
         p = NP.convertPhySorting2tIc(NP.recordingDir,0,1);
     else
         p = NP.convertPhySorting2tIc(NP.recordingDir);

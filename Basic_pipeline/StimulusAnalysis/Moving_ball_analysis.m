@@ -17,7 +17,7 @@ repeatShuff =1;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
-tuning =1;cd
+tuning =1;
 ZscoreMethod = 1;
 takeMedian = 1;
 
@@ -45,9 +45,11 @@ N_bootstrap = 1000;
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
-GoodRecordingsPV =[15:21,40:43,49:54];
 GoodRecordingsRF = [15:20,40:43,49:54];
 Awake = [44:48];
+
+
+%GoodRecordingsPV =[1:21,40:43,49:54];
 %Plot specific neurons
  
 %%%In shuffling make sure that response cat is selected equally between SDG
@@ -55,7 +57,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  15%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -1341,8 +1343,6 @@ for plotOp = plotexamplesMB %rstx
         end
 
 
-        %eNeuron = 19;%1:length(goodU); %8
-
         orderS = [2 3 4 5;4 2 3 5;5 2 3 4;3 2 4 5];
         orderNames = {'dir_off_sizes_speeds';'sizes_dir_off_speeds';'speeds_dir_off_sizes';'off_dir_sizes_speeds'};
 
@@ -1908,6 +1908,14 @@ end
 
 % %%% Convolution
 for convNeuron = 1
+    if ismember(ex,GoodRecordingsRF)
+        ReceptiveFieldConvolutions =1;
+        repeatConv =1;    
+    else
+        ReceptiveFieldConvolutions =0;
+        repeatConv =0; 
+    end
+
     if ReceptiveFieldConvolutions ==1
         cd(NP.recordingDir)
 
