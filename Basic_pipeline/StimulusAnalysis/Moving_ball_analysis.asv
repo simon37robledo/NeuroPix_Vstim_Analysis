@@ -4,19 +4,21 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optional
+bombcelled = 1;
+
 summPlot = 0;
 plotexamplesMB =0;
-newTIC = 0;
-ResponseProfile=0; redoResp=0;
+newTIC = 1;
+ResponseProfile=1; redoResp=1;
 
 Shuffling =0;
-Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =0;
+Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =1;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
-
-tuning =1;
+Y
+tuning =1;cd
 ZscoreMethod = 1;
 takeMedian = 1;
 
@@ -27,7 +29,7 @@ repeatConv =0;
 useZscore = 0;
 noEyeMoves = 0;
 ModeQuadrant = 0;
-XYdivision =1;
+XYdivision =0;
 plotRF =0;
 
 spatialTuning=0;
@@ -44,8 +46,8 @@ N_bootstrap = 1000;
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
-GoodRecordingsPV =[8:21,40:43,49:54];
-GoodRecordingsRF = [8:20,40:43,49:54];
+GoodRecordingsPV =[15:21,40:43,49:54];
+GoodRecordingsRF = [15:20,40:43,49:54];
 Awake = [44:48];
 %Plot specific neurons
  
@@ -54,7 +56,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  51%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -288,12 +290,18 @@ for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRe
         movefile sorting_tIc_All.mat oldTIC
     end
 
-    if
-    p = NP.convertPhySorting2tIc(NP.recordingDir,0,1);
+    if bombcelled
+        p = NP.convertPhySorting2tIc(NP.recordingDir,0,1);
+    else
+        p = NP.convertPhySorting2tIc(NP.recordingDir);
+    end
 
-    p = NP.convertPhySorting2tIc(NP.recordingDir);
+   
+    
     label = string(p.label');
     goodU = p.ic(:,label == 'good');
+    phy_IDg = p.phy_ID(label == 'good');
+    
     if isempty(goodU)
         %disp()
         w= sprintf('No somatic neurons in %s. Skipping into next experiment.',NP.recordingName);
@@ -1425,7 +1433,7 @@ for plotOp = plotexamplesMB %rstx
                 %Plot stim end:
                 xline(stimDur/bin2+preBase/bin2,'k',LineWidth=1.5)
                 ylabel(sprintf('%d Trials',nT));
-                title(sprintf('U.%d-Unit-phy-%d',u,GoodU_or(u)));
+                title(sprintf('U.%d-Unit-phy-%d',u,phy_IDg(u)));
                 caxis([0 1])
 
                 %xticks([0.5 (preBase/bin):10:nB])

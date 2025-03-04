@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python Debugger: Remote Attach",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "/mnt/d/Mark_S13/Documents/GitHub/NeuroPix_Vstim_Analysis/Basic_pipeline/EyeVideoAnalysis/Allen_Gaze_mapper.ipynb",
+                    "remoteRoot": "/home/simon/miniconda3/envs/AllenSDKlinux/lib/python3.6/site-packages/allensdk/brain_observatory/gaze_mapping/_gaze_mapper.py"
+                }
+            ]
+        }
+    ]
+}

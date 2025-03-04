@@ -17,8 +17,7 @@ repeatShuff =1;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
-
-tuning =1;
+tuning =1;cd
 ZscoreMethod = 1;
 takeMedian = 1;
 
@@ -56,7 +55,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  15%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -295,9 +294,12 @@ for ex =  GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRe
     else
         p = NP.convertPhySorting2tIc(NP.recordingDir);
     end
+
+   
     
     label = string(p.label');
     goodU = p.ic(:,label == 'good');
+    phy_IDg = p.phy_ID(label == 'good');
     
     if isempty(goodU)
         %disp()
@@ -1430,7 +1432,7 @@ for plotOp = plotexamplesMB %rstx
                 %Plot stim end:
                 xline(stimDur/bin2+preBase/bin2,'k',LineWidth=1.5)
                 ylabel(sprintf('%d Trials',nT));
-                title(sprintf('U.%d-Unit-phy-%d',u,GoodU_or(u)));
+                title(sprintf('U.%d-Unit-phy-%d',u,phy_IDg(u)));
                 caxis([0 1])
 
                 %xticks([0.5 (preBase/bin):10:nB])

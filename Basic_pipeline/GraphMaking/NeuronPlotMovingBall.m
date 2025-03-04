@@ -163,6 +163,8 @@ goodU = p.ic(:,label == 'good');
 cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
 GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
 
+phy_IDg = p.phy_ID(label == 'good');
+
 
 % Load Triggers (diode)
 Ordered_stims= strsplit(data.VS_ordered{ex},',');
@@ -303,7 +305,7 @@ for u = eNeuron
         %Plot stim end:
         xline(stimDur/bin2+preBase/bin2,'k',LineWidth=1.5)
         ylabel(sprintf('%d Trials',nT));
-        title(sprintf('U.%d-Unit-phy-%d',eNeuron,GoodU_or(eNeuron)));
+        title(sprintf('U.%d-Unit-phy-%d',eNeuron,phy_IDg(eNeuron)));
 
         caxis([0 1])
         dirStart = C(1,2);
