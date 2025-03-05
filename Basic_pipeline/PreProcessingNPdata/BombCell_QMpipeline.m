@@ -162,7 +162,7 @@ data = readtable(excelFile);
 
 
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  1:21%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  21%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -194,7 +194,7 @@ for ex =  1:21%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%Good
 
     NP = NPAPRecording(path);
 
-    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,0,0,1);
+    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,1,4,1);
     close all
 
 end

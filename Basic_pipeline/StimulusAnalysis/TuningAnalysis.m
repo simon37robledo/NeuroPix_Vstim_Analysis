@@ -8,7 +8,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-GoodRecordingsPV =[8:21,40:43,49:54];
+GoodRecordingsPV =[40:43,49:54];
 
 recordings = GoodRecordingsPV;
 
@@ -159,6 +159,12 @@ ylabel('Tuning strength')
 ylim([-0.1 1])
 cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
 print(fig, 'tuningIndexesMovBall.pdf', '-dpdf', '-r300', '-vector');
+
+fig = figure;
+plot(vDSI,vOSI,'.');
+xlabel('DSI')
+ylabel('OSI')
+print(fig, 'OSIvsDSI.pdf', '-dpdf', '-r300', '-vector');
 
 
 

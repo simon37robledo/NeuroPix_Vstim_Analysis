@@ -4,7 +4,7 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optional
-bombcelled = 1;
+bombcelled = 0;
 
 summPlot = 0;
 plotexamplesMB =0;
@@ -12,14 +12,14 @@ newTIC = 1;
 ResponseProfile=1; redoResp=1;
 
 Shuffling =0;
-Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =1;
+Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =0;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
-tuning =1;
-ZscoreMethod = 1;
-takeMedian = 1;
+tuning =0;
+ZscoreMethod = 0;
+takeMedian = 0;
 
 depthPlot =0;
 
@@ -57,7 +57,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  51%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -1908,13 +1908,13 @@ end
 
 % %%% Convolution
 for convNeuron = 1
-    if ismember(ex,GoodRecordingsRF)
-        ReceptiveFieldConvolutions =1;
-        repeatConv =1;    
-    else
-        ReceptiveFieldConvolutions =0;
-        repeatConv =0; 
-    end
+%     if ismember(ex,GoodRecordingsRF)
+%         ReceptiveFieldConvolutions =1;
+%         repeatConv =1;    
+%     else
+%         ReceptiveFieldConvolutions =0;
+%         repeatConv =0; 
+%     end
 
     if ReceptiveFieldConvolutions ==1
         cd(NP.recordingDir)

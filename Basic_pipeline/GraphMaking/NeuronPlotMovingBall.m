@@ -27,7 +27,7 @@ addParameter(p, 'savePlot', 0);
 addParameter(p, 'saveDir', '\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure');
 addParameter(p, 'SelectRand', 0);
 addParameter(p, 'noEyeMoves', 0);
-addParameter(p, 'DivisionType', 'XY');
+addParameter(p, 'DivisionType', 'Mode');
 addParameter(p, 'tuningPlot',0)
 
 
@@ -305,7 +305,7 @@ for u = eNeuron
         %Plot stim end:
         xline(stimDur/bin2+preBase/bin2,'k',LineWidth=1.5)
         ylabel(sprintf('%d Trials',nT));
-        title(sprintf('U.%d-Unit-phy-%d',eNeuron,phy_IDg(eNeuron)));
+        title(sprintf('U.%d-Unit-phy-%d',u,phy_IDg(u)));
 
         caxis([0 1])
         dirStart = C(1,2);
@@ -350,7 +350,7 @@ for u = eNeuron
 
             ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
 
-            mZscoreRaster = mean(ZscoreRaster(:,eNeuron,:),3);
+            mZscoreRaster = mean(ZscoreRaster(:,u,:),3);
 
             trialsHigherSpiking = find(mZscoreRaster>mean(mZscoreRaster)+2*std(mZscoreRaster));
 
@@ -372,7 +372,7 @@ for u = eNeuron
         else %%Select highest window stim type
 
 
-            [maxResp,maxRespIn]= max(NeuronVals(eNeuron,:,1));
+            [maxResp,maxRespIn]= max(NeuronVals(u,:,1));
 
             maxRespIn = maxRespIn-1;
 
@@ -395,7 +395,7 @@ for u = eNeuron
 
         subplot(10,1,[7 8])
 
-        MRhist = BuildBurstMatrix(goodU(:,eNeuron),round(p.t),round((directimesSorted(trials)-preBase)),round((stimDur+preBase*2)));
+        MRhist = BuildBurstMatrix(goodU(:,u),round(p.t),round((directimesSorted(trials)-preBase)),round((stimDur+preBase*2)));
 
         [nT2,nN2,nB2]= size(MRhist);
 
@@ -432,7 +432,7 @@ for u = eNeuron
         %%%%PLot raw data several trials one
         %%%%channel%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        chan = goodU(1,eNeuron);
+        chan = goodU(1,u);
 
         startTimes = directimesSorted(trials)-preBase;
 
@@ -460,6 +460,7 @@ for u = eNeuron
             cd(saveDir)
             print(gcf, sprintf('%s-MovBall-SelectedTrials-eNeuron-%d.pdf',NP.recordingName,u), '-dpdf', '-r300', '-vector');
         end
+        close
     end
 
     %% %%%%%%%%%Plot receptive field per direction
@@ -708,9 +709,13 @@ for u = eNeuron
             timesnips = [directimesSorted(trials);directimesSorted(trials)+stimDur];
 
             EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,timesnips,1,0)
-        else
+        elseif DivisionType == "XY" %%%divided
 
             EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,0,1,1)
+
+        else %% mode type of division
+
+            EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,0,1)
 
         end
 
@@ -756,7 +761,7 @@ for u = eNeuron
 
         if savePlot
             cd(saveDir)
-            print(fig, sprintf('%s-MovBall-tuningCurve-U%d.pdf',NP.recordingName,eNeuron),'-dpdf', '-r300', '-vector');
+            print(fig, sprintf('%s-MovBall-tuningCurve-U%d.pdf',NP.recordingName,u),'-dpdf', '-r300', '-vector');
         end
 
 
