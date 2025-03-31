@@ -21,13 +21,14 @@ addRequired(p, 'eNeuron');
 
 % Optional Name-Value pairs with defaults
 addParameter(p, 'Raster', 0);
+addParameter(p, 'RasterTrials', 0);
 addParameter(p, 'ReField', 0);
 addParameter(p, 'EyeMovements', 0);
 addParameter(p, 'savePlot', 0);
 addParameter(p, 'saveDir', '\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure');
 addParameter(p, 'SelectRand', 0);
 addParameter(p, 'noEyeMoves', 0);
-addParameter(p, 'DivisionType', 'XY');
+addParameter(p, 'DivisionType', 'Mode');
 addParameter(p, 'tuningPlot',0)
 
 
@@ -36,6 +37,7 @@ parse(p, data,ex,eNeuron, varargin{:});
 
 % Extract values
 Raster = p.Results.Raster;
+RasterTrials = p.Results.Raster;
 ReField = p.Results.ReField;
 EyeMovements = p.Results.EyeMovements;
 savePlot = p.Results.savePlot;
@@ -163,6 +165,8 @@ goodU = p.ic(:,label == 'good');
 cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
 GoodU_or = cluster_info.cluster_id(cluster_info.group=="good");
 
+phy_IDg = p.phy_ID(label == 'good');
+
 
 % Load Triggers (diode)
 Ordered_stims= strsplit(data.VS_ordered{ex},',');
@@ -234,13 +238,13 @@ orderNames = {'dir_off_sizes_speeds';'sizes_dir_off_speeds';'speeds_dir_off_size
 posX = squeeze(NeuronVals(:,:,3));
 posY = squeeze(NeuronVals(:,:,2));
 bin = 1;
-bin2 =20;
+bin2 =15;
 trialsPerAngle = trialDivision*offsetN*speedN*sizeN*orientN;
 
 
 directimesSorted = C(:,1)';
 
-preBase = round(stimInter/4);
+preBase = round(stimInter-stimInter/4);
 
 [Mr] = BuildBurstMatrix(goodU(:,eNeuron),round(p.t/bin2),round((directimesSorted-preBase)/bin2),round((stimDur+preBase*2)/bin2));
 
@@ -252,7 +256,7 @@ N_bootstrap = 1000;
 
 pvals = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse').pvalsResponse;
 
-pvals = [eNeuron;pvals(eNeuron)];
+pvals = [eNeuron;pvals(eNeuron)]; %%%Why unit 59 has a pvalue of 0. 
 
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% plot raster MB %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -264,6 +268,10 @@ for u = eNeuron
 
 
     if Raster
+
+        fig =  figure;
+
+        title(sprintf('U.%d-Unit-phy-%d-p-%d',u,phy_IDg(u),pvals(2)));
 
         sizeN=1;
 
@@ -295,26 +303,24 @@ for u = eNeuron
         [nT,nB] = size(Mr2);
 
 
-        fig =  figure;
-        subplot(10,1,[1 6]);
+        subplot(20,1,[7 18]);
         imagesc(squeeze(Mr2).*(1000/bin2));colormap(flipud(gray(64)));
         %Plot stim start:
         xline(preBase/bin2,'k', LineWidth=1.5)
         %Plot stim end:
         xline(stimDur/bin2+preBase/bin2,'k',LineWidth=1.5)
-        ylabel(sprintf('%d Trials',nT));
-        title(sprintf('U.%d-Unit-phy-%d',eNeuron,GoodU_or(eNeuron)));
+
 
         caxis([0 1])
         dirStart = C(1,2);
         offStart = C(1,3);
         for t = 1:nT*mergeTrials
             if dirStart ~= C(t,2)
-                yline(t/mergeTrials+0.5,'k',LineWidth=3);
+                yline(t/mergeTrials-0.5,'k',LineWidth=1.5);
                 dirStart = C(t,2);
             end
             if offStart ~= C(t,3)
-                yline(t/mergeTrials+0.5,'k',LineWidth=1);
+                yline(t/mergeTrials-0.5,'k',LineWidth=0.5);
                 offStart = C(t,3);
             end
 
@@ -339,6 +345,9 @@ for u = eNeuron
 
         yticklabels(repmat([trialDivision:trialDivision*2*sizeN:(nT/direcN)-1+trialDivision*sizeN],1,direcN))
 
+        ax = gca; % Get current axes
+        ax.YAxis.FontSize = 7; % Change font size of y-axis tick labels
+
 
         %%%%Select 10 random trials where Z-score is above the average
 
@@ -348,7 +357,7 @@ for u = eNeuron
 
             ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
 
-            mZscoreRaster = mean(ZscoreRaster(:,eNeuron,:),3);
+            mZscoreRaster = mean(ZscoreRaster(:,u,:),3);
 
             trialsHigherSpiking = find(mZscoreRaster>mean(mZscoreRaster)+2*std(mZscoreRaster));
 
@@ -369,8 +378,19 @@ for u = eNeuron
 
         else %%Select highest window stim type
 
+            j =1;
+            meanMr = zeros(1,nT/trialDivision);
+            for i = 1:trialDivision:nT
+               
+                meanMr(j) = mean(Mr2(i:i+trialDivision-1,:),'all');
 
-            [maxResp,maxRespIn]= max(NeuronVals(eNeuron,:,1));
+                j = j+1;
+            end
+
+
+            %[maxResp,maxRespIn]= max(NeuronVals(u,:,1));
+
+            [maxResp,maxRespIn]= max(meanMr);
 
             maxRespIn = maxRespIn-1;
 
@@ -378,22 +398,42 @@ for u = eNeuron
 
             colors = turbo(trialDivision);
 
-            y1 = maxRespIn*trialDivision + trialDivision+1;
-            y2 = maxRespIn*trialDivision+2;
+            y1 = maxRespIn*trialDivision + trialDivision;
+            y2 = maxRespIn*trialDivision;
 
-            patch([preBase/bin2 (stimDur+preBase)/bin2 (stimDur+preBase)/bin2 preBase/bin2],...
+            start = -50;
+
+            window = 300;%round(stimDur+preBase*2);
+
+            patch([(preBase+start)/bin2 (preBase+start+window)/bin2 (preBase+start+window)/bin2 (preBase+start)/bin2],...
                 [y2 y2 y1 y1],...
                 'b','FaceAlpha',0.3,'EdgeColor','none')
 
+             patch([1 (preBase*2+stimDur)/bin2 (preBase*2+stimDur)/bin2 1],...
+                [y2 y2 y1 y1],...
+                'b','FaceAlpha',0.2,'EdgeColor','b')
+
+
         end
 
+        TrialNumber = 8;
+        %Mark selected trial
+        RasterTrials = trials(TrialNumber);
+% 
+%         spikes1 = Mr2(RasterTrials,:);
+%         
+%         hold on
+%         %plot(zeros(1,numel(RasterTrials)),RasterTrials,'*')
+%        
+%         spikeLoc = find(spikes1 >0);
+%         plot(spikeLoc, repmat(RasterTrials,numel(spikeLoc),1),'.','MarkerSize',10,'MarkerFaceColor','r','MarkerEdgeColor','r')
 
         %%%%%% Plot PSTH
         %%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        subplot(10,1,[7 8])
+        subplot(20,1,[19 20])
 
-        MRhist = BuildBurstMatrix(goodU(:,eNeuron),round(p.t),round((directimesSorted(trials)-preBase)),round((stimDur+preBase*2)));
+        MRhist = BuildBurstMatrix(goodU(:,u),round(p.t),round((directimesSorted-preBase)),round((stimDur+preBase*2)));
 
         [nT2,nN2,nB2]= size(MRhist);
 
@@ -413,15 +453,23 @@ for u = eNeuron
         psthRate = (psthCounts / (binWidth * nT2))*1000;
 
         b=bar(edges(1:end-1), psthRate,'histc');
-        b.FaceColor = 'k';
-        b.FaceAlpha = 0.5;
+        b.FaceColor = 'b';
+        b.FaceAlpha = 0.3;
         b.MarkerEdgeColor = "none";
-        ylabel('Firing Rate (Hz)');
+        ylabel('Spikes/sec','FontSize',10);
+        xlabel('Seconds','FontSize',10);
         xlim([0 round((stimDur+preBase*2)/100)*100])
+        ylim([0 max(psthRate)+std(psthRate)])
 
         xticks([0 preBase:300:(stimDur+preBase*2) round((stimDur+preBase*2)/100)*100])
-        xticklabels([])
+
         xline([preBase stimDur+preBase],'LineWidth',1.5)
+
+        xticklabels([-(preBase) 0:300:round((stimDur/100))*100 round((stimDur/100))*100 + preBase]./1000)
+      
+        ax = gca; % Get current axes
+        ax.YAxis.FontSize = 7; % Change font size of y-axis tick labels
+        ax.XAxis.FontSize = 7;
 
 
         %set(gca, 'XLim', [-0.5, 1]); % Match raster plot x-axis
@@ -430,35 +478,88 @@ for u = eNeuron
         %%%%PLot raw data several trials one
         %%%%channel%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        chan = goodU(1,eNeuron);
+            chan = goodU(1,u);
+            
+            subplot(20,1,[1 3])
+            start = -50;
+            startTimes = directimesSorted(RasterTrials)+start;
 
-        startTimes = directimesSorted(trials)-preBase;
+            window = 300;%round(stimDur+preBase*2);
 
-        window = round(stimDur+preBase*2);
+            freq = "AP"; %or "LFP"
 
-        freq = "AP"; %or "LFP"
+            type = "line"; %or heatmap
 
-        type = "line"; %or heatmap
+            spikes = squeeze(BuildBurstMatrix(goodU(:,u),round(p.t),round(startTimes),round((window))));
 
-        subplot(10,1,[9 10])
+            [fig, mx, mn] = PlotRawData(fig,NP,chan,startTimes,window,freq,type,preBase,spikes');
 
-        [fig, mx, mn] = PlotRawData(fig,NP,chan,startTimes,window,freq,type,preBase);
+            xlabel(string(chan))
+            xline(-start/1000,'LineWidth',1.5)
+            xticklabels([])
+            xlabel([]);xticks([])
+            ylabel('uV')
+                
+        
+        %%%%%%%%%%% Plot raster of selected trials
+        %%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%
+            subplot(20,1,[4 5])
 
-        xticklabels([]) %%%plot example PV139-local neurons
-        xlabel([])
-        %xlim([0 round(stimDur+preBase*2)])
+            %RasterTrials =  trials(2); %Trial selected above
 
-        xticklabels([-(preBase) 0:300:round((stimDur/100))*100 round((stimDur/100))*100 + preBase]./1000)
-        fig.Position = [680     5   296   9734];
+            RasterTrials =  trials;
 
-        limsY = ylim;
-        ylim([limsY(1)-mx limsY(2)+mx]); %%%Set limits using max and min spike values
+            bin3 = 2;
+            trialM = BuildBurstMatrix(goodU(:,eNeuron),round(p.t/bin3),round((directimesSorted+start)/bin3),round((window)/bin3));
+            
+            if numel(RasterTrials) == 1         
+                TrialM = squeeze(trialM(RasterTrials,:,:))';
+            else               
+                TrialM = squeeze(trialM(trials,:,:));   
+            end
+            
+
+            TrialM(TrialM~=0) = 0.3;
+            spikes1 = TrialM(TrialNumber,:);
+            spikeLoc = find(spikes1 >0);
+            TrialM(TrialNumber,spikeLoc) = 1;
+
+            %Select offset in which selected trial belongs (10 trials)
+            imagesc(TrialM);colormap(flipud(gray(64)));
+            %caxis([0 1])
+            xline([preBase stimDur+preBase],'LineWidth',1.5)
+            ylabel([sprintf('%d trials',numel(trials))])
+            xticks([1 abs(start)/bin3:20/bin3:window/bin3])
+            xticklabels([start 0:20:window-abs(start)])
+            xlabel('Milliseconds')
+            set(gca,'FontSize',7)
+
+            xline(-start/bin3,'LineWidth',1.5)
+            
+            xline(spikeLoc,'LineWidth',1,'Color','b','Alpha',0.3)
+
+            yline(TrialNumber,'LineWidth',3,'Color','b','Alpha',0.3) %Mark trial
+%   
+            fig.Position = [680     5   296   9734];
+% 
+%         limsY = ylim;
+%         ylim([limsY(1)-mx limsY(2)+mx]); %%%Set limits using max and min spike values
 
         if savePlot
             cd(saveDir)
             print(gcf, sprintf('%s-MovBall-SelectedTrials-eNeuron-%d.pdf',NP.recordingName,u), '-dpdf', '-r300', '-vector');
         end
+
+        %if max(RasterTrials) > 0 %%trials organized by direction
+
+
+        %end
+
     end
+        
+    
+
+
 
     %% %%%%%%%%%Plot receptive field per direction
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -532,15 +633,19 @@ for u = eNeuron
 
             else
 
-                rf{1} = load(sprintf('NEM-RFuSTDirSizeFilt-%s',NP.recordingName)).RFuSTDirSizeFilt; %Size and dir
+                rf{1} = load(sprintf('NEM-RFuSTDirSizeFilt-Q1-Div-X-%s',NP.recordingName)).RFuSTDirSizeFilt; %Size and dir
 
                 RF{1} = rf;
+
+                names{1} ="";
             end
         else
             q=1;
             rf{1} = load(sprintf('RFuSTDirSizeFilt-%s',NP.recordingName)).RFuSTDirSizeFilt; %Size and dir
 
             RF{1} = rf;
+
+            names{1} ="";
         end
 
      
@@ -597,13 +702,14 @@ for u = eNeuron
                 if names{n} == 'X'
                     qNames = {'Right','Left'};
 
-                else
+                elseif names{n} == 'Y'
                     qNames = {'Down','Up'};
+                else
+                    qNames = {"-"};
                 end
 
                 RFuSTDirSizeFilt = rf{1,q};
 
-                rf{2,q}
                 if size(RFuSTDirSizeFilt,2) >1 %If there is more than on size %%Solve for 2 quadrants
                     %%Select size closest to 120
                     [minS indx] = min(abs(unique(sizes)-120));
@@ -613,7 +719,7 @@ for u = eNeuron
                 end
 
 
-                xqLayout=tiledlayout(NeuronLayout,direcN/2,direcN/2,"TileSpacing","tight");
+                xqLayout=tiledlayout(NeuronLayout,direcN/2,direcN/2,"TileSpacing","compact");
                 xqLayout.Layout.Tile = tl;
 
                 %DirLayout=tiledlayout(direcN/2,direcN/2,"TileSpacing","tight","Padding","none");
@@ -626,25 +732,47 @@ for u = eNeuron
                     if d ==1 || d==3
                         imagesc(rot90(squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,ru)),2));
                         
-                        c = colorbar;
+%                         c = colorbar;
                     else
                         imagesc((squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,ru))));
                         
                     end
 
+                    if d==2
                     c = colorbar;
+                    title(c,'Z-score')
+                    end
+
+                    
+
                     caxis([cMin cMax]);
                     
                     colormap('turbo')
                     title(string(uDir(d)))
-                    title(c,'Z-score')
+                    
                     %xlim([(redCoorX-redCoorY)/2 (redCoorX-redCoorY)/2+redCoorY])
                     xt = xticks;%(linspace((redCoorX-redCoorY)/2,(redCoorX-redCoorY)/2+redCoorY,offsetN*2));
+                    xt = xt((1:2:numel(xt)));
+                    xticks(xt);
                     xticklabels(round(theta_x(1,xt)))
+                    
                     yt = yticks;
+                    yt = yt(1:2:numel(yt));
+                    yticks(yt);
                     yticklabels(round(theta_y(yt,1)))
-%                     xlabel('X degrees')
-%                     ylabel('Y degrees')
+                    %                     xlabel('X degrees')
+                    %                     ylabel('Y degrees')
+                    if d == 1 || d==2
+
+                        xticks([])
+
+                    end
+
+                    if d==2 || d==4
+
+                        yticks([])
+
+                    end
 
 %%%%Use same colorbar scale
 
@@ -679,8 +807,12 @@ for u = eNeuron
 
         if savePlot
             cd(saveDir)
-            figRF.Position = [0.283333333333333        0.0166666666666667                  0.396875         0.893518518518519];
-            print(gcf, sprintf('%s-MovBall-ReceptiveField-Div-%s-Q-%d-eNeuron-%d.pdf',NP.recordingName,names{n},q,u), '-dpdf', '-r300', '-vector');
+            figRF.Position = [ 0.584895833333333         0.261111111111111                   0.11875          0.20462962962963];
+            if noEyeMoves
+                print(gcf, sprintf('%s-NEM-MovBall-ReceptiveField-Div-%s-Q-%d-eNeuron-%d.pdf',NP.recordingName,names{n},q,u), '-dpdf', '-r300', '-vector');
+            else
+                print(gcf, sprintf('%s-MovBall-ReceptiveField-Div-%s-Q-%d-eNeuron-%d.pdf',NP.recordingName,names{n},q,u), '-dpdf', '-r300', '-vector');
+            end
         end
     end
 
@@ -706,11 +838,17 @@ for u = eNeuron
             timesnips = [directimesSorted(trials);directimesSorted(trials)+stimDur];
 
             EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,timesnips,1,0)
-        else
+        elseif DivisionType == "XY" %%%divided
 
             EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,0,1,1)
 
+        else %% mode type of division
+
+            EyePositionAnalysis(NP,data.Eye_video_dir{ex},31,1,0,0,0,1,0)
+
         end
+
+        figure
 
         if savePlot
             cd(saveDir)
@@ -721,40 +859,28 @@ for u = eNeuron
 
     if tuningPlot
 
-        takeMedian = 1;
 
-        if takeMedian 
-            tuningCurve = load('MedianTuningValZS').tuningValZS;
-            SEM = load('MedianSem_values_Tuning').sem_values_Tuning;
-            DSI = load(sprintf('Median-Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
-            OSI = load(sprintf('Median-Orientation-Tuning-Index-%s',NP.recordingName)).L;
-        else
-            tuningCurve = load('MeanTuningValZS').tuningValZS;
-            SEM = load('MeanSem_values_Tuning').sem_values_Tuning;
-            DSI = load(sprintf('Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
-            OSI = load(sprintf('Orientation-Tuning-Index-%s',NP.recordingName)).L;
-        end
-        
-        respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+        tuningCurve = load('tuningCurveAllOffsets').tuningCurve; %mean rate of spikes per ms.
+        SEM = load('sem_values_Tuning').sem_values_Tuning;
+        DSI = load(sprintf('Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
+        OSI = load(sprintf('Orientation-Tuning-Index-%s',NP.recordingName)).L;
 
-        respU = find(respNeuronsMB<0.05);
-
-        ru = find(respU == u);
 
         % Plot the tuning curve with error bars
         fig = figure;
         angles_deg = rad2deg(uDir); % Angles in degrees
-        bar(angles_deg, tuningCurve(ru,:), 'FaceColor', 'k','FaceAlpha',0.5); % Bar plot for spike rates
+        %Convert to spikes per second:
+        bar(angles_deg, tuningCurve(u,:).*1000, 'FaceColor', 'k','FaceAlpha',0.5); % Bar plot for spike rates
         hold on;
-        errorbar(angles_deg, tuningCurve(ru,:), SEM(ru,:), 'k', 'LineStyle', 'none', 'LineWidth', 1.5); % Error bars
-        ylabel('Absolute Z-score');
-        fig.Position = [1395         260         185         194];
+        errorbar(angles_deg, tuningCurve(u,:).*1000, SEM(u,:).*1000, 'k', 'LineStyle', 'none', 'LineWidth', 1.5); % Error bars
+        ylabel('Spikes/sec');
+        fig.Position = [ 997   264   366   142];
 
-        title(sprintf('OSI = %.2f / DSI = %.2f',OSI(ru),DSI(ru)))
+        title(sprintf('OSI = %.2f / DSI = %.2f',OSI(u),DSI(u)))
 
         if savePlot
             cd(saveDir)
-            print(fig, sprintf('%s-MovBall-tuningCurve-U%d.pdf',NP.recordingName,eNeuron),'-dpdf', '-r300', '-vector');
+            print(fig, sprintf('%s-MovBall-tuningCurve-U%d.pdf',NP.recordingName,u),'-dpdf', '-r300', '-vector');
         end
 
 

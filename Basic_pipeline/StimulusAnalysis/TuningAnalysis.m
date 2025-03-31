@@ -8,14 +8,17 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-GoodRecordingsPV =[40:43,49:54];
+GoodRecordingsPV =[40:43 49:54];
 
 recordings = GoodRecordingsPV;
+
+takeMedian = 1;
 
 tuningCurve = cell(1,numel(recordings));
 SEM = cell(1,numel(recordings));
 DSI = cell(1,numel(recordings));
 OSI =cell(1,numel(recordings));
+Theta = cell(1,numel(recordings));
 preferDir = cell(1,numel(recordings));
 
 MBc =[];
@@ -58,7 +61,7 @@ for ex =  GoodRecordingsPV
     sign = 0.05; %%%Significance level used to calculate receptive fields
     respU = find(respNeuronsMB<sign);
         
-    tempTC = load('MedianTuningValZS').tuningValZS;
+    tempTC = load('tuningCurveAllOffsets').tuningCurve;;
 
     if size(tempTC,2) > 4
         tempTC = tempTC(:,1:2:size(tempTC,2)); %%Select only up, left, down, and right (0,90,180,270) if the recording has more than 4 directions
@@ -66,10 +69,20 @@ for ex =  GoodRecordingsPV
 
 
     tuningCurve{i} = tempTC;
-    SEM{i} = load('MedianSem_values_Tuning').sem_values_Tuning;
-    DSI{i} = load(sprintf('Median-Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
-    OSI{i} = load(sprintf('Median-Orientation-Tuning-Index-%s',NP.recordingName)).L;
-    [maxVal preferD] = max(tempTC,[],2);
+
+
+    DSIt= load(sprintf('Direction-Selectivity-Index-%s',NP.recordingName)).DSI;
+    DSIt = DSIt(respNeuronsMB<sign);
+    DSI{i} = DSIt;
+    
+    OSIt = load(sprintf('Orientation-Tuning-Index-%s',NP.recordingName)).L;
+    OSIt = OSIt(respNeuronsMB<sign);
+    OSI{i} = OSIt;
+    
+    Thetat = load(sprintf('Angle-prefer-%s',NP.recordingName)).pI;
+    Thetat = Thetat(respNeuronsMB<sign);
+    Theta{i} = Thetat;
+    [maxVal preferD] = max(tempTC(respNeuronsMB<sign,:),[],2);
 
     preferDir{i} = preferD;
 
@@ -91,7 +104,7 @@ end
 cats = categorical([ones(1,length(cell2mat(DSI'))) ones(1,length(cell2mat(DSI')))+1 ones(1,length(cell2mat(DSI')))+2])';
 
 fig = figure;
-tiledlayout(3,1, "TileSpacing","loose","Padding","loose")
+tiledlayout(2,1, "TileSpacing","loose","Padding","loose")
 
 %%%%%%%%%%%
 nexttile %%% all
@@ -103,68 +116,102 @@ xticklabels({'DSI','OSI','DSI-OSI'})
 ax = gca; % Get current axis
 ax.XAxis.FontSize = 7; % Set font size of x-axis tick labels
 ylabel('Tuning strength')
+yline(0,'LineWidth',1,'Color','k')
 
-%%%%%%%%%%
-nexttile %%% dsi > 0.7
-
-thres1 = 0.7;
-vDSI = cell2mat(DSI');
-
-vOSI = cell2mat(OSI');
-
-diffDSI_OSI = vDSI(vDSI>thres1)-vOSI(vDSI>thres1);
-
-val = [vDSI(vDSI>thres1);vOSI(vDSI>thres1);diffDSI_OSI];
-
-cats = categorical([ones(1,sum(vDSI>thres1)) ones(1,sum(vDSI>thres1))+1 ones(1,sum(vDSI>thres1))+2])';
-
-colors = [MBc(vDSI>thres1)'; MBc(vDSI>thres1)';MBc(vDSI>thres1)'];
-
-swarmchart(cats, val, 10,'filled','MarkerFaceAlpha',0.8)
-
-yline(thres1,'LineWidth',2,'Label',string(0.7),'LabelHorizontalAlignment','right','FontSize',7)
-xticklabels({'DSI > 0.7','OSI','DSI-OSI'})
-ax = gca; % Get current axis
-ax.XAxis.FontSize = 7; % Set font size of x-axis tick labels
-ylabel('Tuning strength')
-
-
-%%%%%%%
-nexttile %%% osi > 0.7
+% %%%%%%%%%%
+% nexttile %%% dsi > 0.7
+% 
+% thres1 = 0.7;
+% vDSI = cell2mat(DSI');
+% 
+% vOSI = cell2mat(OSI');
+% 
+% 
+% diffDSI_OSI = vDSI(vDSI>thres1)-vOSI(vDSI>thres1);
+% 
+% val = [vDSI(vDSI>thres1);vOSI(vDSI>thres1);diffDSI_OSI];
+% 
+% cats = categorical([ones(1,sum(vDSI>thres1)) ones(1,sum(vDSI>thres1))+1 ones(1,sum(vDSI>thres1))+2])';
+% 
+% colors = [MBc(vDSI>thres1)'; MBc(vDSI>thres1)';MBc(vDSI>thres1)'];
+% 
+% swarmchart(cats, val, 10,'filled','MarkerFaceAlpha',0.8)
+% 
+% yline(thres1,'LineWidth',2,'Label',string(0.7),'LabelHorizontalAlignment','right','FontSize',7)
+% xticklabels({'DSI > 0.7','OSI','DSI-OSI'})
+% ax = gca; % Get current axis
+% ax.XAxis.FontSize = 7; % Set font size of x-axis tick labels
+% ylabel('Tuning strength')
 
 
-thres1 = 0.7;
+% %%%%%%%
+% nexttile %%% osi > 0.7
+% 
+% 
+% thres1 = 0.7;
+% 
+% 
+% diffOSI_DSI = vOSI(vOSI>thres1)-vDSI(vOSI>thres1);
+% 
+% val = [vDSI(vOSI>thres1);vOSI(vOSI>thres1);diffOSI_DSI];
+% 
+% cats = categorical([ones(1,sum(vOSI>thres1)) ones(1,sum(vOSI>thres1))+1 ones(1,sum(vOSI>thres1))+2])';
+% 
+% colors = [MBc(vOSI>thres1)'; MBc(vOSI>thres1)';MBc(vOSI>thres1)'];
+% 
+% swarmchart(cats, val, 10,'filled','MarkerFaceAlpha',0.8)
+% 
+% yline(thres1,'LineWidth',2,'Label',string(0.7),'LabelHorizontalAlignment','right','FontSize',7)
 
+% set(gcf,'Color','w');%
+% % xticklabels({'DSI','OSI > 0.7','OSI-DSI'})
+% ax = gca; % Get current axis
+% ax.XAxis.FontSize = 7; % Set font size of x-axis tick labels
 
-diffOSI_DSI = vOSI(vOSI>thres1)-vDSI(vOSI>thres1);
-
-val = [vDSI(vOSI>thres1);vOSI(vOSI>thres1);diffOSI_DSI];
-
-cats = categorical([ones(1,sum(vOSI>thres1)) ones(1,sum(vOSI>thres1))+1 ones(1,sum(vOSI>thres1))+2])';
-
-colors = [MBc(vOSI>thres1)'; MBc(vOSI>thres1)';MBc(vOSI>thres1)'];
-
-swarmchart(cats, val, 10,'filled','MarkerFaceAlpha',0.8)
-
-yline(thres1,'LineWidth',2,'Label',string(0.7),'LabelHorizontalAlignment','right','FontSize',7)
-
-set(gcf,'Color','w');%
-xticklabels({'DSI','OSI > 0.7','OSI-DSI'})
-ax = gca; % Get current axis
-ax.XAxis.FontSize = 7; % Set font size of x-axis tick labels
-
-fig.Position = [1269         362         189         305];
+%fig.Position = [1269         362         189         305];
 
 ylabel('Tuning strength')
 ylim([-0.1 1])
 cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
-print(fig, 'tuningIndexesMovBall.pdf', '-dpdf', '-r300', '-vector');
 
-fig = figure;
+nexttile
 plot(vDSI,vOSI,'.');
 xlabel('DSI')
 ylabel('OSI')
-print(fig, 'OSIvsDSI.pdf', '-dpdf', '-r300', '-vector');
+axis equal
+xlim([0 1])
+ylim([0 1])
+hold on
+plot([0,1],[0,1],'LineWidth',1,'Color','k')
+title('Median per direction')
+print(fig, 'tuningIndexesMovBall.pdf', '-dpdf', '-r300', '-vector');
+
+%% Histogram of prefered angles
+
+%%Create a round histogram divided into 4 direction. Within each direction,
+%%DSI values are sorted
+
+angles = cell2mat(preferDir');
+DSIv = cell2mat(DSI');
+OSIv = cell2mat(OSI');
+
+figure;swarmchart(categorical(angles),OSIv,10, 'filled','MarkerFaceAlpha',0.5);
+
+set(gcf,'Color','w');%
+ax = gca; % Get current axis
+ax.XAxis.FontSize = 7; % Set font size of x-axis tick labels
+ylabel('DSI')
+yline(0,'LineWidth',1,'Color','k')
+
+fig.Position = [1269         362         189         305];
+
+
+fig = figure; tiledlayout(2,2)
+
+
+
+
+
 
 
 

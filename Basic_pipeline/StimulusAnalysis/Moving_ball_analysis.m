@@ -5,29 +5,31 @@ data = readtable(excelFile);
 
 %Optional
 bombcelled = 0;
+sigma = 0.05; %Criteria for responsive units. Used on the tunin and receptive field analysis. 
 
 summPlot = 0;
 plotexamplesMB =0;
-newTIC = 1;
-ResponseProfile=1; redoResp=1;
+newTIC = 0;
 
+ResponseProfile=0; redoResp=0;
 Shuffling =0;
-Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =1;
+Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =0;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
+
 tuning =0;
 ZscoreMethod = 0;
-takeMedian = 0;
+
 
 depthPlot =0;
 
 ReceptiveFieldConvolutions =1;
 repeatConv =1;
 useZscore = 1;
-noEyeMoves = 0;
-ModeQuadrant = 0;
+noEyeMoves = 1;
+ModeQuadrant = 1;
 XYdivision =0;
 plotRF =0;
 
@@ -36,7 +38,7 @@ calculateEntropy =0;
 
 includeOnespeed = 1;
 x=1;
-examplesSDG =[1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
+examplesSDG = [1 2 3 4 5 6 7 29 30 31 32 40 41 42 43];
 N_bootstrap = 1000;
 
 
@@ -45,10 +47,11 @@ N_bootstrap = 1000;
 pv27 = [8 9 10 11 12 13 14];
 
 newDiode =0;
-GoodRecordingsRF = [15:20,40:43,49:54];
+GoodRecordingsRF = [8:20,40:43,49:54];
 Awake = [44:48];
 
-
+duration = 100; %in ms. Duration of window in which the response is calculated. This window
+% moves along the raster and the maximal mean is selected as response, per trial, offset, etx
 %GoodRecordingsPV =[1:21,40:43,49:54];
 %Plot specific neurons
  
@@ -57,7 +60,7 @@ Awake = [44:48];
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [40:43 49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [40:43,49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -333,11 +336,10 @@ for ex =  [40:43 49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRec
 %         stimType(:,end-1) = ResponseStrengthU34;
 %         stimType(:,end) = ResponseStrengthU8;
 % 
-           EyePositionAnalysis(NP,data.Eye_video_dir{ex},21,1,0,0,0,1,1)
+           EyePositionAnalysis(NP,data.Eye_video_dir{ex},31,1)
 % 
      end
     
-
 
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-stimInter/2)/bin),round((stimDur+stimInter)/bin)); %response matrix
     [nT,nN,nB] = size(Mr);
@@ -431,7 +433,7 @@ for ex =  [40:43 49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRec
     for ResponseProfileF =1
 if ResponseProfile ==1
     %4. Create window to scan rasters and get the maximum response
-    duration =300; %ms
+    
     Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
     [MrC]=ConvBurstMatrix(Mr,fspecial('gaussian',[1 5],3),'same');
 
@@ -770,7 +772,6 @@ for Shuffle =1
     if Shuffling_baseline
         
         
-        N_bootstrap = 1000;
 
         if ~isfile(sprintf('pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
 
@@ -796,9 +797,9 @@ for Shuffle =1
 
         kernel = ones(trialDivision, duration) / (trialDivision * duration); % Normalize for mean
         % Start a parallel pool (if not already started)
-        if isempty(gcp('nocreate'))
-            parpool; % Start a pool with the default number of workers
-        end
+%         if isempty(gcp('nocreate'))
+%             parpool; % Start a pool with the default number of workers
+%         end
 
         tic
         for i = 1:N_bootstrap
@@ -831,6 +832,7 @@ for Shuffle =1
         ZScoreU = zeros(1,nN);
 
         for u = 1:nN
+
             posTr = NeuronVals(u,respVali(u),2);
             posBin = NeuronVals(u,respVali(u),3);
 
@@ -842,7 +844,7 @@ for Shuffle =1
             ZScoreU(u) = (respVal(u)-mean(boot_means(:,u)))/(std(boot_means(:,u))+1/(N_bootstrap*trialDivision));
 
 
-            if emptyRows/trialDivision >= trialThres
+            if emptyRows/trialDivision >= trialThres %%%Check which unit is 34 i respU
                 pvalsResponse(u) = 1;
             end
 
@@ -858,9 +860,9 @@ for Shuffle =1
 
         kernel = ones(1, duration); % Normalize for mean
 
-        sigma = 5;  % Standard deviation
+        sigmastd = 5;  % Standard deviation
         % Kernel size (should be odd for symmetry)
-        kernel = fspecial('gaussian', [1 duration], sigma);
+        kernel = fspecial('gaussian', [1 duration], sigmastd);
 
         kernel = ones(1, duration) / (1 * duration);
 
@@ -889,9 +891,9 @@ for Shuffle =1
 
         kernel = ones(1, duration); % Normalize for mean
 
-        sigma = 5;  % Standard deviation
+        sigmastd = 5;  % Standard deviation
         % Kernel size (should be odd for symmetry)
-        kernel = fspecial('gaussian', [1 duration], sigma);
+        kernel = fspecial('gaussian', [1 duration], sigmastd);
 
         kernel = ones(1, duration) / (1 * duration);
 
@@ -949,7 +951,11 @@ if tuning ==1
 
     cd(NP.recordingDir)
 
-    N_bootstrap = 1000;
+
+    pvals= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
+    goodNeurons =  find(pvals <sigma);
+
+    trials_for_angle = nT/direcN;
 
     if ZscoreMethod
 
@@ -958,21 +964,19 @@ if tuning ==1
             ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
 
         else
-            %%%%%%%Compute Z-score raster to use later in convolution
-            try
+            %%%%%%%Compute Z-score raster 
+            try 
                 boot_means = load(sprintf('MovBall-Base-Boot-%d-%s',N_bootstrap,NP.recordingName)).boot_means;
 
                 Mr = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted)/bin),round((stimDur+duration)/bin)); %response matrix
 
                 [nT,nN,nB] = size(Mr);
 
-                duration = 300; %%Standard kernel duration used. 
-
                 kernel = ones(1, duration); % Normalize for mean
 
-                sigma = 5;  % Standard deviation
+                sigmastd = 5;  % Standard deviation
                 % Kernel size (should be odd for symmetry)
-                kernel = fspecial('gaussian', [1 duration], sigma);
+                kernel = fspecial('gaussian', [1 duration], sigmastd);
 
                 kernel = ones(1, duration) / (1 * duration); %Kernel that takes the mean
 
@@ -998,14 +1002,10 @@ if tuning ==1
 
         end
 
-        pvals= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
-        sigma = 0.05;
-        goodNeurons =  find(pvals <sigma);
-%
         % Initialize arrays to store spike rates and SEM for each angle
         tuningValZS = zeros(length(goodNeurons), direcN); % 4 angles (0, 90, 180, 270)
         sem_values_Tuning = zeros(length(goodNeurons), direcN);   % 4 SEM values
-        duration = 300;
+       
 
         if sizeN>1
 
@@ -1047,10 +1047,13 @@ if tuning ==1
                 %Take max across bins
                 [maxZ(j) maxZpos(j)] = max(meanZSperOffset);
 
+                %Take mean across entire  offset
+
+                MeanOffs(j) = mean(meanZSperOffset);
+
                 j =j+1;
             end
 %
-            trials_for_angle = nT/direcN;
 
             % Loop through each angle and calculate the max ZS and SEM
             for i = 1:direcN
@@ -1068,6 +1071,9 @@ if tuning ==1
                 %
                 % Calculate the mean spike rate and SEM
                 sem_values_Tuning(ui,i) = std(TrialValsOfMaxZS) / sqrt(length(TrialValsOfMaxZS));
+
+                tuningValZSmean(ui,i) = max(MeanOffs(i*offsetN-(offsetN-1):i*offsetN));
+
             end
 
             ui = ui+1;
@@ -1091,26 +1097,40 @@ if tuning ==1
 
     end
 
-    nN = size(tuningCurve,1);
+ 
+
+    [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-stimInter)/bin),round((stimDur+stimInter*2)/bin)); %response matrix
+ 
     
+    %Take mean per direction, overall.
+
+    tuningCurve = zeros(size(goodU,2),direcN);
+    sem_values_Tuning = zeros(size(goodU,2),direcN);
+
+    for d = 1:direcN
+        for u=1:size(goodU,2)
+            tuningCurve(u,d) = mean(Mr(d*trials_for_angle-(trials_for_angle-1):d*trials_for_angle,u,:),"all");
+            tMatrix = squeeze(Mr(d*trials_for_angle-(trials_for_angle-1):d*trials_for_angle,u,:));
+            sem_values_Tuning(u,d) = std(mean(tMatrix,2)) ...
+                / sqrt(size(tMatrix,1));
+        end
+    end
+
+
+    save('tuningCurveAllOffsets','tuningCurve');
+    save('sem_values_Tuning','sem_values_Tuning');
+
+    nN = size(tuningCurve,1);
     %%%%% Tuning indexes (OSI, DSI, Prefered angle)
     % Calculate tuning direction and strength for all neurons then plot it across depth and in 3D
     uDirDeg = rad2deg(uDir);
     
-    %%% method one OSI
+    %%% method one OSI %Same result
     OI = sqrt(sum(tuningCurve.*sin(2*uDir),2).^2 + sum(tuningCurve.*cos(2*uDir),2).^2)./sum(tuningCurve,2); % OI calculated as in Dragoi and Swindale.
 
     %%%% Preferred orientation
     oneSideCurve = zeros(nN,direcN/2);
   
-    %     for u = 1:nN
-    %         NeuronD = squeeze(NeuronVals(u,:,[1 5]));
-    %         NeuronD(:,2)=rad2deg(NeuronD(:,2));
-    %         for d = 1:length(uDir)/2
-    %             oneSideCurve(u,d) = mean(NeuronD(NeuronD(:,2)==uDir(d),1))';
-    %             oneSideCurve(u,d) = oneSideCurve(u,d)+ mean(NeuronD(NeuronD(:,2)==uDir(d)+180,1))';
-    %         end
-    %     end
 
     a = sum(tuningCurve.*cos(2*uDir),2);
     b = sum(tuningCurve.*sin(2*uDir),2);
@@ -1139,22 +1159,22 @@ if tuning ==1
     end
 
 
-    DSI = 1- nonPreferDir./preferDir;
+    DSI = 1- nonPreferDir./preferDir; %%%check rasters of prefer/nprefer =1' 
     DSI(isnan(DSI))=0;
     L(isnan(L))=0;
 
+    find(DSI(goodNeurons) ==0)
 
-    if takeMedian
-        save(sprintf('Median-Angle-prefer-%s',NP.recordingName),'Theta')
-        save(sprintf('Median-Orientation-Tuning-Index-%s',NP.recordingName),'L')
-        save(sprintf('Median-Direction-Selectivity-Index-%s',NP.recordingName),'DSI')
-    else
-        save(sprintf('Mean-Angle-prefer-%s',NP.recordingName),'Theta')
-        save(sprintf('Mean-Orientation-Tuning-Index-%s',NP.recordingName),'L')
-        save(sprintf('Mean-Direction-Selectivity-Index-%s',NP.recordingName),'DSI')
-    end
+%     if any(DSI == 0) | any(DSI == 0) 
+% 2+2
+%     end
 
+    Theta = uDirDeg(pI);
 
+    save(sprintf('Angle-prefer-%s',NP.recordingName),'pI')
+    save(sprintf('Orientation-Tuning-Index-%s',NP.recordingName),'L')
+    save(sprintf('Direction-Selectivity-Index-%s',NP.recordingName),'DSI')
+   
 
     %respU = string(data.ResponseU(ex));
 
@@ -1312,7 +1332,7 @@ for plotOp = plotexamplesMB %rstx
             files= filenames(contains(filenames,"timeSnipsNoMov"));
             cd(NP.recordingDir)
             %Run eyePosition Analysis to find no movement timeSnips
-            timeSnips = load(files{1}).timeSnips;
+            timeSnips = load(files{2}).timeSnips; %Select 31 quadrants
             timeSnipsMode = timeSnips(:,timeSnips(3,:) == mode(timeSnips(3,:)));
 
 %             if includeOnespeed
@@ -2117,52 +2137,6 @@ for convNeuron = 1
             end
 
             cd(NP.recordingDir)
-            %         boot_means = load(sprintf('MovBall-Base-Boot-1000-%s',NP.recordingName)).boot_means;
-
-            %spikeSum = spikeSums{2};
-
-%             eNspkS = squeeze(spikeSum(:,ru,:));
-%             figure;imagesc(eNspkS);colormap(flipud(gray(64)));
-%             rowsWithNaN = find(any(isnan(eNspkS), 2));
-%             yline(rowsWithNaN,'g')
-%             yline(trialDivision*sizeN:trialDivision*sizeN:size(spikeSums{q},1));
-%             yline(trialDivision*offsetN*sizeN:trialDivision*offsetN*sizeN:size(spikeSums{q},1)-1,'r','LineWidth',5)
-%             title(string(q))
-
-            %%%Zscore of spikes per frame. Convert everything to spikes per
-            %%%second beforehand.
-            %             meanBase = mean(Mbase(:,respU,:),[1 3]);
-            %             N_bootstrap = 1000;
-            %             nN= length(respU);
-            %             substractor = reshape(mean(boot_means(:,respU)*(1000/duration)),[1, nN, 1]);
-            %             denominator = reshape(std(boot_means(:,respU)*(1000/duration))+1/(N_bootstrap*trialDivision),[1,nN,1]);
-            %             spikeSum = (spikeSum.*(1000/msPerFarme)-substractor)./denominator; %convert into spike rate.
-            %spikeSum = (spikeSum./msPerFarme);%.*1000;
-            %
-            %             if useZscore %%%%%Select correct timestamps.
-            %
-            %                 ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
-            %
-            %                 %bin Z-score accordying to frame number:
-            %                 spikeSum = nan(size(Mr,1),length(respU),sizeX(4),'single');
-            %
-            %
-            %                 for u = 1:length(respU)
-            %
-            %                     Mu = squeeze(ZscoreRaster(:,respU(u),:));
-            %
-            %                     j= 1;
-            %
-            %                     for f = 1:sizeX(4)
-            %
-            %                         spikeSum(selecInd,u,f) = mean(Mu(selecInd,1*j:min(f*msPerFarme,length(Mu))),2);
-            %
-            %                         j = f*msPerFarme;
-            %                     end
-            %                 end
-            %
-            %             end
-
 
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2936,8 +2910,6 @@ for spatun =1
 
         ZScoreU = zeros(length(unique(seqMatrix)),size(goodU,2));
 
-
-        N_bootstrap = 1000;
 
         for u = 1:size(goodU,2)
 

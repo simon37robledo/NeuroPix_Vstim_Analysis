@@ -162,42 +162,32 @@ data = readtable(excelFile);
 
 
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  21%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [51 52 53 54]%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
-    path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
-        +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
-    try %%In case it is not run in Vstim computer, which has drives mapped differently
-        cd(pathE)
-    catch
-        try
-            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-            if strcmp(originP,'sil3\data')
-                path = replaceBetween(path,"","\Large_scale","W:");
-            else
-                path = replaceBetween(path,"","\Large_scale","Y:");
-            end
+    NP = loadNPclassFromTable(ex);
 
-            cd(path)
-        catch
+    KSversion =4;
 
-            if strcmp(originP,'sil3\data')
-                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
-            else
-                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
-            end
-            cd(path)
-
-        end
-
-    end
-
-    NP = NPAPRecording(path);
-
-    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,1,4,1);
+    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,1,KSversion,0);
     close all
 
 end
+
+%% Do distribution of amplitudes
+for ex =  []%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+    %%%%%%%%%%%% Load data and data paremeters
+    %1. Load NP class
+    NP = loadNPclassFromTable(ex);
+
+    KSversion =4;
+
+    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,1,KSversion,0);
+    close all
+
+end
+
+
 
 
 
