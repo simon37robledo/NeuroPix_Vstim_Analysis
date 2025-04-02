@@ -58,7 +58,11 @@ for tr = 1:min(size(raw_signal))
         %plot(spikeTimesIndex,repmat(min(signal-offset*(j)),1,length(spikeTimesIndex)),'.','Color','b','MarkerSize',7);
 
         %%Improve with plot function for several trials
+        try
         xline(spikeTimesIndex,'LineWidth',1,'Color','b','Alpha',0.3) %Plot spikes.
+        catch
+        fprintf('Selected trial has no spikes')
+        end
         
     end
     hold on

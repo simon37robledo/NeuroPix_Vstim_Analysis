@@ -324,9 +324,13 @@ else %%%No center division
     %%%Make condition in which the eye doesn't move from central frame
 
     indexesChange=find(diff(indFrames)~=0)+1;
-    timeSnips = zeros(3,length(indexesChange)+1);
+   
+    if isempty(indexesChange) %%Eye movements remain in the same central quadrant
+        indexesChange = [1 numel(frameTimes)];
 
-    %%Asign start and end timeSnip
+    end
+
+    timeSnips = zeros(3,length(indexesChange)+1);
     timeSnips(:,1) = [0;frameTimes(indexesChange(1));indFrames(1)];
     timeSnips(:,end) = [frameTimes(indexesChange(end));frameTimes(end);indFrames(end)];
 

@@ -27,7 +27,7 @@ depthPlot =0;
 
 ReceptiveFieldConvolutions =1;
 repeatConv =1;
-useZscore = 1;
+useZscore = 0;
 noEyeMoves = 1;
 ModeQuadrant = 1;
 XYdivision =0;
@@ -60,7 +60,7 @@ duration = 100; %in ms. Duration of window in which the response is calculated. 
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [40:43,49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
@@ -336,7 +336,7 @@ for ex =  [40:43,49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRec
 %         stimType(:,end-1) = ResponseStrengthU34;
 %         stimType(:,end) = ResponseStrengthU8;
 % 
-           EyePositionAnalysis(NP,data.Eye_video_dir{ex},31,1)
+           EyePositionAnalysis(NP,data.Eye_video_dir{ex},31)
 % 
      end
     
@@ -2095,16 +2095,16 @@ for convNeuron = 1
            x = fliplr(x);
 
             %%%%%% Add spikes accordying to number of frames.
+
+            msPerFarme= stimDur/sizeX(4);
             
             if useZscore %%%%%Select correct timestamps.
                 Mr = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
             else
-                [Mr] = BuildBurstMatrix(goodU,round(p.t),round((directimesSorted)),round((stimDur)));
-                [Mbase] = BuildBurstMatrix(goodU,round(p.t/binFrame),round((directimesSorted-preBase)/binFrame),round((preBase)/binFrame));
+                [Mr] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted)/msPerFarme),round((stimDur)/msPerFarme));
+                [Mbase] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted-preBase)/msPerFarme),round((preBase)/msPerFarme));
             end
 
-            msPerFarme= round(stimDur/sizeX(4));
-            binFrame = msPerFarme;
             [trials neurons bins] = size(Mr());
             
             spikeSumsDiv = cell(1,numel(IndexDiv));
@@ -2114,21 +2114,28 @@ for convNeuron = 1
 
                 for i = 1:numel(IndexQ) %%%% quadrant, e.g. right, left
 
-                    spikeSum = zeros(size(Mr,1),length(respU),sizeX(4),'single');
+                    spikeSum = Mr(IndexDiv{t}{i},:,:);
 
-                    for u = 1:length(respU)
 
-                        Mu = squeeze(Mr(:,respU(u),:));
+                    spikeSum = (spikeSum./msPerFarme).*1000; %Convert to spikes per second
+                    
+                    %Previous method:
+%                    spikeSum = zeros(size(Mr,1),length(respU),sizeX(4),'single');
+%
+%                     for u = 1:length(respU)
+% 
+%                         Mu = squeeze(Mr(:,respU(u),:));
+% 
+%                         j= 1;
+% 
+%                         for f = 1:sizeX(4)
+% 
+%                             spikeSum(IndexDiv{t}{i},u,f) = mean(Mu(IndexDiv{t}{i},1*j:min(f*msPerFarme,length(Mu))),2);
+% 
+%                             j = f*msPerFarme;
+%                         end
+%                     end
 
-                        j= 1;
-
-                        for f = 1:sizeX(4)
-
-                            spikeSum(IndexDiv{t}{i},u,f) = mean(Mu(IndexDiv{t}{i},1*j:min(f*msPerFarme,length(Mu))),2);
-
-                            j = f*msPerFarme;
-                        end
-                    end
 
                     spikeSumsQ{i} = spikeSum;
                 end
@@ -2137,6 +2144,7 @@ for convNeuron = 1
             end
 
             cd(NP.recordingDir)
+
 
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2170,14 +2178,14 @@ for convNeuron = 1
 
             x = fliplr(x);
 
-            spikeSum = zeros(size(Mr,1),length(respU),sizeX(4),'single');
-            %spikeSumBase = mean(Mbase,3);
-
-            %%%%%% Add spikes accordying to number of frames.
-            msPerFarme= round(stimDur/sizeX(4));
-            [Mr] = BuildBurstMatrix(goodU,round(p.t),round((directimesSorted)),round((stimDur)));
-            binFrame = msPerFarme;
-            [Mbase] = BuildBurstMatrix(goodU,round(p.t/binFrame),round((directimesSorted-preBase)/binFrame),round((preBase)/binFrame));
+            msPerFarme= stimDur/sizeX(4);
+            
+            if useZscore %%%%%Select correct timestamps.
+                ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
+            else
+                [Mr] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted)/msPerFarme),round((stimDur)/msPerFarme));
+                [Mbase] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted-preBase)/msPerFarme),round((preBase)/msPerFarme));
+            end
 
             [trials neurons bins] = size(Mr);
 
@@ -2189,7 +2197,7 @@ for convNeuron = 1
 
                 for f = 1:sizeX(4)
 
-                    spikeSum(:,u,f) = sum(Mu(:,1*j:min(f*msPerFarme,length(Mu))),2);
+                    spikeSum(:,u,f) = mean(Mu(:,1*j:min(f*msPerFarme,length(Mu))),2);
 
                     j = f*msPerFarme;
                 end
@@ -2205,32 +2213,30 @@ for convNeuron = 1
 %             substractor = reshape(mean(boot_means(:,respU)*(1000/duration)),[1, nN, 1]); 
 %             denominator = reshape(std(boot_means(:,respU)*(1000/duration))+1/(N_bootstrap*trialDivision),[1,nN,1]);
 %             spikeSum = (spikeSum.*(1000/msPerFarme)-substractor)./denominator; %convert into spike rate.
-            spikeSum = (spikeSum./msPerFarme);%.*1000;
+           
+            spikeSum = (spikeSum./msPerFarme).*1000; %Convert to spikes per second
 
-            %spikeSum1 = spikeSum;
 
-            if useZscore
+%             ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
+% 
+%             %bin Z-score accordying to frame number:
+% 
+% 
+%             for u = 1:length(respU)
+% 
+%                 Mu = squeeze(ZscoreRaster(:,respU(u),:));
+% 
+%                 j= 1;
+% 
+%                 for f = 1:sizeX(4)
+% 
+%                     spikeSum(:,u,f) = mean(Mu(:,1*j:min(f*msPerFarme,length(Mu))),2);
+% 
+%                     j = f*msPerFarme;
+%                 end
+%             end
 
-                ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
 
-                %bin Z-score accordying to frame number:
-                
-                
-                for u = 1:length(respU)
-
-                    Mu = squeeze(ZscoreRaster(:,respU(u),:));
-
-                    j= 1;
-
-                    for f = 1:sizeX(4)
-
-                        spikeSum(:,u,f) = mean(Mu(:,1*j:min(f*msPerFarme,length(Mu))),2);
-
-                        j = f*msPerFarme;
-                    end
-                end
-
-            end
 
             spikeSumsDiv{1}{1} = spikeSum;
 
@@ -2254,12 +2260,33 @@ for convNeuron = 1
             %%A. CONVOLUTION. Runs the spike train across the stimulus videos, to
             %%extract noisy receptive field (because spike responses are noise).
             if noEyeMoves
-
                 Q = unique(timeSnips(3,:));
             else
                 Q = 1;
             end
-                
+
+            %%%%%%%%%%%%%%%%%%%% Shuffle raster before convolution in order
+            %%%%%%%%%%%%%%%%%%%% to calculate tuning index
+            %%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%
+
+            nShuffle =50;
+
+            Raster = BuildBurstMatrix(goodU(:,respU),round(p.t/msPerFarme),round((directimesSorted)/msPerFarme),round((stimDur)/msPerFarme));
+            
+            shuffledData = zeros(size(Raster,1), size(Raster,2), size(Raster,3), nShuffle);
+
+            for i =1:nShuffle
+
+                % Shuffle along the first dimension
+                idx1 = randperm(size(Raster,1));
+
+                % Shuffle along the third dimension
+                idx3 = randperm(size(Raster,3));
+
+                shuffledData(:,:,:,i) = Raster(idx1, :, idx3);
+
+            end
+
             tic
 
 
@@ -2268,6 +2295,7 @@ for convNeuron = 1
              for q = 1:numel(IndexQ)
 
                  %%%%Initialize 5D matrices
+                 RFuShuff = zeros(redCoorY,redCoorX,sizeX(4),length(respU),"single");
                  RFu = zeros(redCoorY,redCoorX,sizeX(4),length(respU),"single");
 
                  RFuSpeed = zeros(speedN,redCoorY,redCoorX,sizeX(4),length(respU),"single");
@@ -2309,25 +2337,25 @@ for convNeuron = 1
                      %Normalize spike mean by number of spikes.
                      spikeMean = mean(spikeSum(i:i+trialDivision-1,:,:),'omitnan');
                      Co = zeros(redCoorY,redCoorX,sizeX(4),length(respU),'single');
+                     CoShuff = zeros(redCoorY,redCoorX,sizeX(4),length(respU),nShuffle,'single');
+
+                     spikeMeanShuff = mean(shuffledData(i:i+trialDivision-1,:,:,:),'omitnan');
 
 
-                     for u = 1:length(respU)
-                         Co(:,:,:,u) = convn(videoTrials,spikeMean(:,u,:),'same');
+                     for u = 1:length(respU)  
+                         Co(:,:,:,u) = convn(videoTrials,spikeMean(:,respU(u),:),'same');
+
+                         %%%Convolve the shuffled rasters
+
+                         for s = 1:nShuffle
+
+                             CoShuff(:,:,:,u,s) = convn(videoTrials,spikeMeanShuff(:,u,:,s),'same');
+
+                         end                        
+
                      end
 
-                     %                 exam = sum(convn(videoTrials,spikeMean(:,1,:),'same'),3);
-                     %
-                     %                 figure;imagesc(exam)
-
-
-
-                     %     figure;imagesc(squeeze(Co(:,:,80,3)))
-                     %%Select same size per direction
-
-                     if C(i,2) == uDir(3)
-                         2+2
-                     end
-
+                   
                      RFuDir(Udir == C(i,2),:,:,:,:) = squeeze(RFuDir(Udir == C(i,2),:,:,:,:))+Co./(nT/direcN/trialDivision);
                      RFuDirSize(Udir == C(i,2),Usize == C(i,6),:,:,:,:) = squeeze(RFuDirSize(Udir == C(i,2),Usize == C(i,6),:,:,:,:))+Co./(nT/direcN/trialDivision);
                      RFuSize(Usize == C(i,6),:,:,:,:) = squeeze(RFuSize(Usize == C(i,6),:,:,:,:))+Co./(nT/sizeN/trialDivision);
@@ -2336,6 +2364,7 @@ for convNeuron = 1
                      NormVideo = NormVideo+videoTrials;%.*reshape(spkRateBM,[1 1 1 length(spkRateBM)]);
 
                      RFu = RFu+Co./(nT/trialDivision);
+                     RFuShuff = RFuShuff+CoShuff./(nT/trialDivision);
                  end
 
 
@@ -2348,11 +2377,9 @@ for convNeuron = 1
                  time_zero_index = ceil(L / 2);
 
 
-
-
                  nN =length(respU);
 
-                 %%%%%% Normalize abd select delay
+                 %%%%%% Normalize and select delay
                  delay = 250;
 
                  %             RFuNorm = RFu;%squeeze(RFuSize(ceil(sizeN/2),:,:,:,:))./reshape(normMatrixMean,[size(normMatrixMean,1) size(normMatrixMean,2) 1 nN]);
@@ -2364,14 +2391,77 @@ for convNeuron = 1
                  RFuSTDirSize =  reshape(RFuDirSize(:,:,:,:,time_zero_index+round(delay/msPerFarme),:),... %Reshape to eliminate frame component.
                      [size(RFuDirSize,1),size(RFuDirSize,2),size(RFuDirSize,3),size(RFuDirSize,4),size(RFuDirSize,6)]);
 
-                 %
-                 %radius = uSize(ceil(sizeN/2))/2/reduceFactor;
-                 TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDirSize,3)/9),5);
+                 RFuST = squeeze(RFu(:,:,time_zero_index+round(delay/msPerFarme),:));
 
+                 RFuShuffST = squeeze(RFuShuff(:,:,time_zero_index+round(delay/msPerFarme),:));
+
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Calculate tuning
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% indexes
+
+                %1. Bin the receptive field into offsetxoffset grid and
+                %take the mean within each grid. 
+
+                perc = 90; %Tope percentile selected to calculate tuning
+
+                rowT = zeros(1,respU);
+                colT = zeros(1,respU);
+
+                for u =1:length(respU)
+
+                    % Example 54x54 matrix
+                    rfi = squeeze(RFuST(:,(redCoorX-redCoorY)/2+1:(redCoorX-redCoorY)/2+redCoorY,u));
+
+                    % Define block size
+                    blockSize = redCoorY/offsetN;
+
+                    % Reshape and compute the mean for each 9x9 block
+                    meanGrid = blockproc(rfi, [blockSize blockSize], @(x) mean(x.data(:)));
+
+                    % Find mean of top blocks and rest, and the location of
+                    % the top blocks
+                    TOPper = prctile(meanGrid(:), perc);
+
+                    Rtop = mean(meanGrid(meanGrid >= TOPper));
+
+                    [rowT(u), colT(u)] = find(meanGrid >= TOPper);
+
+                    Rrest = mean(meanGrid(meanGrid < TOPper));
+
+                    % Calculate first term
+
+                    realTerm = (Rtop - Rrest)/mean(meanGrid,'all');
+
+                    %Do the same for the shuffled
+
+                    for s = 1:nShuffle
+
+                        rfiShuff = RFuShuff
+
+                        meanGridShuff = blockproc(rfi, [blockSize blockSize], @(x) mean(x.data(:)));
+
+                    end
+
+
+
+                    
+                end
+
+                % Display result
+                disp(meanGrid);
+
+
+
+
+
+                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Apply 2d Gaussian to receptive fields
+                 %TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDirSize,3)/9),5);
+
+                 TwoDGaussian = fspecial('gaussian',floor(size(RFuSTDirSize,3)/(9/2)),redCoorY/offsetN); %increase size of gaussian by 100%.
                  %RFuSTDirFilt = zeros(size(RFuSTDir));
-                 %
+                 
                  RFuSTDirSizeFilt = zeros(size(RFuSTDirSize));
 
+               
                  for d = 1:size(RFuSTDir,1) %dirs
                      for s = 1:size(RFuSTDirSize,2) %Size
                          parfor ui =1:size(RFuSTDir,4) %units

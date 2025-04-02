@@ -9,43 +9,61 @@
 %%
 function NeuronPlotMovingBall(data,ex,eNeuron,varargin)
 
-
-
 % Create parser object
 p = inputParser;
 
-% Add required inputs
+%% Add required inputs
 addRequired(p, 'data');
 addRequired(p, 'ex');
 addRequired(p, 'eNeuron');
 
-% Optional Name-Value pairs with defaults
+%% Optional Name-Value pairs with defaults
+
+%Raster
 addParameter(p, 'Raster', 0);
-addParameter(p, 'RasterTrials', 0);
-addParameter(p, 'ReField', 0);
-addParameter(p, 'EyeMovements', 0);
-addParameter(p, 'savePlot', 0);
-addParameter(p, 'saveDir', '\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure');
+addParameter(p, 'TrialNumber', 1);
 addParameter(p, 'SelectRand', 0);
-addParameter(p, 'noEyeMoves', 0);
-addParameter(p, 'DivisionType', 'Mode');
+addParameter(p, 'window', 300); %window (ms)
+addParameter(p, 'start', -50); %Start respective to stimulus onset (ms)
+
+%Tuning curve
 addParameter(p, 'tuningPlot',0)
 
+%Receptive field
+addParameter(p, 'ReField', 0);
+addParameter(p, 'EyeMovements', 0);
+addParameter(p, 'noEyeMoves', 0);
+addParameter(p, 'DivisionType', 'Mode');
 
-% Parse inputs
+%Save plot
+addParameter(p, 'savePlot', 0);
+addParameter(p, 'saveDir', '\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure');
+
+%% Parse inputs
 parse(p, data,ex,eNeuron, varargin{:});
 
 % Extract values
+
+%Raster
 Raster = p.Results.Raster;
-RasterTrials = p.Results.Raster;
+TrialNumber = p.Results.TrialNumber;
+SelectRand = p.Results.SelectRand;
+window = p.Results.window;
+start = p.Results.start;
+
+%Tuning curve
+tuningPlot = p.Results.tuningPlot;
+
+%Receptive field
 ReField = p.Results.ReField;
 EyeMovements = p.Results.EyeMovements;
-savePlot = p.Results.savePlot;
-saveDir = p.Results.saveDir;
-SelectRand = p.Results.SelectRand;
 noEyeMoves = p.Results.noEyeMoves;
 DivisionType  =p.Results.DivisionType;
-tuningPlot = p.Results.tuningPlot;
+
+%save plot
+savePlot = p.Results.savePlot;
+saveDir = p.Results.saveDir;
+
 
 % Loop through varargin as Name-Value pairs
 for i = 1:2:length(varargin)
@@ -401,9 +419,9 @@ for u = eNeuron
             y1 = maxRespIn*trialDivision + trialDivision;
             y2 = maxRespIn*trialDivision;
 
-            start = -50;
-
-            window = 300;%round(stimDur+preBase*2);
+            %Figure paper
+%             start = -50;
+%             window = 300;
 
             patch([(preBase+start)/bin2 (preBase+start+window)/bin2 (preBase+start+window)/bin2 (preBase+start)/bin2],...
                 [y2 y2 y1 y1],...
@@ -416,7 +434,7 @@ for u = eNeuron
 
         end
 
-        TrialNumber = 8;
+        %TrialNumber = 8;
         %Mark selected trial
         RasterTrials = trials(TrialNumber);
 % 
@@ -481,10 +499,8 @@ for u = eNeuron
             chan = goodU(1,u);
             
             subplot(20,1,[1 3])
-            start = -50;
+           
             startTimes = directimesSorted(RasterTrials)+start;
-
-            window = 300;%round(stimDur+preBase*2);
 
             freq = "AP"; %or "LFP"
 
@@ -874,7 +890,7 @@ for u = eNeuron
         hold on;
         errorbar(angles_deg, tuningCurve(u,:).*1000, SEM(u,:).*1000, 'k', 'LineStyle', 'none', 'LineWidth', 1.5); % Error bars
         ylabel('Spikes/sec');
-        fig.Position = [ 997   264   366   142];
+        fig.Position = [  997   266   149   135];
 
         title(sprintf('OSI = %.2f / DSI = %.2f',OSI(u),DSI(u)))
 
