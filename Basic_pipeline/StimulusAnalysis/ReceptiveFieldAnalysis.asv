@@ -203,13 +203,12 @@ for ex = [49:54]
 
     NMRF = squeeze(load(sprintf('NEM-RFuSTDirSizeFilt-Q1-Div-X-%s',NP.recordingName)).RFuSTDirSizeFilt);
 
+
     %%EyeMoves
+
     RF = squeeze(load(sprintf('RFuSTDirSizeFilt-%s',NP.recordingName)).RFuSTDirSizeFilt);
 
-    RFReal = {NMRF,RF};
-
-
-
+    RFS
 
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Calculate tuning
@@ -228,7 +227,8 @@ SpatialTuningIndex = zeros(1,numel(respU));
 % figure;tiledlayout(9,10,"TileSpacing","tight")
 % 
 % MrC = ConvBurstMatrix(Mr,fspecial('gaussian',[1 10],3),'same');
-%shuffC = ConvBurstMatrix(squeeze(mean(shuffledData,4)),fspecial('gaussian',[1 10],3),'same');
+
+shuffC = ConvBurstMatrix(squeeze(mean(shuffledData,4)),fspecial('gaussian',[1 10],3),'same');
 
 for u =1:length(respU)
 

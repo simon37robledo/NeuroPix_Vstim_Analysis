@@ -662,10 +662,7 @@ for u = eNeuron
             RF{1} = rf;
 
             names{1} ="";
-        end
-
-     
-       
+        end   
 
         %%%% find max and min of colorbar limits
 
@@ -746,11 +743,14 @@ for u = eNeuron
                     nexttile(xqLayout);
 
                     if d ==1 || d==3
-                        imagesc(rot90(squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,ru)),2));
+                        %imagesc(rot90(squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,ru)),2));
+
+                        imagesc((squeeze(RFuSTDirFilt(d,:,:,ru))));
                         
 %                         c = colorbar;
+                        2+2
                     else
-                        imagesc((squeeze(RFuSTDirFilt(d,:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY,ru))));
+                        imagesc((squeeze(RFuSTDirFilt(d,:,:,ru))));
                         
                     end
 
