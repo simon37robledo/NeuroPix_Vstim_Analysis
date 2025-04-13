@@ -1,8 +1,6 @@
 %%%RF analysis
 
 
-
-
 cd('\\sil3\data\Large_scale_mapping_NP')
 excelFile = 'Experiment_Excel.xlsx';
 
@@ -10,9 +8,14 @@ data = readtable(excelFile);
 
 indexSummary =[];
 
-in =1;
+locationRF = [];
 
-for ex = [49:54] 
+in =1;
+totalN = 0;
+
+perDirection =0;
+
+for ex = [51] 
     %%%%%%%%%%%% Load data and data paremeters
 
     %1. Load NP class
@@ -43,10 +46,21 @@ for ex = [49:54]
     end
     NP = NPAPRecording(path);
 
+    p = NP.convertPhySorting2tIc(NP.recordingDir);
+
+    label = string(p.label');
+    goodU = p.ic(:,label == 'good');
+
+    totalN = totalN+size(goodU,2);
+
+
+
     N_bootstrap =1000;
 
     cd(NP.recordingDir)
     respNeuronsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName)).pvalsResponse;
+
+   
     sign = 0.05; %%%Significance level used to calculate receptive fields
     respU = find(respNeuronsMB<sign);
 
@@ -199,114 +213,275 @@ for ex = [49:54]
 % 
 %     indexSummary = [indexSummary indexFinal]; 
 
+
+if perDirection ==0
+    %%%% Load real responses:
     %%noEyeMoves
-
-    NMRF = squeeze(load(sprintf('NEM-RFuSTDirSizeFilt-Q1-Div-X-%s',NP.recordingName)).RFuSTDirSizeFilt);
-
+    NMRF = squeeze(load(sprintf('NEM-RFuST-Q1-Div-X-%s',NP.recordingName)).RFuST);
+    RFrectGrid =  load(sprintf('RFuStatic-%s',NP.recordingName)).RFu;
     %%EyeMoves
-    RF = squeeze(load(sprintf('RFuSTDirSizeFilt-%s',NP.recordingName)).RFuSTDirSizeFilt);
-
+    RF = squeeze(load(sprintf('RFuST-Q1-Div-X-%s',NP.recordingName)).RFuST);
     RFReal = {NMRF,RF};
 
-
-
+    %%% Load suffled responses:
+    %%NoEyeMoves
+    NMRFs = squeeze(load(sprintf('NEM-RFuShuffST-Q1-Div-X-%s',NP.recordingName)).RFuShuffST);
+    %RFrectGridShuff = load(sprintf('RFuStaticShuff-%s',NP.recordingName)).RFu;
+    %%EyeMoves
+    RFs = squeeze(load(sprintf('RFuShuffST-Q1-Div-X-%s',NP.recordingName)).RFuShuffST);
+    RFShuffle = {NMRFs,RFs};
 
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Calculate tuning
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% indexes
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% indexes
 
-%1. Bin the receptive field into offsetxoffset grid and
-%take the mean within each grid.
+    %1. Bin the receptive field into offsetxoffset grid and
+    %take the mean within each grid.
 
-perc = 90; %Tope percentile selected to calculate tuning
+    perc = 90; %Tope percentile selected to calculate tuning
 
-rowT = cell(1,numel(respU));
-colT = cell(1,numel(respU));
+    rowT = cell(1,numel(respU));
+    colT = cell(1,numel(respU));
 
-SpatialTuningIndex = zeros(1,numel(respU));
-% 
-% figure;tiledlayout(9,10,"TileSpacing","tight")
-% 
-% MrC = ConvBurstMatrix(Mr,fspecial('gaussian',[1 10],3),'same');
-%shuffC = ConvBurstMatrix(squeeze(mean(shuffledData,4)),fspecial('gaussian',[1 10],3),'same');
+    SpatialTuningIndex = zeros(4,numel(respU));
+    %
+    % figure;tiledlayout(9,10,"TileSpacing","tight")
+    %
+    % MrC = ConvBurstMatrix(Mr,fspecial('gaussian',[1 10],3),'same');
+    %shuffC = ConvBurstMatrix(squeeze(mean(shuffledData,4)),fspecial('gaussian',[1 10],3),'same');
 
-for u =1:length(respU)
+    for em =1:2
 
-    % Example 54x54 matrix
-    rfi = squeeze(RFuST(:,:,u));
+        RFuST = RFReal{em};
 
+        RFuShuffST = RFShuffle{em};
 
-    % Define block size
-    blockSize = redCoorY/offsetN;
+        meanY = zeros(1,length(respU));
+        meanX = zeros(1,length(respU));
 
-    % Reshape and compute the mean for each 9x9 block
-    meanGrid = blockproc(rfi, [blockSize blockSize], @(x) mean(x.data(:)));
+        for u =1:length(respU)
 
-    % Find mean of top blocks and rest, and the location of
-    % the top blocks
-    TOPper = prctile(meanGrid(:), perc);
+            % Example 54x54 matrix
+            rfi = squeeze(RFuST(:,:,u));
 
-    Rtop = mean(meanGrid(meanGrid >= TOPper));
+            % Define block size
+            blockSize = redCoorY/offsetN;
 
-    [rowT{u}, colT{u}] = find(meanGrid >= TOPper);
+            % Reshape and compute the mean for each 9x9 block
+            meanGrid = blockproc(rfi, [blockSize blockSize], @(x) mean(x.data(:)));
 
-    Rrest = mean(meanGrid(meanGrid < TOPper));
+            % Find mean of top blocks and rest, and the location of
+            % the top blocks
+            TOPper = prctile(meanGrid(:), perc);
 
-    % Calculate first term
+            Rtop = mean(meanGrid(meanGrid >= TOPper));
 
-    realTerm = (Rtop - Rrest)/mean(meanGrid,'all');
+            [rowT, colT] = find(meanGrid >= TOPper);
 
-    %Do the same for the shuffled
+            meanY(u) = mean(rowT)/size(meanGrid,1);
+            meanX(u) = mean(colT)/size(meanGrid,1);
 
-    shuffTerm =zeros(1,numel(respU));
+            Rrest = mean(meanGrid(meanGrid < TOPper));
 
-    for s = 1:nShuffle
+            if isnan(Rrest) %% In case top percentile is values bigger than 0 (sparse unit)
+                Rrest = 0;
+            end
 
-        rfiShuff = squeeze(RFuShuffST(:,:,u,s));
+            % Calculate first term
 
-        meanGridShuff = blockproc(rfiShuff, [blockSize blockSize], @(x) mean(x.data(:)));
-        %
-        %                         % Use the same positions of the top blocks in the
-        %                         % shuffled data
-        %
-        %                         RtopS = mean(meanGridShuff(rowT{u},colT{u}),'all');
-        %
-        %                         Mask = true(size(meanGridShuff));
-        %
-        %                         Mask(rowT{u},colT{u}) = false;
-        %
-        %                         RrestS = mean(meanGridShuff(Mask));
+            realTerm = (Rtop - Rrest)/mean(meanGrid,'all');
 
-        % Find mean of top blocks and rest, and the location of
-        % the top blocks
-        TOPper = prctile(meanGridShuff(:), perc);
+            %Do the same for the shuffled
 
-        RtopS = mean(meanGridShuff(meanGridShuff >= TOPper));
+            shuffTerm =zeros(1,numel(respU));
 
-        RrestS = mean(meanGridShuff(meanGridShuff < TOPper));
+            for s = 1:nShuffle
 
-        % Calculate first term
+                rfiShuff = squeeze(RFuShuffST(:,:,u,s));
 
-        shuffTerm(s) = (RtopS - RrestS)/mean(meanGridShuff,'all');
+                meanGridShuff = blockproc(rfiShuff, [blockSize blockSize], @(x) mean(x.data(:)));
+                %
+                %                         % Use the same positions of the top blocks in the
+                %                         % shuffled data
+                %
+                %                         RtopS = mean(meanGridShuff(rowT{u},colT{u}),'all');
+                %
+                %                         Mask = true(size(meanGridShuff));
+                %
+                %                         Mask(rowT{u},colT{u}) = false;
+                %
+                %                         RrestS = mean(meanGridShuff(Mask));
 
-    end
+                % Find mean of top blocks and rest, and the location of
+                % the top blocks
+                TOPper = prctile(meanGridShuff(:), perc);
 
-    SpatialTuningIndex(u) = realTerm-median(shuffTerm);
+                RtopS = mean(meanGridShuff(meanGridShuff >= TOPper));
 
-%     nexttile
-%     imagesc(rfi);title(string(SpatialTuningIndex(u)))
-%     axis off;
+                RrestS = mean(meanGridShuff(meanGridShuff < TOPper));
 
-    %imagesc(squeeze(shuffC(:,u,:)));title(string(shuffTerm(u)))
+                if isnan(Rrest)
+                    Rrest = 0;
+                end
 
-    %                     imagesc(squeeze(MrC(:,respU(u),:)));title(string(SpatialTuningIndex(u)))
-    %                     yline([10:10:size(Mr,1)],'w','LineWidth',1);
-    %                     yline([90:90:size(Mr,1)],'w','LineWidth',3);
+                % Calculate first term
+
+                shuffTerm(s) = (RtopS - RrestS)/mean(meanGridShuff,'all');
+
+            end
+
+            SpatialTuningIndex(em,u) = realTerm-median(shuffTerm);
+
+            SpatialTuningIndex(3,u) = respU(u);
+
+            SpatialTuningIndex(4,u) = in;
+
+            %     nexttile
+            %     imagesc(rfi);title(string(SpatialTuningIndex(u)))
+            %     axis off;
+
+            %imagesc(squeeze(shuffC(:,u,:)));title(string(shuffTerm(u)))
+
+            %                     imagesc(squeeze(MrC(:,respU(u),:)));title(string(SpatialTuningIndex(u)))
+            %                     yline([10:10:size(Mr,1)],'w','LineWidth',1);
+            %                     yline([90:90:size(Mr,1)],'w','LineWidth',3);
+
+        end %%% end units
+
+    end %%% end eye moves or not
+
+else %%%Do per direction
+
+     %%%% Load real responses:
+    %%noEyeMoves
+    NMRF = squeeze(load(sprintf('NEM-RFuSTDirSize-Q1-Div-X-%s',NP.recordingName)).RFuSTDirSize);
+    %%EyeMoves
+    RF = squeeze(load(sprintf('RFuSTDirSize-Q1-Div-X-%s',NP.recordingName)).RFuSTDirSize);
+
+    RFReal = {NMRF,RF};
+
+    %%% Load suffled responses:
+    %%NoEyeMoves
+    NMRFs = squeeze(load(sprintf('NEM-RFuShuffST-Q1-Div-X-%s',NP.recordingName)).RFuShuffST);
+    %%EyeMoves
+    RFs = squeeze(load(sprintf('RFuShuffST-Q1-Div-X-%s',NP.recordingName)).RFuShuffST);
+
+    RFShuffle = {NMRFs,RFs};
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Calculate tuning
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% indexes
+
+    %1. Bin the receptive field into offsetxoffset grid and
+    %take the mean within each grid.
+
+    perc = 90; %Tope percentile selected to calculate tuning
+
+    rowT = cell(1,numel(respU));
+    colT = cell(1,numel(respU));
+
+    SpatialTuningIndex = zeros(5,numel(respU)*4);
+    %
+    % figure;tiledlayout(9,10,"TileSpacing","tight")
+    %
+    % MrC = ConvBurstMatrix(Mr,fspecial('gaussian',[1 10],3),'same');
+    %shuffC = ConvBurstMatrix(squeeze(mean(shuffledData,4)),fspecial('gaussian',[1 10],3),'same');
+
+    for em =1:2
+
+        ui =1;
+
+        RFuST = RFReal{em};
+
+        RFuShuffST = RFShuffle{em};
+
+        for u =1:length(respU)
+
+            for d =1:4
+
+                % Example 54x54 matrix
+                rfi = squeeze(RFuST(d,:,:,u));
+
+                % Define block size
+                blockSize = redCoorY/offsetN;
+
+                % Reshape and compute the mean for each 9x9 block
+                meanGrid = blockproc(rfi, [blockSize blockSize], @(x) mean(x.data(:)));
+
+                % Find mean of top blocks and rest, and the location of
+                % the top blocks
+                TOPper = prctile(meanGrid(:), perc);
+
+                Rtop = mean(meanGrid(meanGrid >= TOPper));
+
+                [rowT{u}, colT{u}] = find(meanGrid >= TOPper);
+
+                Rrest = mean(meanGrid(meanGrid < TOPper));
+
+                if isnan(Rrest) %% In case top percentile is values bigger than 0 (sparse unit)
+                    Rrest = 0;
+                end
+
+                % Calculate first term
+
+                realTerm = (Rtop - Rrest)/mean(meanGrid,'all');
+
+                if d == 1 %%Calculate shuffled indez once per direction
+
+                    %Do the same for the shuffled
+
+                    shuffTerm =zeros(1,numel(respU));
+
+                    for s = 1:nShuffle
+
+                        rfiShuff = squeeze(RFuShuffST(:,:,u,s));
+
+                        meanGridShuff = blockproc(rfiShuff, [blockSize blockSize], @(x) mean(x.data(:)));
+
+                        % Find mean of top blocks and rest, and the location of
+                        % the top blocks
+                        TOPper = prctile(meanGridShuff(:), perc);
+
+                        RtopS = mean(meanGridShuff(meanGridShuff >= TOPper));
+
+                        RrestS = mean(meanGridShuff(meanGridShuff < TOPper));
+
+                        if isnan(Rrest)
+                            Rrest = 0;
+                        end
+
+                        % Calculate first term
+
+                        shuffTerm(s) = (RtopS - RrestS)/mean(meanGridShuff,'all');
+
+                    end
+
+                end
+
+                SpatialTuningIndex(em,ui) = realTerm-median(shuffTerm);
+
+                SpatialTuningIndex(3,ui) = respU(u);
+
+                SpatialTuningIndex(4,ui) = in;
+
+                SpatialTuningIndex(5,ui) = d;
+
+                ui = ui+1;
+
+            end %%% end directions
+
+        end %%% end units
+
+    end %%% end eye moves or not
 
 end
 
-end
+indexSummary = [indexSummary SpatialTuningIndex];
 
+locationRF = [locationRF [meanX;meanY]];
+
+in = in+1;
+
+end %%% end insertions
 
 
 
@@ -331,24 +506,54 @@ colorMatrix = hsv2rgb([H' S' V']);
 % Display the colors
 figure;
 colormap(colorMatrix);
-colorbar;
+c = colorbar;
+caxis([0 1])
+c.Ticks = linspace(1/(in-1),1,in-1)-(1/(in-1))/2; 
+c.TickLabels = 1:in-1;
+c.Limits
 title('Pale Differentiated Colors');
+legend()
 
-colors = colorMatrix(indexSummary(5,:),:);
+
+colors = colorMatrix(indexSummary(4,:),:);
+%% Scatter
+
+figure;scatter(locationRF(1,:),locationRF(2,:),7,colors,"filled",'MarkerFaceAlpha',0.7)
+set(gca, 'YDir', 'reverse');
+cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
+title('Locality index')
+axis equal
+print(gcf, 'RFsLocations.pdf', '-dpdf', '-r300', '-vector');
+
+
+%% Histogram
+
+
+figure;histogram(indexSummary(2,:),'FaceColor','k','FaceAlpha',0.5)
+hold on;
+histogram(indexSummary(1,:),'FaceColor','b','FaceAlpha',0.5)
+ylabel('Neuron count')
+xlabel('L')
+cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
+print(gcf, 'LocalityIndexDistribution.pdf', '-dpdf', '-r300', '-vector');
+cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
+title('Locality index')
+print(gcf, 'LocalityIndex.pdf', '-dpdf', '-r300', '-vector');
+
 %% Plot NEM vs EM %Color
 
 
-cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
+
 fig = figure;
-scatter(indexSummary(1,:),indexSummary(2,:),7, colors,"filled",'MarkerFaceAlpha',0.7);
+scatter(indexSummary(1,:),indexSummary(2,:),7, colors,"filled",'MarkerFaceAlpha',0.4);
 xlabel('C.Eye Mov')
 ylabel('NC. Eye Mov')
 hold on
-plot([0,1],[0,1],'LineWidth',1,'Color','k')
+plot([0,max(indexSummary(1:2,:),[],'all')],[0,max(indexSummary(1:2,:),[],'all')],'LineWidth',1,'Color','k')
 axis equal
 fig.Position = [1141         261         214         140];
-xlim([0,1])
-ylim([0,1])
+xlim([0,max(indexSummary(1:2,:),[],'all')])
+ylim([0,max(indexSummary(1:2,:),[],'all')])
 cd('\\sil3\data\Large_scale_mapping_NP\Figs paper\1stFigure')
 title('Locality index')
 print(fig, 'LocalityIndex.pdf', '-dpdf', '-r300', '-vector');
@@ -360,18 +565,19 @@ print(fig, 'LocalityIndex.pdf', '-dpdf', '-r300', '-vector');
 %%Create a round histogram divided into 4 direction. Within each direction,
 %%DSI values are sorted
 
-angles = indexSummary(3,:);
+angles = indexSummary(5,:);
 L = indexSummary(1,:);
 
-fig=figure;swarmchart(categorical(angles),L,10, colors,'filled','MarkerFaceAlpha',0.8);
+fig=figure;swarmchart(categorical(angles),(L),10, colors,'filled','MarkerFaceAlpha',0.8);
 
 set(gcf,'Color','w');%
 ax = gca; % Get current axis
 ax.XAxis.FontSize = 7; % Set font size of x-axis tick labels
-ylabel('L')
+ylabel('log(L)')
 yline(0,'LineWidth',1,'Color','k')
+set(gca, 'YScale', 'log')
 
-fig.Position = [1269         521         189         146];
+%fig.Position = [1269         521         189         146];
 
 print(gcf, 'swarmPlotLocalIndexPerAngle.pdf', '-dpdf', '-r300', '-vector');
 

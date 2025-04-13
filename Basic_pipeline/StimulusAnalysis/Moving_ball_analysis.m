@@ -2097,12 +2097,14 @@ for convNeuron = 1
             %%%%%% Add spikes accordying to number of frames.
 
             msPerFarme= stimDur/sizeX(4);
+
+            duration = 300;
             
             if useZscore %%%%%Select correct timestamps.
                 Mr = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
             else
                 [Mr] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted)/msPerFarme),round((stimDur)/msPerFarme));
-                [Mbase] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted-preBase)/msPerFarme),round((preBase)/msPerFarme));
+                [Mbase] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted-duration)/msPerFarme),round((duration)/msPerFarme));
             end
 
             [trials neurons bins] = size(Mr());
@@ -2116,7 +2118,9 @@ for convNeuron = 1
 
                     spikeSum = zeros(size(Mr,1),length(respU),sizeX(4),'single');
 
-                    spikeSum(IndexDiv{t}{i},:,:) = Mr(IndexDiv{t}{i},respU,:);
+                    %spikeSum(IndexDiv{t}{i},:,:) = Mr(IndexDiv{t}{i},respU,:) - mean(Mbase(IndexDiv{t}{i},respU,:),3); %Substract baseline per trial
+
+                    spikeSum(IndexDiv{t}{i},:,:) = Mr(IndexDiv{t}{i},respU,:); %Substract baseline per trial
 
                     spikeSum = (spikeSum./msPerFarme).*1000; %Convert to spikes per second
                     
@@ -2182,8 +2186,8 @@ for convNeuron = 1
             if useZscore %%%%%Select correct timestamps.
                 ZscoreRaster = load(sprintf('ZscoreRaster-%d-%s',N_bootstrap,NP.recordingName)).ZscoreRaster;
             else
-                [Mr] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted)/msPerFarme),round((stimDur)/msPerFarme));
-                [Mbase] = BuildBurstMatrix(goodU,round(p.t/msPerFarme),round((directimesSorted-preBase)/msPerFarme),round((preBase)/msPerFarme));
+                [Mr] = BuildBurstMatrix(goodU(:,respU),round(p.t/msPerFarme),round((directimesSorted)/msPerFarme),round((stimDur)/msPerFarme));
+                [Mbase] = BuildBurstMatrix(goodU(:,respU),round(p.t/msPerFarme),round((directimesSorted-preBase)/msPerFarme),round((preBase)/msPerFarme));
             end
 
             [trials neurons bins] = size(Mr);
@@ -2234,8 +2238,6 @@ for convNeuron = 1
 %                     j = f*msPerFarme;
 %                 end
 %             end
-
-
 
             spikeSumsDiv{1}{1} = spikeSum;
 

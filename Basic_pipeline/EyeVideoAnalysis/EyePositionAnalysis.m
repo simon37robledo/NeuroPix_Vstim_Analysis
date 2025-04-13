@@ -80,7 +80,21 @@ filenames = {file.name};
 % filenames = {file.name};
 
 ellipseName = filenames(contains(filenames,"Eye_ellipse_thr_") & contains(filenames,"_"+NP.recordingName(end)+"_") & contains(filenames,shuffle) & contains(filenames,thres)); %%Contains insertion number?
+
+if isempty(ellipseName)
+ellipseName = filenames(contains(filenames,"ellipse_thr_0.8")); %%Contains insertion number?
+
+end
+
+
 goodFrames = filenames(contains(filenames, "good_frames_thr_") & contains(filenames,"_"+NP.recordingName(end)+"_") & contains(filenames,shuffle) & contains(filenames,thres));
+
+
+if isempty(goodFrames)
+goodFrames = filenames(contains(filenames,"good_frames_thr_0.8")); %%Contains insertion number?
+
+end
+
 
 if numel(ellipseName) > 1
     ellipseName = ellipseName{1};
@@ -732,7 +746,11 @@ if length(stimType)> 1
 else
     if timestamps == 0
        
-        gscatter(Data.center_x-rectNew(1), Data.center_y-rectNew(2),indFrames);
+        h= gscatter(Data.center_x-rectNew(1), Data.center_y-rectNew(2),indFrames);
+
+        for i = 1:length(h)
+            h(i).MarkerSize = 5; % set to whatever size you want
+        end
        
     else
         

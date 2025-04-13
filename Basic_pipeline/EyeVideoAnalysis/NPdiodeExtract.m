@@ -16,13 +16,16 @@ function [onsetSync offsetSync onSync offSync] = NPdiodeExtract(NP,newDiode,ismo
 %%%%MATLAB PTB SPECS: %%%%%%%%%%%%%%%%%%%%%%
 cd(NP.recordingDir)
 
-validOptions = {'MB', 'SDG', 'BB', 'FFF','RGN','RG','NS','NSC'};
+validOptions = {'MB', 'SDG', 'BB', 'FFF','RGN','RG','NS','NSC','MBR'};
 
 % Validate the input
 stimName = validatestring(stimName, validOptions);
 
 % Example logic based on the validated input
 switch stimName
+    case 'MBR' %%Linearly moving bar
+        stimtype= 'linearlyMovingBar';
+
     case 'MB' %%Linearly moving ball
         stimtype= 'linearlyMovingBall';
 

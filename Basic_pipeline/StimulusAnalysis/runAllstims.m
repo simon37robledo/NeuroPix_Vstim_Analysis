@@ -1,7 +1,7 @@
 %%Run all stimuli scripts
 SDGrecordingsA = [8:14,40:43,49:54]; %anesthetized 
 
-GoodRecordingsPV =[8:21,40:43,49:54];
+GoodRecordingsPV =[40:43,49:54];
 
 %Visual stim computer
 %files = dir('C:\Users\MarkS9\Documents\GitHub\NeuroPix_Vstim_Analysis\Basic_pipeline\StimulusAnalysis\*.m'); 

@@ -7,19 +7,19 @@ excelFile = 'Experiment_Excel.xlsx';
 data = readtable(excelFile);
 
 %Optionall
-bombcelled = 1;
+bombcelled = 0;
 plotRasters =0;
-heatMap = 0;
+heatMap = 1;
 plotHeatMap =0;
 calculateEntropy =0;
 ex=1;
 responseDo = 1;
-redoResp =1;
-noEyeMoves = 0;
+redoResp =0;
+noEyeMoves = 1;
 newDiode =0;
 
-Shuffling_baseline=1;
-repeatShuff =1;
+Shuffling_baseline=0;
+repeatShuff =0;
 trialThres =0.6;
 
 %GoodRecordingsPV =[15:20,40:43];
@@ -31,7 +31,7 @@ Awake = [44:48];
 %GoodRecordingsPV =[1:21,40:43,49:54];
 
 %%
-for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
+for ex = 51 %selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
      %1. Load NP class
@@ -472,6 +472,8 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
             [Mr]=BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-preBase)/bin),round(win/bin));
 
+            Mr = ConvBurstMatrix(Mr,fspecial('gaussian',[1 10],3),'same');
+
             [nT,nN,nB] = size(Mr);
             %indRG --> sorted infexes
 
@@ -481,7 +483,7 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
             posY = squeeze(NeuronVals(:,:,2));
 
             eNeuron = 1:length(goodU);
-            eNeuron =[25];%selecN{1}(2,selecN{1}(1,:)==ex);
+            eNeuron =[60];%selecN{1}(2,selecN{1}(1,:)==ex);
 
             [respVal respVali]= max(NeuronVals(:,:,1),[],2);
 
@@ -521,15 +523,15 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
                     [nTrials,nTimes]=size(M);
                     nexttile
                     imagesc((1:nTimes),1:nTrials,squeeze(M));colormap(flipud(gray(64)));
-                    xline(preBase/bin, '--', LineWidth=2, Color="#77AC30");
-                    xline((stimDur+preBase)/bin, '--', LineWidth=2, Color="#0072BD");
+                    xline(preBase/bin, LineWidth=1.5, Color="#77AC30");
+                    xline((stimDur+preBase)/bin, LineWidth=1.5, Color="#0072BD");
                     xticks([preBase/bin (round(stimDur/100)*100+preBase)/bin]);
                     xticklabels(xticks*bin)
                     if nSize >1
                         yline([trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials/nSize:trialsPerCath/mergeTrials-1]+0.5,LineWidth=1)
                     end
                     %caxis([0 max(Mr2,[],'all').*(1000/bin)]);
-                    caxis([0 1]);
+                    %caxis([0 1]);
                     set(gca,'YTickLabel',[]);
 
                     if i < T - (trialsPerCath/mergeTrials)*max(positionsMatrix(:))-1
@@ -547,13 +549,13 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
                     %                     end
 
                     offsetR = 300;
-                    if posX(u,j) == NeuronVals(u,respVali(u),3) & posY(u,j) == NeuronVals(u,respVali(u),2)
-                        rectangle('Position', [round(offsetR/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
-                            'EdgeColor', 'r', 'LineWidth', 1.5,'LineStyle','-.');
-                    else
+%                     if posX(u,j) == NeuronVals(u,respVali(u),3) & posY(u,j) == NeuronVals(u,respVali(u),2)
 %                         rectangle('Position', [round(offsetR/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
-%                             'EdgeColor', 'b', 'LineWidth', 1,'LineStyle','-.');
-                    end
+%                             'EdgeColor', 'r', 'LineWidth', 1.5,'LineStyle','-.');
+%                     else
+% %                         rectangle('Position', [round(offsetR/bin)+round(preBase/bin), 0, round(duration/bin), trialsPerCath/mergeTrials+1],...
+% %                             'EdgeColor', 'b', 'LineWidth', 1,'LineStyle','-.');
+%                     end
 
 
                     j = j+1;
@@ -583,6 +585,7 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 % 
 %                 end
                 % Set the color of the figure and axes to black
+                colorbar;
                 title(t,sprintf('Rect-GRid-raster-U%d',u))
                 ylabel(t,sprintf('%d trials',nTrials*mergeTrials))
                 xlabel(t,'Time (ms)')
@@ -607,12 +610,13 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
     trialDiv  = length(seqMatrix)/length(unique(seqMatrix))/nSize;
 
-    offsetR=300;
+    offsetR=50;
     duration = 300;%ms for offset response
 
     bin =1;
     [Mr] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+offsetR)/bin),round(duration)/bin);
     [Mro] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted+stimDur)/bin),round(duration)/bin);
+    [Mb1] = BuildBurstMatrix(goodU,round(p.t/bin),round((directimesSorted-duration)/bin),round(duration)/bin);
 
     [nT,nN,NB] = size(Mr);
     [nTo,nNo,NBo] = size(Mro);
@@ -624,6 +628,30 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
     Nbase = mean(Mb,[1 3]);
 
+
+    %%%%%%%%%%%%%%%%%%%% Shuffle raster before convolution in order
+    %%%%%%%%%%%%%%%%%%%% to calculate tuning index
+    %%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%
+
+%     nShuffle =50;
+% 
+%     shuffledDataOn = zeros(size(MrMean,1), size(MrMean,2), size(MrC,3), nShuffle);
+%     shuffledDataOff = zeros(size(Mro,1), size(Mro,2), size(Mro,3), nShuffle);
+% 
+%     for i =1:nShuffle
+% 
+%         % Shuffle along the first dimension
+%         idx1 = randperm(size(Mro,1));
+% 
+%         % Shuffle along the third dimension
+%         idx3 = randperm(size(Mro,3));
+% 
+%         shuffledDataOff(:,:,:,i) = Mro(idx1, :, idx3);
+%         shuffledDataOn(:,:,:,i) = Mr(idx1, :, idx3);
+% 
+%     end
+
+
     if noEyeMoves
         % EyePositionAnalysis
         % Create spike Sums with NaNs when the eye is not present.
@@ -631,10 +659,10 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
         file = dir (NP.recordingDir);
         filenames = {file.name};
-        files= filenames(contains(filenames,"timeSnipsNoMov"));
+        files= filenames(contains(filenames,"timeSnipsNoMov-31"));
         cd(NP.recordingDir)
         %Run eyePosition Analysis to find no movement timeSnips
-        timeSnips = load(files{2}).timeSnips;
+        timeSnips = load(files{1}).timeSnips;
         timeSnipsMode = timeSnips(:,timeSnips(3,:) == mode(timeSnips(3,:)));
 
         selecInd = [];
@@ -644,8 +672,9 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
             selecInd = [selecInd find(directimesSorted>=timeSnipsMode(1,i) & directimesSorted<(timeSnipsMode(2,i)-stimDur))];
         end
 
-        MrC = nan(round(nT/trialDiv),nN, NB+NBo);
+        %MrC = nan(round(nT/trialDiv),nN, NB+NBo);
 
+        MrC = nan(round(nT/trialDiv),nN, NB);
 
 
         %%Create summary of identical trials
@@ -666,9 +695,11 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
                     meanRoff =  reshape(mean(Mro(indexVal,u,:),1),[1,size(Mro,3)]);
 
+                    %meanBase =  reshape(mean(Mb1(indexVal,u,:),1),[1,size(Mb1,3)]);
 
-                    MrC(j,u,:) = [meanRon meanRoff]; %Combine on and off response
+                    %MrC(j,u,:) = [meanRon-meanBase meanRoff-meanBase]; %Combine on and off response and substract to each the mean baseline
 
+                    MrC(j,u,:) = [meanRon];
                     MrMean(j,u) = mean(MrC(j,u,:),3);%-Nbase;
 
                 else
@@ -710,6 +741,8 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
         MrMean = mean(MrC,3);%-Nbase;
 
     end
+
+  
 
     cd(NP.recordingDir + "\Figs")
 %     respU = [138,134,127,124,123,121,118,112]; %PV67-1 %check Offset response also.
@@ -840,7 +873,7 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
 
     MrMean(NanPos) = 0;
 
-    Res = reshape(MrMean,[1,1,size(MrMean,1),nN]);
+    Res = reshape(MrMean,[1,1,size(MrMean,1),nN]).*1000;
 
     RFu = squeeze(sum(VD.*Res,3));
  
@@ -858,9 +891,9 @@ for ex = GoodRecordingsPV%selecN{1}(1,:)%20%GoodRecordingsPV%[1:20,28:32,40:48]%
     normRFu = (RFu-normMatrixMean)./normMatrixSTD;
     %normRFu = (RFu)./repmat(pxyScreen,[1,1,nN]);
 
-    %figure;imagesc(normRFu(:,:,21))
+    %figure;imagesc(RFu(:,:,60))
 
-    save(sprintf('RFuStatic-%s',NP.recordingName),"normRFu")
+    save(sprintf('RFuStatic-%s',NP.recordingName),"RFu")
 %&
 
     if plotHeatMap

@@ -5,7 +5,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-bombcelled = 1;
+bombcelled = 0;
 newTIC = 0;
 rasters = 0;
 shuffling = 0;

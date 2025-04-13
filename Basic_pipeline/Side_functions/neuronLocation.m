@@ -44,7 +44,7 @@ if (plotN || plotIns) && isempty(Fig)
     sideview = [90 0];
     topview = [-90 90];
     frontview = [0 0];
-    view(sideview)
+    view(frontview)
 
     Ylims = ylim;
     Xlims = xlim;
@@ -57,7 +57,7 @@ if (plotN || plotIns) && isempty(Fig)
     zlim([zmin Zlims(2)])
 
     % yticks([5:5:ymax-30])
-    % zticks([zmin:5:round(Zlims(2))])
+    zticks([zmin:5:round(Zlims(2))])
     xticks([round(Xlims(1)):5:round(Xlims(2))])
 
     grid on

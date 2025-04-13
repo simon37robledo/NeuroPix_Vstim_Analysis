@@ -8,7 +8,7 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
-GoodRecordingsPV =[40:43 49:54];
+GoodRecordingsPV =[49:54];
 
 recordings = GoodRecordingsPV;
 
@@ -25,7 +25,7 @@ MBc =[];
 insertionID = [];
 i =1;
 animal =0;
-for ex =  51%GoodRecordingsPV
+for ex =  GoodRecordingsPV
     %%%%%%%%%%%% Load data and data paremeters
 
     %1. Load NP class
@@ -102,10 +102,11 @@ for ex =  51%GoodRecordingsPV
 
 end
 
-%% Colors per insertion
 
+%% Colors per insertion
+in =i;
 % Number of colors
-nColors = max(unique(insertionID));
+nColors = in-1;
 
 % Generate hues evenly spaced around the color wheel
 H = linspace(0, 1, nColors+1); 
@@ -123,8 +124,13 @@ colorMatrix = hsv2rgb([H' S' V']);
 % Display the colors
 figure;
 colormap(colorMatrix);
-colorbar;
+c = colorbar;
+caxis([0 1])
+c.Ticks = linspace(1/(in-1),1,in-1)-(1/(in-1))/2; 
+c.TickLabels = 1:in-1;
+c.Limits
 title('Pale Differentiated Colors');
+legend()
 
 colors = colorMatrix(insertionID,:);
 
@@ -227,7 +233,7 @@ angles = cell2mat(preferDir');
 DSIv = cell2mat(DSI');
 OSIv = cell2mat(OSI');
 
-figure;swarmchart(categorical(angles),DSIv,10, colors,'filled','MarkerFaceAlpha',0.8);
+figure;swarmchart(categorical(angles),OSIv,10, colors,'filled','MarkerFaceAlpha',0.8);
 
 set(gcf,'Color','w');%
 ax = gca; % Get current axis

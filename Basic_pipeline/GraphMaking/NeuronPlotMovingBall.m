@@ -31,6 +31,7 @@ addParameter(p, 'tuningPlot',0)
 
 %Receptive field
 addParameter(p, 'ReField', 0);
+addParameter(p, 'oneDir', 0);
 addParameter(p, 'EyeMovements', 0);
 addParameter(p, 'noEyeMoves', 0);
 addParameter(p, 'DivisionType', 'Mode');
@@ -56,6 +57,7 @@ tuningPlot = p.Results.tuningPlot;
 
 %Receptive field
 ReField = p.Results.ReField;
+oneDir = p.Results.oneDir;
 EyeMovements = p.Results.EyeMovements;
 noEyeMoves = p.Results.noEyeMoves;
 DivisionType  =p.Results.DivisionType;
@@ -453,9 +455,9 @@ for u = eNeuron
 
         MRhist = BuildBurstMatrix(goodU(:,u),round(p.t),round((directimesSorted-preBase)),round((stimDur+preBase*2)));
 
-        [nT2,nN2,nB2]= size(MRhist);
+        MRhist = squeeze(MRhist(trials,:,:));
 
-        MRhist = squeeze(MRhist);
+        [nT2,nB2]= size(MRhist);
 
         spikeTimes = repmat([1:nB2],nT2,1);
 
@@ -611,6 +613,67 @@ for u = eNeuron
 
         theta_x = theta_x(:,1+(redCoorX-redCoorY)/2:(redCoorX-redCoorY)/2+redCoorY);
 
+        if oneDir
+
+            if noEyeMoves %%%mode quadrant
+                RFu = squeeze(load(sprintf('NEM-RFuST-Q1-Div-X-%s',NP.recordingName)).RFuST);
+            else
+                RFu = squeeze(load(sprintf('RFuST-Q1-Div-X-%s',NP.recordingName)).RFuST);
+            end
+
+            %%%Filter with gaussian:
+
+            TwoDGaussian = fspecial('gaussian',floor(size(RFu,2)/(9/2)),redCoorY/offsetN); %increase size of gaussian by 100%.
+            %RFuSTDirFilt = zeros(size(RFuSTDir));
+
+            RFuFilt= zeros(size(RFu));
+
+            for ui =1:size(RFu,3) %units
+
+                slice = squeeze(RFu(:,:,ui));
+
+                slicek = conv2(slice,TwoDGaussian,'same');
+
+                RFuFilt(:,:,ui) =slicek;
+            end
+
+            figRF=figure;
+            imagesc((squeeze(RFuFilt(:,:,ru))));
+
+          caxis
+
+            c = colorbar;
+            title(c,'spk/s')
+
+            colormap('turbo')
+            title(sprintf('u-%d',u))
+
+            xt = xticks;
+            xt = xt((1:2:numel(xt)));
+            xticks(xt);
+            xticklabels(round(theta_x(1,xt)))
+
+            yt = yticks;
+            yt = yt(1:2:numel(yt));
+            yticks(yt);
+            yticklabels(round(theta_y(yt,1)))
+            %                     xlabel('X degrees')
+            %                     ylabel('Y degrees')
+
+             axis equal tight
+
+            if savePlot
+                cd(saveDir)
+                figRF.Position = [ 680   577   156   139];
+                if noEyeMoves
+                    print(figRF, sprintf('%s-NEM-MovBall-ReceptiveField-eNeuron-%d.pdf',NP.recordingName,u), '-dpdf', '-r300', '-vector');
+                else
+                    print(figRF, sprintf('%s-MovBall-ReceptiveField-eNeuron-%d.pdf',NP.recordingName,u), '-dpdf', '-r300', '-vector');
+                end
+            end
+
+        else %%%% Plot receptive field per direction
+
         if noEyeMoves
 
             if string(DivisionType) == "XY"
@@ -756,7 +819,7 @@ for u = eNeuron
 
                     if d==2
                     c = colorbar;
-                    title(c,'Z-score')
+                    title(c,'Spike Rate (Hz)')
                     end
 
                     
@@ -823,13 +886,17 @@ for u = eNeuron
 
         if savePlot
             cd(saveDir)
-            figRF.Position = [ 0.584895833333333         0.261111111111111                   0.11875          0.20462962962963];
+            figRF.Position = [  0.2328125                     0.315                0.23515625                   0.38125];
             if noEyeMoves
                 print(gcf, sprintf('%s-NEM-MovBall-ReceptiveField-Div-%s-Q-%d-eNeuron-%d.pdf',NP.recordingName,names{n},q,u), '-dpdf', '-r300', '-vector');
             else
                 print(gcf, sprintf('%s-MovBall-ReceptiveField-Div-%s-Q-%d-eNeuron-%d.pdf',NP.recordingName,names{n},q,u), '-dpdf', '-r300', '-vector');
             end
         end
+        
+        end %%%End onDir
+
+
     end
 
     if EyeMovements
