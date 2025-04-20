@@ -7,19 +7,19 @@ data = readtable(excelFile);
 bombcelled = 0;
 sigma = 0.05; %Criteria for responsive units. Used on the tunin and receptive field analysis. 
 
-summPlot = 0;
-plotexamplesMBR =1;
+summPlot = 1;
+plotexamplesMBR =0;
 newTIC = 0;
 
 ResponseProfile=1; redoResp=1;
-Shuffling =1;
+Shuffling =0;
 Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =1;
+repeatShuff =0;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
 
-tuning =0;
+tuning =1;
 ZscoreMethod = 0;
 
 
@@ -50,7 +50,7 @@ newDiode =0;
 GoodRecordingsRF = [8:20,40:43,49:54];
 Awake = [44:48];
 
-duration = 300; %in ms. Duration of window in which the response is calculated. This window
+duration = 100; %in ms. Duration of window in which the response is calculated. This window
 % moves along the raster and the maximal mean is selected as response, per trial, offset, etx
 %GoodRecordingsPV =[1:21,40:43,49:54];
 %Plot specific neurons
@@ -121,7 +121,7 @@ for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%G
             %disp()
             w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
             warning(w)
-            %continue
+            continue
         end
 
     directions = [];
@@ -302,7 +302,7 @@ for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%G
         %disp()
         w= sprintf('No somatic neurons in %s. Skipping into next experiment.',NP.recordingName);
         warning(w)
-       % continue
+        continue
     end
     goodSPKS = p.nSpks(label == 'good');
     goodAmp = p.neuronAmp(label == 'good');
@@ -488,7 +488,7 @@ if ResponseProfile ==1
         max_position_Trial = zeros(nT,2); %Create 2 matrices, for mean inside max window, and for position of window, for each trial category
         max_mean_value_Trial = zeros(1,nT);
         max_mean_value_TrialB = zeros(1,nT);
-        for i = 1:nT %Iterate across trials %%%%%%%%%% 
+        for i = 1:nT %Iterate across trials
             uM = squeeze(Mr2(i,u,:))';%Create matrix per unique trial conditions
 
             uMB = squeeze(Mbd2(i,u,:))';%Create matrix per unique trial conditions
@@ -982,7 +982,7 @@ if tuning ==1
 end
 
 end
-%
+
 % Rasters plots per Neuron
 for plotOp = plotexamplesMBR %rstx
     if plotexamplesMBR == 1
@@ -997,7 +997,7 @@ for plotOp = plotexamplesMBR %rstx
         uDir = unique(directions);
         bin = 1;
         bin2 =20;
-        trialsPerAngle = trialDivision*speedN;
+        trialsPerAngle = trialDivision*speedN*sizeN;
 
         %[C sIndex2]= sortrows(A,orderS(k,:));
 
@@ -1009,17 +1009,19 @@ for plotOp = plotexamplesMBR %rstx
 
         directimesSorted = C(:,1)';
 
-        preBase = round(stimInter/2);
+        preBase = round(stimInter/4);
 
         [Mr2] = BuildBurstMatrix(goodU,round(p.t/bin2),round((directimesSorted-preBase)/bin2),round((stimDur+preBase*2)/bin2));
 
         [nT,nN,nB] = size(Mr);
 
+        Mr2 = [];
 
-        pvals = load(sprintf('pvalsBaselineBootMBR-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse').pvalsResponse;
-        pvalsMB = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse').pvalsResponse;
-        %eNeuron = find(pvals<0.005 |pvalsMB <0.005 );
-        eNeuron = find(pvals<0.005);
+        pvals = load(sprintf('pvalsBaselineBoot-%d-%s',N_bootstrap,NP.recordingName),'pvalsResponse').pvalsResponse;
+
+        %eNeuron = find(pvals<0.005);
+
+        eNeuron = 18;
 
         sizeN=1;
 
@@ -1027,13 +1029,15 @@ for plotOp = plotexamplesMBR %rstx
 
             j=1;
 
+            [nT,nB] = size(Mr2);
+
             fig =  figure;
 
             subplot(10,1,[1 6]);
             pos1 = 0.1;
             %subplot('Position', [pos1, 0.1, 0.7, 0.8]);
 
-            imagesc(squeeze(Mr2(:,u,:)).*(1000/bin2));colormap(flipud(gray(64)));
+            imagesc(squeeze(Mr2).*(1000/bin2));colormap(flipud(gray(64)));
             %Plot stim start:
             xline(preBase/bin2,'k', LineWidth=1.5)
             %Plot stim end:
@@ -1042,9 +1046,22 @@ for plotOp = plotexamplesMBR %rstx
             title(sprintf('U.%d-Unit-phy-%d',u,phy_IDg(u)));
             caxis([0 1])
 
-    
-            yline([nT/direcN:nT/direcN:nT-1],'k',LineWidth=3);
- 
+            %xticks([0.5 (preBase/bin):10:nB])
+            %xticklabels([-preBase 0:10*bin:nB*bin])
+            %yticklabels([yticks]*mergeTrials)
+            dirStart = C(1,2);
+            offStart = C(1,3);
+            for t = 1:nT*mergeTrials
+                if dirStart ~= C(t,2)
+                    yline(t/mergeTrials+0.5,'k',LineWidth=3);
+                    dirStart = C(t,2);
+                end
+                if offStart ~= C(t,3)
+                    yline(t/mergeTrials+0.5,'k',LineWidth=1);
+                    offStart = C(t,3);
+                end
+
+            end
 
             yticks([trialDivision:trialDivision:nT])
 
@@ -1056,7 +1073,7 @@ for plotOp = plotexamplesMBR %rstx
             for d = 1:size(NeuronVals,2)
 
                 if posX(u,d) == NeuronVals(u,respVali(u),3) & posY(u,d) == NeuronVals(u,respVali(u),2)
-                    rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision)+0.5, window_size(2)/(bin2), trialDivision],...
+                    rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision)/mergeTrials+0.5, window_size(2)/(bin2), trialDivision/mergeTrials],...
                         'EdgeColor', 'r', 'LineWidth', 1,'LineStyle','-.');
                 else
                     %                         rectangle('Position', [posX(u,d)/(bin2)+round(preBase/bin2), (posY(u,d)*trialDivision-trialDivision+1)/mergeTrials, window_size(2)/(bin2), trialDivision],...
@@ -1066,6 +1083,57 @@ for plotOp = plotexamplesMBR %rstx
             end
 
 
+
+            %%%Plot arrows
+            % Parameters for arrow plotting
+            ax = gca;
+
+            setX = nB/6;
+            % Parameters for arrow plotting
+            arrowXStart = nB - setX; % Position the arrows at the last 10 columns of the raster plot
+            arrowLength = 2;      % Default length of the arrow
+            headSize = 3;       % Size of the arrowhead
+
+            uDir =sort(uDir,'descend');
+            % Plot the arrows for each trial type (every 20 trials per type)
+            for i = 1:direcN
+                % Get the direction from uDir array
+                direction = uDir(i);
+                halftrials = nT/direcN/2;
+
+                % Modify arrow length for up/down arrows to make the shaft longer
+                if direction == 0  % Up or Down
+                    arrowLength = halftrials/2;ys = halftrials-1;
+                elseif direction == pi
+                    arrowLength = halftrials/2;ys = -halftrials/2;
+                else
+                    arrowLength = halftrials*2;ys=0;  % Default length for left/right arrows
+                end
+
+                % The starting position of the arrow for each trial type
+                if direction == pi/2  % Right
+                    startX = nB - (setX-setX/4);
+                    ys = 1;% Start at the last 10 columns for right arrows
+                    direction = direction +pi/2;
+                elseif direction == 3*pi/2  % Left
+                    startX = nB -setX-1;
+                    direction = direction +pi/2;
+                    ys = -(3*halftrials)/4;% Start at the last 10 columns minus arrow length for left arrows
+                else  % Up or Down
+                    startX = nB - setX;
+                    direction = direction +3*pi/2;
+                    % Use the same starting X position for up and down
+                end
+
+
+                startY = (i - 1) * (nT/direcN) + (nT/direcN) / 2 - ys;% Increase the length for up/down arrows
+
+                % For vertical arrows (up or down), position them in the middle of the trials
+                % Centered in the trial block
+
+                % Call the plotArrow function to plot the arrows
+                %plotArrow(ax, direction, arrowLength, startX, startY, headSize);
+            end
 
             xticklabels([])
             xlim([0 round(stimDur+preBase*2)/bin2])
@@ -2189,7 +2257,7 @@ for spatun =1
             %disp()
             w= sprintf('No rectangle grid files where found in %s. Skipping into next experiment.',NP.recordingName);
             warning(w)
-            %continue
+            continue
         end
 
 
