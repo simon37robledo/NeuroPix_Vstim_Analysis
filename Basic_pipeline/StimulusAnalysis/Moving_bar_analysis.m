@@ -11,10 +11,10 @@ summPlot = 0;
 plotexamplesMBR =1;
 newTIC = 0;
 
-ResponseProfile=1; redoResp=1;
-Shuffling =1;
-Shuffling_baseline=1;%Everything that involves the TIC matrix needs to change (choose trials) 
-repeatShuff =1;
+ResponseProfile=1; redoResp=0;
+Shuffling =0;
+Shuffling_baseline=0;%Everything that involves the TIC matrix needs to change (choose trials) 
+repeatShuff =0;
 trialThres =0.6;
 
 ReceptiveFieldFixedDelay = 0;
@@ -119,7 +119,7 @@ for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%G
     
         if isempty(ballFiles)
             %disp()
-            w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
+            w= sprintf('No moving bar files where found in %s. Skipping into next experiment.',NP.recordingName);
             warning(w)
             %continue
         end
@@ -128,7 +128,6 @@ for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%G
     lengthBar = [];
     widthBar = [];
     speeds = [];
-    orientations = [];
 
     j =1;
 
@@ -154,15 +153,6 @@ for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%G
         disp('Directory does not exist!');
     end
 
-    if ~isempty(find(strcmp(ball.VSMetaData.allPropName,'orientationFreq')))
-        Freq = [ cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'orientationFreq'))))];
-    end
-
-    
-%     rectcheck{r} = cell2mat(ball.VSMetaData.allPropVal(find(strcmp(ball.VSMetaData.allPropName,'rect'))))';
-% 
-%     r=r+1;
-
     
     uDir = unique(directions);
     direcN = length(uDir);
@@ -184,45 +174,6 @@ for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%G
 
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,newDiode,1,"MBR",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex));
     [stimOn stimOff onSync offSync] = NPdiodeExtract(NP,0,1,"MBR",ttlInd,data.Digital_channel(ex),data.Sync_bit(ex)); %Ugly second time to make sure orientation is right for creating A
-
-    %Check diode
-
-    % for i = 1:length(stimOn)
-    %
-    %     Lon = length(onSync(onSync>=stimOn(i) & onSync<=stimOff(i)));
-    %
-    %     Loff = length(offSync(offSync>=stimOn(i) & offSync<=stimOff(i)));
-    %
-    %     if Lon ~= 77 || Loff ~= 77
-    %
-    %         2+2
-    %
-    %     end
-    %
-    %     a = NP.getAnalogData(1,stimOn(i)-500,4000);
-    %
-    %     figure;plot(squeeze(a));
-    %     xline((onSync(onSync>=stimOn(i) & onSync<=stimOff(i))-stimOn(i)-500)*NP.samplingFrequencyNI/1000)
-    %
-    % end
-%
-%     ttlInd =2;
-%     % %
-%     %     %%Test diode triggers vs difital triggers:
-%     tr = NP.getTrigger;
-%     stimOnt = tr{3}(tr{3} > tr{1}(ttlInd) &  tr{3} < tr{2}(ttlInd));
-%     %
-%     stimOfft = tr{4}(tr{4} > tr{1}(ttlInd) &  tr{4} < tr{2}(ttlInd));
-    %
-    %      figure;plot(onDigital,stimOn','g')
-    %      hold on;
-    %      plot(stimOn,stimOn,'k')
-%      plot(offDigital,stimOff,'r');
-%      plot(stimOff,stimOff,'b')
-% % 
-% figure;plot(1:length(stimOff),offDigital-stimOff')
-% figure;plot(1:length(directimesSortedOff)-1,diff(directimesSortedOff)/1000)
-% figure;plot(1:length(directimesSorted)-1,diff(directimesSorted)/1000)
 
 
      %When dealing with different speeds, save different stim durs, and create M for each speed
@@ -253,21 +204,14 @@ for ex =  [51]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%G
 
     end
 
-%     figure;plot(1:length(stimOn)-1,diff(digon)/1000)
-
-    %find(-stimOn+stimOff>3000)
     %4. Sort directions:
     directimesSorted = C(:,1)';
     directimesSortedOff = Coff(:,1)';
 
-   
-
-     % When dealing with different speeds, save different stim durs, and create M for each speed
+    % When dealing with different speeds, save different stim durs, and create M for each speed
     stimDurs = -stimOn+stimOff;
 
     stimDur = mean(stimDurs(stimDurs>mean(stimDurs)-std(stimDurs)));
-    
-
 
     %5. Load data to select good units
     cluster_info = readtable(string(NP.recordingDir) + "\cluster_info.tsv",  "FileType","text",'Delimiter', '\t');
@@ -876,10 +820,7 @@ for tuningIndex = 1
 if tuning ==1
 
 
-    % Z-score method
-
     cd(NP.recordingDir)
-
 
     pvals= load(sprintf('pvalsBaselineBoot-1000-%s',NP.recordingName)).pvalsResponse;
     pvalsbar= load(sprintf('pvalsBaselineBootMBR-1000-%s',NP.recordingName)).pvalsResponse;
@@ -982,7 +923,7 @@ if tuning ==1
 end
 
 end
-%
+%%
 % Rasters plots per Neuron
 for plotOp = plotexamplesMBR %rstx
     if plotexamplesMBR == 1
@@ -1009,7 +950,7 @@ for plotOp = plotexamplesMBR %rstx
 
         directimesSorted = C(:,1)';
 
-        preBase = round(stimInter/2);
+        preBase = round((stimInter));
 
         [Mr2] = BuildBurstMatrix(goodU,round(p.t/bin2),round((directimesSorted-preBase)/bin2),round((stimDur+preBase*2)/bin2));
 
@@ -1066,18 +1007,17 @@ for plotOp = plotexamplesMBR %rstx
             end
 
 
-
             xticklabels([])
             xlim([0 round(stimDur+preBase*2)/bin2])
-            xticks([0 preBase/bin2:300/bin2:(stimDur+preBase*2)/bin2 (round((stimDur+preBase*2)/100)*100)/bin2])
-            xticklabels([]);
+            xticks([0 preBase/bin2:300/bin2:(stimDur+preBase)/bin2 (stimDur+preBase*2)/bin2])
+            xticklabels([[0 preBase:300:(stimDur+preBase) round(stimDur+preBase*2)]]);
 
 
             %%%%%% Plot PSTH
 
             subplot(10,1,[7 8])
 
-            MRhist = BuildBurstMatrix(goodU(:,eNeuron),round(p.t),round((directimesSorted(round(C(:,2)) == 3)-preBase)),round((stimDur+preBase*2)));
+            MRhist = BuildBurstMatrix(goodU(:,u),round(p.t),round((directimesSorted(round(C(:,2)) == 0)-preBase)),round((stimDur+preBase*2)));
 
 
             [nT2,nN2,nB2]= size(MRhist);
@@ -1114,11 +1054,11 @@ for plotOp = plotexamplesMBR %rstx
 
             %%%%PLot several trials one channel:
 
-            chan = goodU(1,eNeuron);
+            chan = goodU(1,u);
 
-            startTimes = directimesSorted(round(C(:,2)) == 3)-preBase;
+            startTimes = directimesSorted(round(C(:,2)) == 0)-preBase;
 
-            startTimes = startTimes(end-9:end);
+            %startTimes = startTimes(end-9:end);
 
             window = round(stimDur+preBase*2);
 
