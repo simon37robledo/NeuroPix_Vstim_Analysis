@@ -1,0 +1,92 @@
+
+ImagePath = "W:\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\4_5_25_In1-2";
+
+cd(ImagePath);
+
+files = dir;
+names = string({files.name});
+IRfile = names(contains(names,"IRmirror"));
+img = imread(ImagePath+filesep+IRfile);
+figure;imagesc(img);
+
+Xc = 636;
+Yc = 1056;
+
+Xm1 = 2298;
+Ym1 = 1247;
+Xm2 = 2475;
+Ym2 = 1077;
+
+Xe = 2429;
+Ye = 1040;
+
+
+Xc1 = -16.36;
+Yc = -3.379;
+
+Xm1 = 4.542;
+Ym1 = -4.078;
+
+Xm2 = 6.102;
+Ym2 = -2.355;
+
+Xe = 5.077;
+Ye = -2.012;
+
+%%
+Xc1 = 10;
+
+Xc = -16.36-Xc1;
+Yc = -3.379;
+
+Xm1 = 4.542-Xc1;
+Ym1 = -4.078;
+
+Xm2 = 6.102-Xc1;
+Ym2 = -2.355;
+
+Xe = 5.077-Xc1;
+Ye = -2.012;
+
+
+f = sqrt((Ym1-Yc).^2+(Xm1-Xc).^2);
+
+b = sqrt((Ye-Yc).^2+(Xe-Xc).^2);
+
+m = (Ym2 - Ym1)/(Xm2 - Xm1);
+n = Ym2-m*Xm2;
+
+syms Xmo a 
+
+d=sqrt((Xmo-Xc).^2+(m*Xmo+n - Yc).^2);
+c=sqrt((Xmo-Xe).^2+(m*Xmo+n - Ye).^2);
+e=sqrt((Xmo-Xm1).^2 + (m*Xmo+n - Ym1).^2);
+
+Y = vpasolve([b^2 == d^2 + c^2 - 2*d*c*cosd(2*a),...
+    f.^2 == d^2 + e^2 - 2*e*d*cosd(90-a)],[Xmo,a]);
+
+
+syms Xci
+
+Xmo=Y.Xmo;
+Ymo=Y.Xmo*m+n;
+d=sqrt((Xmo-Xc).^2+(m*Xmo+n - Yc).^2);
+
+
+m1 = (Ye - Ymo)/(Xe - Xmo);
+n1 = Ye-m1*Xe;
+
+Y1 = vpasolve((Xci-Xmo)^2+(Xci*m1+n1-Ymo)^2 == d^2,Xci)
+
+Xci = double(Y1(2));
+Yci = m1*Xci+n1;
+
+%%
+figure;
+scatter([Xc;Xm1;Xm2;Xe],[Yc;Ym1;Ym2;Ye],100,[1:4],"filled");hold on;
+text([Xc;Xm1;Xm2;Xe],[Yc;Ym1;Ym2;Ye],{'Cam','Mirror1','Mirror2','Eye'});
+plot([0 10],[0*m+n,10*m+n]);
+plot(Xmo,Ymo,'*k')
+plot(Xci,Yci,'ok')
+axis equal;
+

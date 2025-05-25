@@ -1,4 +1,7 @@
 %% Process video files
+% 1. Find good and synced frames from the digital triggers that correspond to real captured frames in reptilearn
+% 2. Filter Jitter of DLC results in case there is. 
+
 j=1;
 
 missingFrames = {};
@@ -24,65 +27,27 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile,'Format','auto');
 
+removeVibrations =0;
+
+
 %%
 
-for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
+for ex = [57:72]%examplesSDG%[7 8 28]%1:size(data,1):66
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
 
-    %1. Load NP class
-    path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
-        +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
-    try %%In case it is not run in Vstim computer, which has drives mapped differently
-        cd(pathE)
-    catch
-        try
-            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-            if strcmp(originP,'sil3\data')
-                path = replaceBetween(path,"","\Large_scale","W:");
-            else
-                path = replaceBetween(path,"","\Large_scale","Y:");
-            end
-
-            cd(path)
-        catch
-
-            if strcmp(originP,'sil3\data')
-                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
-            else
-                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
-            end
-            cd(path)
-
-        end
-    end
-    NP = NPAPRecording(path);
+    NP = loadNPclassFromTable(ex);
 
     [Ttrigger,chNumberT]=NP.getTrigger();
+    
+    vidDir = data.Eye_video_dir{ex};
 
-%     %2. Extract video dir
-%     patternIndex = strfind(string(NP.recordingDir), "\catgt");
-%     endIndex = patternIndex(1)-1;
-%     vidDir = string(NP.recordingDir);
-%     vidDir = extractBetween(vidDir,1,endIndex)+"\Original_Video";
-
-
-    %2. Extract video dir
-    patternIndex = strfind(string(NP.recordingDir),"Insertion"+string(data.Insertion(ex))+filesep+"catgt_"+string(NP.recordingName));
-    endIndex = patternIndex(1)-1;
-    vidDir = string(NP.recordingDir);
-    vidDir = extractBetween(vidDir,1,endIndex)+"Videos";
 
     file = dir (vidDir);
     filenames = {file.name};
     %Original video path:
-    vidFrames = filenames(contains(filenames,".csv") & contains(filenames,"Camera") & ~contains(filenames,"snapshot") & contains(filenames,"_"+string(data.Insertion(ex))+"_"));
+    vidFrames = filenames{contains(filenames,".csv") & contains(filenames,"Camera") & ~contains(filenames,"snapshot") & contains(filenames,"_"+string(data.Insertion(ex))+"_")};
 
-    %vidName = filenames(contains(filenames,".mp4"));
-
-
-%     figure;
-%     plot([1:length(vidTTLs)-1],diff(vidTTLs))
 
     vidTTLs = Ttrigger{7}; %Camera trigger
     indexTTLs = find(diff(vidTTLs)>1000);
@@ -100,69 +65,113 @@ for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
 
     end
 
-    VideoTS = readtable(vidDir+filesep+vidFrames); %Real frames saved in video
+    VideoTS = readtable(string(vidDir)+filesep+string(vidFrames)); %Real frames saved in video
 
     timestampsRecF = (VideoTS.timestamp - VideoTS.timestamp(1))*1000; %Zero frames, t-start = 0, and convert to miliseconds
 
     diffTS = diff(timestampsRecF); %Difference between zeroed frames
 
-    
-%     frameRateReptilearn = readtable(filenames{contains(filenames,".json") &  contains(filenames,"_"+string(data.Insertion(ex))+"_")})
-
-
-
-
-%     %Plot missing frames
-%     figure;
-%     plot([1:size(VideoTS,1)-1],diffTS)
-%     ylim([10 23])
 
     msPerFarme = mean(diffTS);
+    frameRate = round(1000/msPerFarme);
 
-    if mean(diffTS)>20 %%%Problem in PV97, where one frame taken every two triggers
-        
-        MissingInd = find(diffTS>25);
-        vidTTLs = vidTTLs(1:2:end);
-
-        extraInd = find(diffTS<11);
-
-        fprintf('extraInd = %d',length(extraInd))
-
-    
+    if ex == 65 || ex == 66 ||  ex == 67
+        removeVibrations = 1;
     else
-        
-        MissingInd = find(diffTS>15);
-    end %find indexes where there is a frame-miss event (could be one or several).
+        removeVibrations = 0;
+    end
 
-    %Exclude missing frames in rec time stamps from TTLs
+
+    if removeVibrations
+
+        filename = filenames{contains(filenames,".csv") & contains(filenames,"snapshot") & contains(filenames,"_"+string(data.Insertion(ex))+"_")};
+        T =  readtable(filename, ...
+            'ReadVariableNames', true, ...
+            'NumHeaderLines', 2);  % Skip first 3 lines to get to the actual data;
+
+        fs = frameRate;  % Frames per second (adjust based on your video)
+        f0 = 49;              % Frequency to remove (Hz)
+        Q = 10;               % Quality factor (higher = narrower notch)
+
+        % Design notch filter
+        wo = f0 / (fs/2);     % Normalized frequency
+        bw = wo / Q;
+        [b, a] = iirnotch(wo, bw);
+
+        % Create a copy to store filtered data
+        T_filtered = T;
+
+        % Get all variable (column) names
+        varNames = T.Properties.VariableNames;
+
+        % Loop through all columns
+        for i = 1:length(varNames)
+            colName = varNames{i};
+
+            % Check if column is x or y coordinate
+            if contains(colName, 'x') || contains(colName, 'y')
+                Tempdata = T{:, i};
+
+
+                % Apply zero-phase lowpass filter (ignore NaNs)
+                nanIdx = isnan(Tempdata);
+                dataClean = Tempdata;
+                dataClean(nanIdx) = interp1(find(~nanIdx), Tempdata(~nanIdx), find(nanIdx), 'linear', 'extrap');
+                filtered = filtfilt(b, a, dataClean);
+
+                % Restore NaNs after filtering
+                filtered(nanIdx) = NaN;
+
+                % Save into filtered table
+                T_filtered{:, i} = filtered;
+            end
+        end
+
+%         %%%Test
+%         figure;plot(2000:2500,filtered(2000:2500)')
+%         title('Notch, Q = 5')
+%         figure;plot(2000:2500,T.y(2000:2500)')
+
+        % Path to original file and output file
+        originalFile = filename;
+        outputFile   = sprintf('%s-FilteredJitter.csv',extractBefore(filename, ".csv"));
+
+        % --- Step 1: Read original headers ---
+        fid = fopen(originalFile);
+        header1 = fgetl(fid);  % Line 1: scorer
+        header2 = fgetl(fid);  % Line 2: bodypart
+        header3 = fgetl(fid);  % Line 3: coords (x/y/likelihood)
+        fclose(fid);
+
+        % --- Step 2: Write headers to output file ---
+        fid_out = fopen(outputFile, 'w');
+        fprintf(fid_out, '%s\n', header1);
+        fprintf(fid_out, '%s\n', header2);
+        fprintf(fid_out, '%s\n', header3);
+        fclose(fid_out);
+
+        % --- Step 3: Append the filtered data ---
+        % Write numeric data (no variable names, just values)
+        writetable(T_filtered, outputFile, ...
+            'WriteVariableNames', false, ...
+            'WriteMode', 'append');
+
+
+    end
+
+    MissingInd = find(diffTS>(msPerFarme+5));
 
     mFrames= [];
 
     TTL2FrameI = 1:length(vidTTLs);
 
-%     VideoTS(extraInd(1),:) =[];
-% 
-%     timestampsRecF = (VideoTS.timestamp - VideoTS.timestamp(1))*1000; %Zero frames, t-start = 0, and convert to miliseconds
-% 
-%     diffTS = diff(timestampsRecF);
-% 
-%      %Plot missing frames
-%     figure;
-%     plot([1:size(VideoTS,1)-1],diffTS)
-%     ylim([10 23])
-
-
-    
 
     for m = 1:length(MissingInd)
 
         %Check what is the time period of missed frames within an event and calculate the
         %indexes of the unexisting frames.
 
-
         MissingSection = [MissingInd(m):MissingInd(m)-1+floor(diffTS(MissingInd(m))/msPerFarme)-1];
-       
-        %MissingSection = [MissingInd(m):MissingInd(min([m+1 length(MissingInd)]))];
 
         mFrames = [mFrames MissingSection];
 
@@ -175,7 +184,7 @@ for ex = [49:55]%examplesSDG%[7 8 28]%1:size(data,1)
         mFrames = 0;
     end
 
-   fprintf('Missed frames = %d',mFrames)
+   fprintf('Missed frames = %d',length(mFrames))
 
     TTL2Frame = setdiff(TTL2FrameI,mFrames); %%TTL index number to index number of frame
 
