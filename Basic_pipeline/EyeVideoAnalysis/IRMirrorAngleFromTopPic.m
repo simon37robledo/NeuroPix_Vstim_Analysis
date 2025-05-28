@@ -43,7 +43,7 @@ imagesPaths = {'\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experimen
 
 coorTable2 = table();
 ins = {[1,2],[3,4],[5,6],[7,8,9]};
-for i = 2%2:numel(imagesPaths)
+for i = 1:4%2:numel(imagesPaths)
 
     iPath = imagesPaths{i};
 
@@ -72,29 +72,53 @@ size(j,1)
 
 coorTable = coorTable2;
 
-kx = -5;
+kx = 0;%[0:20]-10;
 
 %Row 1 PV132In1-2 | R2 PV132In3-4 | R2 PV132In5-6 | R2 PV132In7-9
 
 FusionCoorsX = [-34.069,7.35,11.23,9.25;-16.36,4.54,6.102,5.077;-17.103,4.747,6.03,4.576;-23.87,10.173,13.572,11.265];%Xc, Xm1, Xm2, Xe
 FusionCoorsY = [-3.858,-8.42,-4.746,-3.6;-3.379,-4.078,-2.355,-2.012;2.123,-0.03,1.3,1.98;2.133,-0.78,2.844,3.074];%Yc, Ym1, Ym2, Ye
 
-for i = 4%height(coorTable)
 
+for i = 1:4%height(coorTable)
+
+    XmoV = [];
+    aV = [];
+    Xm2V =[];
+    Xm1V =[];
+    XciDV =[];
+
+    fig = figure;
 
     for k = 1:length(kx)
 
-        Xc = FusionCoorsX(i,1)+kx(k);%coorTable.Camera_X(i)/10;%
-        Yc = FusionCoorsY(i,1);%(size(j,1)-coorTable.Camera_Y(i))/-10;%
+        if Fusion
 
-        Xm1 =  FusionCoorsX(i,2)+kx(k);%(coorTable.Mirror1_X(i))/10;%
-        Ym1 = FusionCoorsY(i,2);%(size(j,1)-coorTable.Mirror1_Y(i))/-10;%
+            Xc = FusionCoorsX(i,1)+kx(k);%coorTable.Camera_X(i)/10;%
+            Yc = FusionCoorsY(i,1);%(size(j,1)-coorTable.Camera_Y(i))/-10;%
 
-        Xm2 =  FusionCoorsX(i,3)+kx(k);%coorTable.Mirror2_X(i)/10;%
-        Ym2 = FusionCoorsY(i,3);%(size(j,1)-coorTable.Mirror2_Y(i))/-10;%
+            Xm1 =  FusionCoorsX(i,2)+kx(k);%(coorTable.Mirror1_X(i))/10;%
+            Ym1 = FusionCoorsY(i,2);%(size(j,1)-coorTable.Mirror1_Y(i))/-10;%
 
-        Xe =  FusionCoorsX(i,4)+kx(k); %coorTable.Eye_X(i)/10;%
-        Ye =  FusionCoorsY(i,4); %(size(j,1)-coorTable.Eye_Y(i))/-10;%
+            Xm2 =  FusionCoorsX(i,3)+kx(k);%coorTable.Mirror2_X(i)/10;%
+            Ym2 = FusionCoorsY(i,3);%(size(j,1)-coorTable.Mirror2_Y(i))/-10;%
+
+            Xe =  FusionCoorsX(i,4)+kx(k); %coorTable.Eye_X(i)/10;%
+            Ye =  FusionCoorsY(i,4); %(size(j,1)-coorTable.Eye_Y(i))/-10;%
+        else
+            Xc = coorTable.Camera_X(i)+kx(k);%coorTable.Camera_X(i)/10;%
+            Yc = coorTable.Camera_Y(i);%(size(j,1)-coorTable.Camera_Y(i))/-10;%
+
+            Xm1 = coorTable.Mirror1_X(i)+kx(k);%(coorTable.Mirror1_X(i))/10;%
+            Ym1 = coorTable.Mirror1_Y(i);%(size(j,1)-coorTable.Mirror1_Y(i))/-10;%
+
+            Xm2 = coorTable.Mirror2_X(i)+kx(k);%coorTable.Mirror2_X(i)/10;%
+            Ym2 = coorTable.Mirror2_Y(i);%(size(j,1)-coorTable.Mirror2_Y(i))/-10;%
+
+            Xe =  coorTable.Eye_X(i)+kx(k); %coorTable.Eye_X(i)/10;%
+            Ye =  coorTable.Eye_Y(i); %(size(j,1)-coorTable.Eye_Y(i))/-10;%
+
+        end
 
         f = sqrt((Ym1-Yc).^2+(Xm1-Xc).^2);
 
@@ -109,8 +133,8 @@ for i = 4%height(coorTable)
         c=sqrt((Xmo-Xe).^2+(m*Xmo+n - Ye).^2);
         e=sqrt((Xmo-Xm1).^2 + (m*Xmo+n - Ym1).^2);
 
-        Y = vpasolve([b^2 == d^2 + c^2 - 2*d*c*cosd(2*a),...
-            f.^2 == d^2 + e^2 - 2*e*d*cosd(90-a)],[Xmo,a]);
+        Y = vpasolve([b^2 == d^2 + c^2 - 2*d*c*cos(2*a),...
+            f.^2 == d^2 + e^2 - 2*e*d*cos(pi/2-a)],[Xmo,a],[Xm1+Xm1*0.01 Xm2-Xm2*0.01; 0.2 1.5]);
 
 
         syms Xci
@@ -131,11 +155,35 @@ for i = 4%height(coorTable)
         %     coorTable.NewCam_X(i) = XciD;
         %     coorTable.NewCam_Y(i) = YciD;
 
-%         scatter(Xmo,kx(k));
-%         hold on
+        XmoV = [XmoV Xmo];
+        aV = [aV double(Y.a)];
+        Xm1V = [Xm1V Xm1];
+        Xm2V = [Xm2V Xm2];
+        XciDV = [XciDV XciD];
 
     end
 
+    subplot(3,1,1)
+    scatter(kx,XmoV);
+    title(string(i))
+    hold on
+    scatter(kx,Xm1V,'red','filled');
+    scatter(kx,Xm2V,'yellow','filled')
+    xlabel('Constant added to X coor')
+    ylabel('X mirror-cam intersection')
+
+    subplot(3,1,2)
+    scatter(kx,aV);
+    ylabel('Angle')
+    xlabel('Constant added to X coor')
+
+    subplot(3,1,3)
+    scatter(kx,XciDV(1,:));
+    hold on
+    scatter(kx,XciDV(2,:));
+    ylabel('New camera position')
+    xlabel('Constant added to X coor')
+      
     figure;
     scatter([Xc;Xm1;Xm2;Xe],[Yc;Ym1;Ym2;Ye],100,[1:4],"filled");hold on;
     text([Xc;Xm1;Xm2;Xe],[Yc;Ym1;Ym2;Ye],{'Cam','Mirror1','Mirror2','Eye'});
