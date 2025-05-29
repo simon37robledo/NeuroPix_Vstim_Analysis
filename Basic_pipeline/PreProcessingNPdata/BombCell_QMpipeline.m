@@ -162,7 +162,7 @@ data = readtable(excelFile);
 
 
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [51 52 53 54]%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [69]%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     NP = loadNPclassFromTable(ex);
@@ -175,14 +175,14 @@ for ex =  [51 52 53 54]%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordin
 end
 
 %% Do distribution of amplitudes
-for ex =  []%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [69]%GoodRecordingsPV%allGoodRec %GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     NP = loadNPclassFromTable(ex);
 
     KSversion =4;
 
-    [qMetric,unitType]=NP.getBombCell(NP.recordingDir,1,KSversion,0);
+    [qMetric,unitType]=NP.getBombCell(NP.recordingDir+"\kilosort4",1,KSversion,0);
     close all
 
 end
