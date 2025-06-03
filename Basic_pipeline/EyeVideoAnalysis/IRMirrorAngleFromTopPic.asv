@@ -200,8 +200,6 @@ for i = 1:height(coorTable)
 end
 %% Convert into cm and save
 
-coorTableTransf = coorTable;
-
 for i = 1:height(coorTable)
     distBoard(i) = sqrt(sum(([coorTable.Edge1_board1_X(i) coorTable.Edge1_board1_Y(i) ] - [coorTable.Edge2_board_X(i)  coorTable.Edge2_board_Y(i) ]).^2));
 end
@@ -210,10 +208,10 @@ distReal = 30;
 factor = distReal./distBoard;
 
 for i = 1:height(coorTable)
-coorTableTransf(i,[1:14 19:20]) = array2table(coorTable{i,[1:14 19:20]}*factor(i));
+coorTable(i,:) = coorTable(i,:).*factor(i);
 end
 
-writetable(coorTableTransf,'coordinatesTransf.csv');
+writetable(coorTable,'coordinates.csv');
 
 %% Check cam angle
 % Define points as vectors
