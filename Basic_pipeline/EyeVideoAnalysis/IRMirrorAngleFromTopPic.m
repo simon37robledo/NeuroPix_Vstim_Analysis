@@ -213,6 +213,11 @@ for i = 1:height(coorTable)
 coorTableTransf(i,[1:14 19:20]) = array2table(coorTable{i,[1:14 19:20]}*factor(i));
 end
 
+%%Use eye center as 0,0
+
+coorTableTransf.newCamX = coorTableTransf.newCamX - coorTableTransf.Eye_X;
+coorTableTransf.newCamX = coorTableTransf.newCamY - coorTableTransf.Eye_Y;
+
 writetable(coorTableTransf,'coordinatesTransf.csv');
 
 %% Check cam angle
