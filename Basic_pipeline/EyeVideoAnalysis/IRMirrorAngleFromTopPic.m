@@ -41,7 +41,7 @@ imagesPaths = {'\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experimen
     '\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\6_5_25_In5-6\IRmirror_angle_In5-6.jpg',...
      '\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\7_5_25_In7-9\IR_mirror_image_In_7-9.jpg'};
 
-coorTable2 = table();
+coorTable = table();
 ins = {[1,2],[3,4],[5,6],[7,8,9]};
 for i = 1:4%2:numel(imagesPaths)
 
@@ -50,7 +50,7 @@ for i = 1:4%2:numel(imagesPaths)
     fc = coordinateSelectorGUI(iPath);
     fc.Animal =  repmat({'PV132'}, height(fc), 1);
     fc.Session = repmat({ins{i}}, height(fc), 1);
-    coorTable2 = [coorTable2; fc]; 
+    coorTable = [coorTable; fc]; 
 
 end
 
@@ -66,11 +66,7 @@ size(j,1)
 
 %%
 
-%coorTable = readtable('coordinates.csv');
-
-%coorTable1 = coorTable;
-
-coorTable = coorTable2;
+coorTable = readtable('coordinates.csv');
 
 kx = 0;%[0:20]-10;
 
@@ -79,8 +75,9 @@ kx = 0;%[0:20]-10;
 FusionCoorsX = [-34.069,7.35,11.23,9.25;-16.36,4.54,6.102,5.077;-17.103,4.747,6.03,4.576;-23.87,10.173,13.572,11.265];%Xc, Xm1, Xm2, Xe
 FusionCoorsY = [-3.858,-8.42,-4.746,-3.6;-3.379,-4.078,-2.355,-2.012;2.123,-0.03,1.3,1.98;2.133,-0.78,2.844,3.074];%Yc, Ym1, Ym2, Ye
 
+Fusion =0;
 
-for i = 1:4%height(coorTable)
+for i = 1:height(coorTable)
 
     XmoV = [];
     aV = [];
@@ -163,6 +160,12 @@ for i = 1:4%height(coorTable)
 
     end
 
+    [my,ind] = min([abs(YciD(1)-Xm1), abs(YciD(2)-Xm1)]);
+    coorTable.newCamX(i) = XciD(ind);
+    coorTable.newCamY(i) = YciD(ind);
+    coorTable.Cam_eye_angle(i) = double(Y.a);
+
+
     subplot(3,1,1)
     scatter(kx,XmoV);
     title(string(i))
@@ -195,6 +198,53 @@ for i = 1:4%height(coorTable)
 
 
 end
+%% Convert into cm and save
+
+coorTableTransf = coorTable;
+
+for i = 1:height(coorTable)
+    distBoard(i) = sqrt(sum(([coorTable.Edge1_board1_X(i) coorTable.Edge1_board1_Y(i) ] - [coorTable.Edge2_board_X(i)  coorTable.Edge2_board_Y(i) ]).^2));
+end
+
+distReal = 30;
+factor = distReal./distBoard;
+
+for i = 1:height(coorTable)
+coorTableTransf(i,[1:14 19:20]) = array2table(coorTable{i,[1:14 19:20]}*factor(i));
+end
+
+%%Use eye center as 0,0
+
+coorTableTransf.newCamX = coorTableTransf.newCamX - coorTableTransf.Eye_X;
+coorTableTransf.newCamX = coorTableTransf.newCamY - coorTableTransf.Eye_Y;
+
+writetable(coorTableTransf,'coordinatesTransf.csv');
+
+%% Check cam angle
+% Define points as vectors
+camN = [XciD(ind), YciD(ind)];  % Replace with actual coordinates
+Mirror = [Xmo, Ymo];
+Eye = [Xe,Ye];
+
+% Compute vectors
+u = Mirror - camN;  % vector AB
+v = Eye - Mirror;  % vector BC
+
+% Compute the dot product and norms
+dot_uv = dot(u, v);
+norm_u = norm(u);
+norm_v = norm(v);
+
+% Compute angle in radians
+angle_rad = acos(dot_uv / (norm_u * norm_v));
+
+% Convert to degrees
+angle_deg = rad2deg(angle_rad);
+
+% Display the result
+fprintf('Angle between AB and BC is %.2f degrees\n', angle_deg);
+
+
 %% Check solutions
 
 a = double(Y.a);
