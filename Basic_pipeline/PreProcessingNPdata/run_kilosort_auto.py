@@ -45,9 +45,9 @@ def _get_path(Base_path, Exp_name, Insertion):
 
 
 if __name__ == "__main__":
-    animal = 'PV132'
+    animal = 'PV140'
 
-    for i in  range(6, 7):
+    for i in  range(1, 7):
         meta_path = Path(_get_meta_path(*get_table_path(animal, i)))
         base_path, animal_name, insertion_name = get_table_path(animal, i)
         path_folder = _get_path(base_path, animal_name, insertion_name)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
         SAVE_PATH = _get_bin_path(*get_table_path(animal, i))
 
-        settings = {'filename': SAVE_PATH, 'n_chan_bin': 385, 'Th_universal': 8, 'Th_learned': 6, 'duplicate_spike_ms': 0.5, 'highpass_cutoff': 300}
+        settings = {'filename': SAVE_PATH, 'n_chan_bin': 385, 'Th_universal': 8, 'Th_learned': 6, 'duplicate_spike_ms': 0.5, 'highpass_cutoff': 200}
 
         ops, st, clu, tF, Wall, similar_templates, is_ref, est_contam_rate, kept_spikes = \
             run_kilosort(
