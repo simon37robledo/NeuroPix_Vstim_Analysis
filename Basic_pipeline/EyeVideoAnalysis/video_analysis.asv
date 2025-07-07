@@ -18,7 +18,7 @@ removeVibrations =0;
 
 %%
 
-for ex = [73:78]%examplesSDG%[7 8 28]%1:size(data,1):66
+for ex = [78]%examplesSDG%[7 8 28]%1:size(data,1):66
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
 
@@ -84,11 +84,9 @@ for ex = [73:78]%examplesSDG%[7 8 28]%1:size(data,1):66
 
         VibrationF = round(f(ind+mnIn-1)); %find vibration freq.
 
-        if VibrationF ~= 49
+        if VibrationF != 49
 
-            print(sprintf('Diff vibration freq %s',filename))
-
-        end
+            print
 
         fs = frameRate;  % Frames per second (adjust based on your video)
         f0 = VibrationF;              % Frequency to remove (Hz)

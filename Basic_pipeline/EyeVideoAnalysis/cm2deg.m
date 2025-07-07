@@ -5,7 +5,7 @@
 
 %function pixels2eyeDegrees()
 % Parameters
-eye_to_monitor_distance = 21.5; % Distance from eye to monitor in cm
+eye_to_monitor_distance = 23.5; % Distance from eye to monitor in cm
 pixel_size = 33/1080; % Size of one pixel in cm (e.g., 25 micrometers) screen divided resolution
 monitor_resolution = [1920, 1080]; % Width and height in pixels
 screen_center = monitor_resolution / 2; % Center pixel coordinates

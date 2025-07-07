@@ -2,6 +2,7 @@
 %%Dell screen specs
 
 %%Acer active display area 587x330 mm
+%%pixel_size = 33/(1080)
 
 function [theta_x theta_y] = pixels2eyeDegrees(eye_to_monitor_distance,pixel_size,monitor_resolution)
 % Parameters

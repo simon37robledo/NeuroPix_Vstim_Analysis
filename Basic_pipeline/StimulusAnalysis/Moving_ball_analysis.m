@@ -63,32 +63,7 @@ duration = 100; %in ms. Duration of window in which the response is calculated. 
 for ex =  [49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
-    path = convertStringsToChars(string(data.Base_path(ex))+filesep+string(data.Exp_name(ex))+filesep+"Insertion"+string(data.Insertion(ex))...
-        +filesep+"catgt_"+string(data.Exp_name(ex))+"_"+string(data.Insertion(ex))+"_g0");
-    try %%In case it is not run in Vstim computer, which has drives mapped differently
-        cd(pathE)
-    catch
-        try
-            originP = cell2mat(extractBetween(path,"\\","\Large_scale"));
-            if strcmp(originP,'sil3\data')
-                path = replaceBetween(path,"","\Large_scale","W:");
-            else
-                path = replaceBetween(path,"","\Large_scale","Y:");
-            end
-
-            cd(path)
-        catch
-
-            if strcmp(originP,'sil3\data')
-                path = replaceBetween(path,"","\Large_scale","\\sil3\data");
-            else
-                path = replaceBetween(path,"","\Large_scale","\\sil1\data");
-            end
-            cd(path)
-
-        end
-    end
-    NP = NPAPRecording(path);
+    NP = loadNPclassFromTable(ex);
 
     %Create Figs and matData folders if they don't exist
 

@@ -8,7 +8,7 @@ data = readtable(excelFile);
 
 %%% Call preprocessing:
 
-for ex =[70]
+for ex =[79:83]
     experiment = data(ex,:);
     FRunCatGTnTprime(experiment);
 
@@ -120,7 +120,7 @@ end
 
 
 filenames = {file.name};
-num = string(sum( ~cellfun(@isempty, strfind(filenames, expPath)))-2); %Normal is -1
+num = string(sum( ~cellfun(@isempty, strfind(filenames, expPath)))-1); %Normal is -1
 
 %%
 if concat ==1

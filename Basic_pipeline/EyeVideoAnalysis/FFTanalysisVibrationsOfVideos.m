@@ -1,5 +1,23 @@
 % Use Welch’s method to estimate power spectral density
-[pxx, f] = pwelch(Tempdata, [], [], [], 99);
+
+for ex = [73:78]%examplesSDG%[7 8 28]%1:size(data,1):66
+    %%%%%%%%%%%% Load data and data paremeters
+    %1. Load NP class
+
+
+    vidDir = data.Eye_video_dir{ex};
+
+
+    file = dir (vidDir);
+    filenames = {file.name};
+    filename = filenames{contains(filenames,".csv") & contains(filenames,"snapshot") & contains(filenames,"_"+string(data.Insertion(ex))+"_")};
+    T =  readtable(filename, ...
+        'ReadVariableNames', true, ...
+        'NumHeaderLines', 2);  % Skip first 3 lines to get to the actual data;
+
+   
+
+end
 
 % Plot
 figure;
