@@ -283,8 +283,7 @@ pvals = [eNeuron;pvals(eNeuron)]; %%%Why unit 59 has a pvalue of 0.
 ur = 1;
 
 for u = eNeuron
-
-    
+  
 
 
     if Raster
@@ -576,8 +575,6 @@ for u = eNeuron
     end
         
     
-
-
 
     %% %%%%%%%%%Plot receptive field per direction
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -46,7 +46,7 @@ N_bootstrap = 1000;
 
 pv27 = [8 9 10 11 12 13 14];
 
-newDiode =0;
+newDiode =1;
 GoodRecordingsRF = [8:20,40:43,49:54];
 Awake = [44:48];
 
@@ -60,7 +60,7 @@ duration = 100; %in ms. Duration of window in which the response is calculated. 
 %%
 %r=1;%check rect
 % Iterate through experiments (insertions and animals) in excel file
-for ex =  [49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
+for ex =  [65]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecordings%GoodRecordingsPV%GoodRecordingsPV%selecN{1}(1,:) %1:size(data,1)
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
     NP = loadNPclassFromTable(ex);
@@ -92,12 +92,12 @@ for ex =  [49:54]%GoodRecordingsPV%GoodRecordingsPV%SDGrecordingsA%GoodRecording
     ballFiles = filenames(contains(filenames,"linearlyMovingBall"));
 
     
-        if isempty(ballFiles)
-            %disp()
-            w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
-            warning(w)
-            continue
-        end
+        % if isempty(ballFiles)
+        %     %disp()
+        %     w= sprintf('No moving ball files where found in %s. Skipping into next experiment.',NP.recordingName);
+        %     warning(w)
+        %     continue
+        % end
 
     directions = [];
     offsets = [];
@@ -745,8 +745,7 @@ for Shuffle =1
     %%%%%%%%%%%%%%%%%%%%% Botstraping baseline
 
     if Shuffling_baseline
-        
-        
+             
 
         if ~isfile(sprintf('pvalsBaselineBoot-%d-%s.mat',N_bootstrap,NP.recordingName))||repeatShuff==1
 

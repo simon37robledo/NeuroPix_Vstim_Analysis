@@ -508,14 +508,29 @@ else
 
     if nargin>=7 %% If there is a sync waveform:
 
+        %%%%% Diode ups and downs are extracted accordying to digital
+        %%%%% triggers into two categories 1. frames ('onSync','offSync)
+        %%%%% and 2. stimulus' trial onset and offset ('onset','offset')
+
         % Search in for neural SQW and NI SQW and load them
 
+        %Load neural sync waveform timestamps:
         Neur = readmatrix(dir(fullfile(NP.recordingDir, '*imec0.ap.xd_384_6_500.txt*')).name);
+
+        %Load nidaq sync waveform timestamps:
         originSQW = readmatrix(dir(fullfile(NP.recordingDir, sprintf('*nidq.xd_%d_%d_500.txt*',digCH,syncCH))).name);
+        
+        %If the stimulus moves (e.g. Moving ball) sync frames and stimulus
+        %onsets and offsets:
+      
         if ismoving
+
+            %Sync on frames
             offSync = interp1(originSQW'*1000, Neur'*1000, offFrame, 'linear');
+            %Sync off frames
             onSync = interp1(originSQW'*1000, Neur'*1000, onFrame, 'linear');
 
+            %Save
             fileID = fopen(fileName+"OnFrame"+".txt",'w');
             fprintf(fileID, '%d\n', onSync);
             fclose(fileID);
@@ -525,6 +540,9 @@ else
             fclose(fileID);
 
         end
+
+        %Sync stimulus onset and offset (non moving stimuli
+        %are treated as just having onset and offset)
         onsetSync = interp1(originSQW'*1000, Neur'*1000, onset, 'linear');
         fileID = fopen(fileName+"Onset"+".txt",'w');
         fprintf(fileID, '%d\n', onsetSync);

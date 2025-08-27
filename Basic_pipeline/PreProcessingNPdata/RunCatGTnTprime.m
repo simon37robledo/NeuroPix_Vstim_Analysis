@@ -8,7 +8,7 @@ data = readtable(excelFile);
 
 %%% Call preprocessing:
 
-for ex =[79:83]
+for ex =[84:86]
     experiment = data(ex,:);
     FRunCatGTnTprime(experiment);
 

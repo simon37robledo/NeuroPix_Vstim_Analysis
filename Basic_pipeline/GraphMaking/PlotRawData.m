@@ -1,6 +1,6 @@
 
 
-function [fig mx mn] = PlotRawData(fig,NP,chan,startTimes,window,freq,type,preBase,spikeTimes)
+function [fig mx mn] = PlotRawDataNP(fig,NP,chan,startTimes,window,freq,type,preBase,spikeTimes)
 tic
 raw_signal = squeeze(NP.getData(chan,startTimes,window));
 toc
