@@ -9,7 +9,7 @@ data = readtable(excelFile);
 %Optionall
 bombcelled = 0;
 plotRasters =0;
-heatMap = 1;
+c = 1;
 plotHeatMap =0;
 calculateEntropy =0;
 ex=1;

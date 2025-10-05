@@ -3,6 +3,8 @@ excelFile = 'Experiment_Excel.xlsx';
 
 data = readtable(excelFile);
 
+%%
+
 ex =82; %error with 67 PV132_4
 NP = loadNPclassFromTable(ex); %73 81
 
@@ -14,30 +16,97 @@ d3 = vsR.getSyncedDiodeTriggers();
 r = vsR.getReceptiveFields();
 vsR.plotReceptiveFields
 %% Rect Grid
-NP = loadNPclassFromTable(84); %73 81
-vsRe = rectGridAnalysis(NP);
-vsRe.getSessionTime("overwrite",true);
-%vsRe.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true); 
-vsRe.getDiodeTriggers('overwrite',true); 
-vsRe.getSyncedDiodeTriggers("overwrite",true);
-vsRe.plotSpatialTuningSpikes;
-vsRe.plotSpatialTuningLFP;
+for ex = 73 %84:91
+    NP = loadNPclassFromTable(ex); %73 81
+    vsRe = rectGridAnalysis(NP);
+    vsRe.getSessionTime("overwrite",true);
+    %vsRe.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true);
+    vsRe.getDiodeTriggers('overwrite',true);
+    vsRe.getSyncedDiodeTriggers("overwrite",true);
+    % vsRe.plotSpatialTuningSpikes;
+    % vsRe.plotSpatialTuningLFP;
+    vsRe.ResponseWindow('overwrite',true)
+    results = vsRe.ShufflingAnalysis('overwrite',true);
+    vsRe.plotRaster('AllResponsiveNeurons',true,MergeNtrials=1,overwrite=true)
+end
+vsRe.CalculateReceptiveFields
+vsRe.PlotReceptiveFields("meanAllNeurons",true)
+
 %% Moving ball
-NP = loadNPclassFromTable(86); %73 81
-vs = linearlyMovingBallAnalysis(NP);
+
+for ex = 84
+    NP = loadNPclassFromTable(ex); %73 81
+    vs = linearlyMovingBallAnalysis(NP);
+    vs.getSessionTime("overwrite",true);
+     vs.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true);
+    % %vs.plotDiodeTriggers
+    % vs.getSyncedDiodeTriggers("overwrite",true);
+    % %vs.plotSpatialTuningSpikes;
+    % r = vs.ResponseWindow('overwrite',true);
+    % results = vs.ShufflingAnalysis('overwrite',true);
+    vs.plotRaster('AllResponsiveNeurons',true,'overwrite',true,'MergeNtrials',3)
+    vs.plotRaster('exNeurons',133,'MergeNtrials',3,'speed',1)
+    %vs.plotRaster('exNeurons',301,'overwrite',true,'MergeNtrials',3)
+    %vs.plotCorrSpikePattern
+    %vs.plotRaster('AllSomaticNeurons',true,'overwrite',true,'speed',2)
+    %vs.CalculateReceptiveFields('overwrite',true);
+    %vs.PlotReceptiveFields('overwrite',true,'RFsDivision',{'Directions','','Luminosities'})
+end
+
+%% PlotZScoreComparison
+%[49:54 57:81] MBR all experiments
+
+VStimAnalysis.PlotZScoreComparison([49:54 57:81],{'MB', 'RG','MBR'})%[49:54,57:91]
+
+%% Gratings
+ex = 49;
+NP = loadNPclassFromTable(ex); %73 81
+vs = StaticDriftingGratingAnalysis(NP);
 vs.getSessionTime("overwrite",true);
-vs.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true); 
-%vs.plotDiodeTriggers
+vs.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true);
+
+dT = vs.getDiodeTriggers;
+% vs.plotDiodeTriggers
 vs.getSyncedDiodeTriggers("overwrite",true);
-%vs.plotSpatialTuningSpikes;
 r = vs.ResponseWindow('overwrite',true);
-results = vs.ShufflingAnalysis('overwrite',true);
-vs.plotRaster('AllResponsiveNeurons',true,'overwrite',true,'MergeNtrials',3)
-vs.plotRaster('exNeurons',42,'overwrite',true,'MergeNtrials',3)
-vs.plotCorrSpikePattern
-%vs.plotRaster('AllSomaticNeurons',true,'overwrite',true,'speed',2)
-vs.CalculateReceptiveFields('overwrite',true);
-vs.PlotReceptiveFields("allDir",true,'overwrite',true)
+
+
+%% Moving bar
+for ex = 84
+    NP = loadNPclassFromTable(ex); %73 81
+    vs = linearlyMovingBarAnalysis(NP);
+    vs.getSessionTime("overwrite",true);
+    vs.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true);
+    %vs.plotDiodeTriggers
+    vs.getSyncedDiodeTriggers("overwrite",true);
+    r = vs.ResponseWindow('overwrite',true);
+    results = vs.ShufflingAnalysis('overwrite',true);
+    if ~any(results.Speed1.pvalsResponse<0.05)
+         fprintf('%d-No responsive neurons.\n',ex)
+         continue
+    end
+    vs.CalculateReceptiveFields('overwrite',true,'nShuffle',20);
+    vs.PlotReceptiveFields('overwrite',true,'RFsDivision',{'Directions','','Luminosities'},meanAllNeurons=true)
+end
+
+
+%% Run for all
+for ex = 85:88
+    NP = loadNPclassFromTable(ex); %73 81
+    vs = linearlyMovingBallAnalysis(NP);
+    vs.getSessionTime("overwrite",true);
+    vs.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true);
+    %vs.plotDiodeTriggers
+    vs.getSyncedDiodeTriggers("overwrite",true);
+    r = vs.ResponseWindow('overwrite',true);
+    results = vs.ShufflingAnalysis('overwrite',true);
+    if ~any(results.Speed1.pvalsResponse<0.05)
+         fprintf('%d-No responsive neurons.\n',ex)
+         continue
+    end
+    vs.CalculateReceptiveFields('overwrite',true,'nShuffle',20);
+    vs.PlotReceptiveFields('overwrite',true,'RFsDivision',{'Directions','','Luminosities'},meanAllNeurons=true)
+end
 
 %% Check experiments in timseseries viewer
 timeSeriesViewer(NP)

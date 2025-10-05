@@ -18,7 +18,7 @@ removeVibrations =0;
 
 %%
 
-for ex = [73:78]%examplesSDG%[7 8 28]%1:size(data,1):66
+for ex = [84:86]%examplesSDG%[7 8 28]%1:size(data,1):66
     %%%%%%%%%%%% Load data and data paremeters
     %1. Load NP class
 
@@ -61,7 +61,7 @@ for ex = [73:78]%examplesSDG%[7 8 28]%1:size(data,1):66
     msPerFarme = mean(diffTS);
     frameRate = round(1000/msPerFarme);
 
-    if ex == 65 || ex == 66 ||  ex == 67 || ex ==78
+    if ex == 65 || ex == 66 ||  ex == 67 || ex ==78 || ex == 84 || ex == 85 || ex == 86
         removeVibrations = 1;
     else
         removeVibrations = 0;
@@ -97,7 +97,9 @@ for ex = [73:78]%examplesSDG%[7 8 28]%1:size(data,1):66
         % Design notch filter
         wo = f0 / (fs/2);     % Normalized frequency
         bw = wo / Q;
-        [b, a] = iirnotch(wo, bw);
+        %[b, a] = iirnotch(wo, bw);
+
+        [b,a] = designNotchPeakIIR(Response="notch",CenterFrequency=wo,QualityFactor = Q);
 
         % Create a copy to store filtered data
         T_filtered = T;
@@ -129,9 +131,9 @@ for ex = [73:78]%examplesSDG%[7 8 28]%1:size(data,1):66
         end
 
 %         %%%Test
-%         figure;plot(2000:2500,filtered(2000:2500)')
-%         title('Notch, Q = 5')
-%         figure;plot(2000:2500,T.y(2000:2500)')
+        figure;plot(2000:2500,filtered(2000:2500)')
+        title(sprintf('Notch, Q = %d',Q))
+        figure;plot(2000:2500,dataClean(2000:2500)')
 
         % Path to original file and output file
         originalFile = filename;

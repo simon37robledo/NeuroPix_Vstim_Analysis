@@ -35,20 +35,34 @@ Ym2 = -2.355;
 Xe = 5.077;
 Ye = -2.012;
 %%
+%PV132 
+% imagesPaths = {'\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\4_5_25_In1-2\IRmirror_angle_pic.jpg',...
+%     '\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\5_5_25_In3-4\IRmirror_angle_in3-4-Cam.jpg',...
+%     '\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\6_5_25_In5-6\IRmirror_angle_In5-6.jpg',...
+%      '\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\7_5_25_In7-9\IR_mirror_image_In_7-9.jpg'};
+%ins = {[1,2],[3,4],[5,6],[7,9]};
+% PV140
+% imagesPaths = {'\\sil3\data\Large_scale_mapping_NP\lizards\PV140\PV140_Experiment_4_6_25\Images_setup\4_6_25_In1-3\IR_mirror_image_1-3.jpg',...
+%     '\\sil3\data\Large_scale_mapping_NP\lizards\PV140\PV140_Experiment_4_6_25\Images_setup\5_6_25_In4-6\IR_mirror_image_4-6.jpg',...
+%     '\\sil3\data\Large_scale_mapping_NP\lizards\PV140\PV140_Experiment_4_6_25\Images_setup\9_6_25_In7-11\IR_mirror_Image_In7-11.jpg'};
+%ins = {[1,3],[4,6],[7,11]};
 
-imagesPaths = {'\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\4_5_25_In1-2\IRmirror_angle_pic.jpg',...
-    '\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\5_5_25_In3-4\IRmirror_angle_in3-4-Cam.jpg',...
-    '\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\6_5_25_In5-6\IRmirror_angle_In5-6.jpg',...
-     '\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4_5_25\Images_setup\7_5_25_In7-9\IR_mirror_image_In_7-9.jpg'};
+%PV51
+imagesPaths = {'\\sil3\data\Large_scale_mapping_NP\lizards\PV51\PV51_Experiment_20_8_25\CraniotomyAndsetupPics\UpPicIns-1-3.jpg',...
+    '\\sil3\data\Large_scale_mapping_NP\lizards\PV51\PV51_Experiment_20_8_25\CraniotomyAndsetupPics\UpPictureIns-4-5.jpg'};
+ins = {[1,3],[4,5]};
 
-coorTable = table();
-ins = {[1,2],[3,4],[5,6],[7,8,9]};
-for i = 1:4%2:numel(imagesPaths)
+%cd('\\sil3\data\Large_scale_mapping_NP\lizards\PV140\PV140_Experiment_4_6_25\Images_setup');
+cd('\\sil3\data\Large_scale_mapping_NP\lizards\PV51\PV51_Experiment_20_8_25\CraniotomyAndsetupPics')
+%coorTable = table();
+
+
+for i = 2%2:numel(imagesPaths)
 
     iPath = imagesPaths{i};
 
     fc = coordinateSelectorGUI(iPath);
-    fc.Animal =  repmat({'PV132'}, height(fc), 1);
+    fc.Animal =  repmat({'PV140'}, height(fc), 1);
     fc.Session = repmat({ins{i}}, height(fc), 1);
     coorTable = [coorTable; fc]; 
 
@@ -117,6 +131,7 @@ for i = 1:height(coorTable)
 
         end
 
+        %%%Camera
         f = sqrt((Ym1-Yc).^2+(Xm1-Xc).^2);
 
         b = sqrt((Ye-Yc).^2+(Xe-Xc).^2);
@@ -210,13 +225,13 @@ distReal = 30;
 factor = distReal./distBoard;
 
 for i = 1:height(coorTable)
-coorTableTransf(i,[1:14 19:20]) = array2table(coorTable{i,[1:14 19:20]}*factor(i));
+coorTableTransf(i,[1:14 18:20]) = array2table(coorTable{i,[1:14 18:20]}*factor(i));
 end
 
 %%Use eye center as 0,0
 
 coorTableTransf.newCamX = coorTableTransf.newCamX - coorTableTransf.Eye_X;
-coorTableTransf.newCamX = coorTableTransf.newCamY - coorTableTransf.Eye_Y;
+coorTableTransf.newCamY = coorTableTransf.newCamY - coorTableTransf.Eye_Y;
 
 writetable(coorTableTransf,'coordinatesTransf.csv');
 
@@ -302,7 +317,8 @@ function coordsTable = coordinateSelectorGUI(imgPath)
 
     % Load image
     img = imread(imgPath);
-    % Rotate image if portrait (height > width)
+    
+    %Rotate image if portrait (height > width)
     if size(img, 1) > size(img, 2)
         img = permute(img, [2 1 3]);  % Rotate 90° counterclockwise without interpolation
     end
