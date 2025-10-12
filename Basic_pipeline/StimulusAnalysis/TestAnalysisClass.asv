@@ -56,20 +56,22 @@ end
 %% PlotZScoreComparison
 %[49:54 57:81] MBR all experiments
 
-VStimAnalysis.PlotZScoreComparison([49:54 57:81],{'MB', 'RG','MBR','SDG'},"overwrite",true)%[49:54,57:91]
+VStimAnalysis.PlotZScoreComparison([49:54 57:81],{'MB', 'RG','MBR'})%[49:54,57:91]
 
 %% Gratings
 
-for ex = [54 84:90]
-    NP = loadNPclassFromTable(ex); %73 81
-    vs = StaticDriftingGratingAnalysis(NP);
-    vs.getSessionTime("overwrite",true);
-    vs.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true);
-    dT = vs.getDiodeTriggers;
-    % vs.plotDiodeTriggers
-    vs.getSyncedDiodeTriggers("overwrite",true);
-    r = vs.ResponseWindow('overwrite',true);
-    results = vs.ShufflingAnalysis('overwrite',true);
+for ex = [49]
+NP = loadNPclassFromTable(ex); %73 81
+vs = StaticDriftingGratingAnalysis(NP);
+vs.getSessionTime("overwrite",true);
+vs.getDiodeTriggers('extractionMethod','digitalTriggerDiode','overwrite',true);
+
+dT = vs.getDiodeTriggers;
+% vs.plotDiodeTriggers
+vs.getSyncedDiodeTriggers("overwrite",true);
+r = vs.ResponseWindow('overwrite',true);
+results = vs.ShufflingAnalysis('overwrite',true);
+
 end
 
 
