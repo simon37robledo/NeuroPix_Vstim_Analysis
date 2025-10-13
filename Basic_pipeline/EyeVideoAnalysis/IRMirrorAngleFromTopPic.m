@@ -3,7 +3,7 @@ ImagePath = "\\sil3\data\Large_scale_mapping_NP\lizards\PV132\PV132_Experiment_4
 
 cd(ImagePath);
 
-
+NP = loadNPclassFromTable(66);
 NP.recordingDir
 files = dir;
 names = string({files.name});
@@ -54,7 +54,7 @@ ins = {[1,3],[4,5]};
 
 %cd('\\sil3\data\Large_scale_mapping_NP\lizards\PV140\PV140_Experiment_4_6_25\Images_setup');
 cd('\\sil3\data\Large_scale_mapping_NP\lizards\PV51\PV51_Experiment_20_8_25\CraniotomyAndsetupPics')
-%coorTable = table();
+coorTable = table();
 
 
 for i = 2%2:numel(imagesPaths)
