@@ -57,8 +57,8 @@ end
 %% PlotZScoreComparison
 %[49:54 57:81] MBR all experiments %%[89,90,92,93,95,96,97] 'NV','NI'
 %[44:56,64:88]
-%Check triggers 45, SA82 44,45,47:54,56,64:88 'FFF','SDG','MBR','MB','RG','NI','NV'
-VStimAnalysis.PlotZScoreComparison([49:54,64:97],{'MBR'},'overwrite',true,'overwriteResponse',true)%[49:54,57:91] %%Check why I have different array dimensions in MBR
+%Check triggers 45, SA82 44,45,47:54,56,64:88
+VStimAnalysis.PlotZScoreComparison([49:54,64:97],{'FFF','S},'overwrite',true,'overwriteResponse',true)%[49:54,57:91] %%Check why I have different array dimensions in MBR
 
 %% Gratings
 

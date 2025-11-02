@@ -214,6 +214,9 @@ locSync = interp1([originSQW(1)-1;originSQW;originSQW(end)+1]'*1000, [Neur(1)-1;
 save('Peak_nosync.mat','locsms')
 
 
+save('Peak_sync.mat','locSync')
+
+locSync = locSync.locsms;
 
 
 
