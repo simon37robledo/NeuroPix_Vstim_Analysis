@@ -91,7 +91,7 @@ FusionCoorsY = [-3.858,-8.42,-4.746,-3.6;-3.379,-4.078,-2.355,-2.012;2.123,-0.03
 
 Fusion =0;
 
-for i = 1:height(coorTable)
+for i = 4%1:height(coorTable)
 
     XmoV = [];
     aV = [];
@@ -117,8 +117,12 @@ for i = 1:height(coorTable)
             Xe =  FusionCoorsX(i,4)+kx(k); %coorTable.Eye_X(i)/10;%
             Ye =  FusionCoorsY(i,4); %(size(j,1)-coorTable.Eye_Y(i))/-10;%
         else
-            Xc = coorTable.Camera_X(i)+kx(k);%coorTable.Camera_X(i)/10;%
-            Yc = coorTable.Camera_Y(i);%(size(j,1)-coorTable.Camera_Y(i))/-10;%
+            % Xc = coorTable.Camera_X(i)+kx(k);%coorTable.Camera_X(i)/10;%
+            % Yc = coorTable.Camera_Y(i);%(size(j,1)-coorTable.Camera_Y(i))/-10;%
+            
+            Xc = coorTable.IR_light_X(i)+kx(k);%coorTable.Camera_X(i)/10;%
+            Yc = coorTable.IR_light_Y(i);%(size(j,1)-coorTable.Camera_Y(i))/-10;%
+
 
             Xm1 = coorTable.Mirror1_X(i)+kx(k);%(coorTable.Mirror1_X(i))/10;%
             Ym1 = coorTable.Mirror1_Y(i);%(size(j,1)-coorTable.Mirror1_Y(i))/-10;%
@@ -217,7 +221,7 @@ end
 
 coorTableTransf = coorTable;
 
-for i = 1:height(coorTable)
+for i = 4%1:height(coorTable)
     distBoard(i) = sqrt(sum(([coorTable.Edge1_board1_X(i) coorTable.Edge1_board1_Y(i) ] - [coorTable.Edge2_board_X(i)  coorTable.Edge2_board_Y(i) ]).^2));
 end
 
